@@ -6,15 +6,145 @@ import { Plane, Palette, ChevronRight } from 'lucide-react';
 import TravelConcierge from '@/components/personas/TravelConcierge';
 import CreativeStudio from '@/components/personas/CreativeStudio';
 import Header from '@/components/Header';
+import Search from '@/components/Search';
+import CommandPalette from '@/components/CommandPalette';
+import ProcessTimeline from '@/components/ProcessTimeline';
+import { generatePersonaContent, exportToPDF } from '@/lib/exportPdf';
 
 export default function Home() {
   const [activePersona, setActivePersona] = useState<'travel' | 'artkech'>('travel');
+  const [showSearch, setShowSearch] = useState(false);
+
+  const handleExport = () => {
+    const content = generatePersonaContent(activePersona);
+    exportToPDF(activePersona, content);
+  };
+
+  const travelStages = [
+    {
+      number: 1,
+      title: 'Inquiry & Qualification',
+      description: 'Receive initial inquiry, assess client profile (net worth, travel history, preferences), and determine fit for exclusive services.',
+      details: ['Profile assessment', 'Service fit analysis', 'Initial consultation scheduling']
+    },
+    {
+      number: 2,
+      title: 'Consultation & Proposal',
+      description: 'Conduct detailed consultation to understand specific desires. Present high-level, bespoke itinerary proposal highlighting unique experiences.',
+      details: ['Detailed needs assessment', 'Proposal development', 'Exclusive access planning']
+    },
+    {
+      number: 3,
+      title: 'Itinerary Refinement',
+      description: 'Iterate on proposal based on client feedback, securing tentative holds on luxury accommodations and exclusive access.',
+      details: ['Feedback integration', 'Accommodation holds', 'Experience confirmation']
+    },
+    {
+      number: 4,
+      title: 'Booking & Confirmation',
+      description: 'Finalize all bookings (private jets, riads, dining, tours). Provide comprehensive, polished itinerary document.',
+      details: ['Final bookings', 'Itinerary documentation', 'Special requests confirmation']
+    },
+    {
+      number: 5,
+      title: 'Pre-Trip Preparation',
+      description: 'Coordinate logistics, share packing recommendations, ensure all special requests (dietary, security) are communicated to partners.',
+      details: ['Logistics coordination', 'Packing guidance', 'Partner communication']
+    },
+    {
+      number: 6,
+      title: 'In-Trip Concierge',
+      description: 'Provide 24/7 support, manage real-time adjustments, ensure flawless execution of all planned activities.',
+      details: ['24/7 availability', 'Real-time support', 'Activity management']
+    },
+    {
+      number: 7,
+      title: 'Post-Trip Follow-up',
+      description: 'Gather feedback, update client profile with preferences learned during trip, nurture relationship for future travel.',
+      details: ['Feedback collection', 'Profile updates', 'Relationship nurturing']
+    }
+  ];
+
+  const artkechStages = [
+    {
+      number: 1,
+      title: 'Discovery & Briefing',
+      description: 'Understand client vision, target audience, and the specific "reader problem" the project aims to solve.',
+      details: ['Vision alignment', 'Audience analysis', 'Problem identification']
+    },
+    {
+      number: 2,
+      title: 'Strategy & Concept',
+      description: 'Develop brand identity or editorial strategy. Present initial concepts focusing on premium aesthetics and market positioning.',
+      details: ['Strategy development', 'Concept creation', 'Market positioning']
+    },
+    {
+      number: 3,
+      title: 'Design & Development',
+      description: 'Execute design work (editorial layout, brand assets). Ensure meticulous attention to detail and premium standard alignment.',
+      details: ['Design execution', 'Asset creation', 'Quality assurance']
+    },
+    {
+      number: 4,
+      title: 'Production & Photography',
+      description: 'Coordinate and direct photography or asset creation. Ensure all visual elements meet the studio\'s high-quality bar.',
+      details: ['Photography direction', 'Asset production', 'Quality standards']
+    },
+    {
+      number: 5,
+      title: 'Review & Refinement',
+      description: 'Present near-final designs to client. Incorporate feedback while maintaining premium design integrity.',
+      details: ['Design presentation', 'Feedback integration', 'Refinement iterations']
+    },
+    {
+      number: 6,
+      title: 'Pre-Press & Publishing',
+      description: 'Prepare files for print, select premium materials (paper, binding), oversee printing process to guarantee "shelf presence."',
+      details: ['File preparation', 'Material selection', 'Print oversight']
+    },
+    {
+      number: 7,
+      title: 'Delivery & Launch',
+      description: 'Deliver final physical or digital products. Provide guidance on launch strategies to maximize impact and perceived value.',
+      details: ['Product delivery', 'Launch strategy', 'Impact maximization']
+    }
+  ];
 
   return (
     <div className="min-h-screen bg-background text-foreground font-body">
       <Header />
       
       <main className="container py-12">
+        {/* Top toolbar */}
+        <div className="flex items-center justify-between mb-12 gap-4 flex-wrap">
+          <div>
+            <h2 className="font-display text-3xl mb-1 text-foreground">Reference Guide</h2>
+            <p className="text-muted-foreground text-sm">Operational processes & best practices</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowSearch(!showSearch)}
+              className="px-3 py-2 rounded-lg bg-card border border-border/50 text-muted-foreground hover:border-accent/50 transition-colors text-sm"
+            >
+              🔍 Search
+            </button>
+            <CommandPalette onExport={handleExport} onSwitchPersona={setActivePersona} />
+          </div>
+        </div>
+
+        {/* Search Panel */}
+        {showSearch && (
+          <Card className="card-premium mb-12">
+            <CardHeader>
+              <CardTitle>Advanced Search</CardTitle>
+              <CardDescription>Search across all personas, processes, and guidelines</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Search />
+            </CardContent>
+          </Card>
+        )}
+
         {/* Hero Section */}
         <div className="mb-16 text-center py-12">
           <div className="inline-block mb-6 px-4 py-2 rounded-full bg-accent/10 border border-accent/20">
@@ -42,12 +172,30 @@ export default function Home() {
               </TabsTrigger>
             </TabsList>
 
-            <TabsContent value="travel" className="mt-8">
+            <TabsContent value="travel" className="mt-8 space-y-8">
               <TravelConcierge />
+              <Card className="card-premium">
+                <CardHeader>
+                  <CardTitle>Process Timeline</CardTitle>
+                  <CardDescription>7-stage operational workflow</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ProcessTimeline stages={travelStages} title="Atlas Elite Concierge Process" />
+                </CardContent>
+              </Card>
             </TabsContent>
 
-            <TabsContent value="artkech" className="mt-8">
+            <TabsContent value="artkech" className="mt-8 space-y-8">
               <CreativeStudio />
+              <Card className="card-premium">
+                <CardHeader>
+                  <CardTitle>Process Timeline</CardTitle>
+                  <CardDescription>7-stage operational workflow</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ProcessTimeline stages={artkechStages} title="ArtKech Design Process" />
+                </CardContent>
+              </Card>
             </TabsContent>
           </Tabs>
         </div>
