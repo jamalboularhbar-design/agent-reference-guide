@@ -116,3 +116,4 @@
 - [x] Reading goals and progress tracking (set weekly reading goals, track completion %, gamification badges)
 - [x] Document approval workflow notifications (notify owner when doc moves to review, approval actions)
 - [x] Public REST API documentation endpoint (/api/docs) with OpenAPI-style reference for external integrations
+- [x] Rename all "Atlas Elite" references to "Riad & Routes" (riadandroutes.com) throughout the application

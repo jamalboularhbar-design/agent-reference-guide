@@ -25,7 +25,7 @@ export async function exportToPDF(persona: 'travel' | 'artkech', content: string
 }
 
 function generateHTML(persona: string, content: string): string {
-  const title = persona === 'travel' ? 'Atlas Elite Concierge - Luxury Travel Guide' : 'ArtKech Lead Designer - Creative Studio Guide';
+  const title = persona === 'travel' ? 'Riad & Routes Concierge - Luxury Travel Guide' : 'ArtKech Lead Designer - Creative Studio Guide';
   const timestamp = new Date().toLocaleDateString();
 
   return `
@@ -185,8 +185,8 @@ function generateHTML(persona: string, content: string): string {
 export function generatePersonaContent(persona: 'travel' | 'artkech'): string {
   if (persona === 'travel') {
     return `
-      <h2>Atlas Elite Concierge</h2>
-      <p><strong>Luxury Travel Company - Moroccan Experiences for HNW Americans</strong></p>
+      <h2>Riad & Routes Concierge</h2>
+      <p><strong>Riad & Routes (riadandroutes.com) — Bespoke Moroccan Experiences for HNW Americans</strong></p>
       
       <div class="section">
         <h3>Core Characteristics</h3>

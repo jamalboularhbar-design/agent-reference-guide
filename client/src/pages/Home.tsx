@@ -163,7 +163,7 @@ export default function Home() {
             Agent Reference Guide
           </h1>
           <p className="text-base sm:text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto mb-6 sm:mb-8 leading-relaxed px-2">
-            A comprehensive interactive guide for managing operational processes across your luxury travel company and creative design studio. Seamlessly switch between personas and explore detailed process frameworks.
+            A comprehensive interactive guide for managing operational processes across Riad & Routes and your creative design studio. Seamlessly switch between personas and explore detailed process frameworks.
           </p>
           <div className="max-w-lg mx-auto">
             <SearchAutocomplete placeholder="Quick search 525+ documents..." className="text-left" />
@@ -176,7 +176,7 @@ export default function Home() {
             <TabsList className="grid w-full max-w-sm sm:max-w-md mx-auto grid-cols-2 mb-8 sm:mb-12 bg-card/50 border border-border/50 p-1 rounded-lg">
               <TabsTrigger value="travel" className="flex items-center gap-2">
                 <Plane className="w-4 h-4" />
-                <span>Luxury Travel</span>
+                <span>Riad & Routes</span>
               </TabsTrigger>
               <TabsTrigger value="artkech" className="flex items-center gap-2">
                 <Palette className="w-4 h-4" />
@@ -192,7 +192,7 @@ export default function Home() {
                   <CardDescription>7-stage operational workflow</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <ProcessTimeline stages={travelStages} title="Atlas Elite Concierge Process" />
+                  <ProcessTimeline stages={travelStages} title="Riad & Routes Concierge Process" />
                 </CardContent>
               </Card>
             </TabsContent>

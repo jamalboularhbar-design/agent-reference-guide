@@ -23,8 +23,8 @@ export default function CommandPalette({ onExport, onSwitchPersona }: CommandPal
   const commands: Command[] = [
     {
       id: 'travel-persona',
-      title: 'Switch to Luxury Travel',
-      description: 'View Atlas Elite Concierge persona',
+      title: 'Switch to Riad & Routes',
+      description: 'View Riad & Routes Concierge persona',
       icon: <Plane className="w-4 h-4" />,
       action: () => {
         onSwitchPersona?.('travel');
