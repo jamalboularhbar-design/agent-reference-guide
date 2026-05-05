@@ -12,6 +12,9 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { useReadingProgress } from '@/hooks/useReadingProgress';
 import ShareDocument from '@/components/ShareDocument';
+import DocumentRating from '@/components/DocumentRating';
+import AISummary from '@/components/AISummary';
+import QuickActionsToolbar from '@/components/QuickActionsToolbar';
 
 // Reading time calculation
 function getReadingTime(wordCount: number): string {
@@ -105,11 +108,16 @@ export default function DocumentDetail() {
   // Persist reading progress (auto-saves scroll position)
   useReadingProgress(slug);
 
+  // Record view count
+  const recordViewMutation = trpc.documents.recordView.useMutation();
+
   // Track recently viewed
   useEffect(() => {
     if (document) {
       addToRecentlyViewed(document.slug, document.title);
       setIsFavorited(getFavorites().includes(document.slug));
+      // Record view (fire and forget)
+      recordViewMutation.mutate({ slug: document.slug });
     }
   }, [document]);
 
@@ -373,6 +381,14 @@ export default function DocumentDetail() {
                   </div>
                 )}
               </div>
+
+              {/* Rating and AI Summary */}
+              <div className="flex flex-wrap items-center gap-4 mt-4">
+                <DocumentRating slug={document.slug} upvotes={(document as any).upvotes ?? 0} downvotes={(document as any).downvotes ?? 0} />
+              </div>
+              <div className="mt-4">
+                <AISummary slug={document.slug} existingSummary={(document as any).summary} />
+              </div>
             </div>
 
             {/* Markdown Content */}
@@ -452,6 +468,17 @@ export default function DocumentDetail() {
           </main>
         </div>
       </div>
+
+      {/* Quick Actions Floating Toolbar */}
+      {document && (
+        <QuickActionsToolbar
+          slug={document.slug}
+          title={document.title}
+          onShare={() => {}}
+          isFavorited={isFavorited}
+          onToggleFavorite={handleToggleFavorite}
+        />
+      )}
 
       {/* Scroll to Top Button */}
       <ScrollToTop />

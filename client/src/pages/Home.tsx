@@ -14,6 +14,7 @@ import DocumentStats from '@/components/DocumentStats';
 import RecentlyViewed from '@/components/RecentlyViewed';
 import Favorites from '@/components/Favorites';
 import SearchAutocomplete from '@/components/SearchAutocomplete';
+import PopularDocuments from '@/components/PopularDocuments';
 import { generatePersonaContent, exportToPDF } from '@/lib/exportPdf';
 
 export default function Home() {
@@ -255,6 +256,9 @@ export default function Home() {
         {/* Favorites & Recently Viewed */}
         <Favorites />
         <RecentlyViewed />
+
+        {/* Popular/Trending Documents */}
+        <PopularDocuments />
 
         {/* Document Statistics */}
         <section className="mt-16">

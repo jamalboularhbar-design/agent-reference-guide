@@ -1,6 +1,6 @@
-import { eq, like, or, sql, desc, asc, count } from "drizzle-orm";
+import { eq, like, or, sql, desc, asc, count, and } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, documents } from "../drizzle/schema";
+import { InsertUser, users, documents, documentRatings, readingLists, readingListItems } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -266,4 +266,210 @@ export async function getDocumentStats() {
     totalCategories: Number(catResult[0]?.cats ?? 0),
     avgReadingTime: Math.ceil(Number(wordResult[0]?.totalWords ?? 0) / (totalResult[0]?.total || 1) / 200),
   };
+}
+
+// ─── Document Ratings ──────────────────────────────────────────────────────
+
+export async function rateDocument(slug: string, visitorId: string, rating: 'up' | 'down') {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+
+  // Check if user already rated this document
+  const existing = await db.select().from(documentRatings)
+    .where(and(eq(documentRatings.documentSlug, slug), eq(documentRatings.visitorId, visitorId)))
+    .limit(1);
+
+  if (existing.length > 0) {
+    const oldRating = existing[0].rating;
+    if (oldRating === rating) {
+      // Remove rating (toggle off)
+      await db.delete(documentRatings).where(eq(documentRatings.id, existing[0].id));
+      // Decrement count
+      if (rating === 'up') {
+        await db.update(documents).set({ upvotes: sql`GREATEST(0, ${documents.upvotes} - 1)` }).where(eq(documents.slug, slug));
+      } else {
+        await db.update(documents).set({ downvotes: sql`GREATEST(0, ${documents.downvotes} - 1)` }).where(eq(documents.slug, slug));
+      }
+      return { action: 'removed', rating: null };
+    } else {
+      // Change rating
+      await db.update(documentRatings).set({ rating }).where(eq(documentRatings.id, existing[0].id));
+      if (rating === 'up') {
+        await db.update(documents).set({ upvotes: sql`${documents.upvotes} + 1`, downvotes: sql`GREATEST(0, ${documents.downvotes} - 1)` }).where(eq(documents.slug, slug));
+      } else {
+        await db.update(documents).set({ downvotes: sql`${documents.downvotes} + 1`, upvotes: sql`GREATEST(0, ${documents.upvotes} - 1)` }).where(eq(documents.slug, slug));
+      }
+      return { action: 'changed', rating };
+    }
+  } else {
+    // New rating
+    await db.insert(documentRatings).values({ documentSlug: slug, visitorId, rating });
+    if (rating === 'up') {
+      await db.update(documents).set({ upvotes: sql`${documents.upvotes} + 1` }).where(eq(documents.slug, slug));
+    } else {
+      await db.update(documents).set({ downvotes: sql`${documents.downvotes} + 1` }).where(eq(documents.slug, slug));
+    }
+    return { action: 'added', rating };
+  }
+}
+
+export async function getUserRating(slug: string, visitorId: string) {
+  const db = await getDb();
+  if (!db) return null;
+
+  const result = await db.select().from(documentRatings)
+    .where(and(eq(documentRatings.documentSlug, slug), eq(documentRatings.visitorId, visitorId)))
+    .limit(1);
+
+  return result.length > 0 ? result[0].rating : null;
+}
+
+// ─── View Count ────────────────────────────────────────────────────────────
+
+export async function incrementViewCount(slug: string) {
+  const db = await getDb();
+  if (!db) return;
+
+  await db.update(documents).set({ viewCount: sql`${documents.viewCount} + 1` }).where(eq(documents.slug, slug));
+}
+
+// ─── Popular Documents ─────────────────────────────────────────────────────
+
+export async function getPopularDocuments(limit = 10) {
+  const db = await getDb();
+  if (!db) return [];
+
+  const result = await db
+    .select({
+      slug: documents.slug,
+      title: documents.title,
+      category: documents.category,
+      wordCount: documents.wordCount,
+      viewCount: documents.viewCount,
+      upvotes: documents.upvotes,
+      downvotes: documents.downvotes,
+    })
+    .from(documents)
+    .orderBy(sql`(${documents.viewCount} + ${documents.upvotes} * 3 - ${documents.downvotes}) DESC`)
+    .limit(limit);
+
+  return result;
+}
+
+// ─── Reading Lists ─────────────────────────────────────────────────────────
+
+export async function getReadingLists(visitorId: string) {
+  const db = await getDb();
+  if (!db) return [];
+
+  const lists = await db.select().from(readingLists)
+    .where(eq(readingLists.visitorId, visitorId))
+    .orderBy(desc(readingLists.updatedAt));
+
+  // Get item counts for each list
+  const result = [];
+  for (const list of lists) {
+    const items = await db.select({ count: count() }).from(readingListItems)
+      .where(eq(readingListItems.listId, list.id));
+    result.push({ ...list, itemCount: items[0]?.count ?? 0 });
+  }
+
+  return result;
+}
+
+export async function createReadingList(visitorId: string, name: string, description?: string) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+
+  const result = await db.insert(readingLists).values({ visitorId, name, description: description || null });
+  return { id: result[0].insertId, name };
+}
+
+export async function addToReadingList(listId: number, documentSlug: string) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+
+  // Check if already in list
+  const existing = await db.select().from(readingListItems)
+    .where(and(eq(readingListItems.listId, listId), eq(readingListItems.documentSlug, documentSlug)))
+    .limit(1);
+
+  if (existing.length > 0) return { alreadyExists: true };
+
+  await db.insert(readingListItems).values({ listId, documentSlug });
+  return { alreadyExists: false };
+}
+
+export async function removeFromReadingList(listId: number, documentSlug: string) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+
+  await db.delete(readingListItems)
+    .where(and(eq(readingListItems.listId, listId), eq(readingListItems.documentSlug, documentSlug)));
+  return { success: true };
+}
+
+export async function getReadingListItems(listId: number) {
+  const db = await getDb();
+  if (!db) return [];
+
+  const items = await db.select({
+    slug: documents.slug,
+    title: documents.title,
+    category: documents.category,
+    wordCount: documents.wordCount,
+    addedAt: readingListItems.addedAt,
+  })
+    .from(readingListItems)
+    .innerJoin(documents, eq(readingListItems.documentSlug, documents.slug))
+    .where(eq(readingListItems.listId, listId))
+    .orderBy(desc(readingListItems.addedAt));
+
+  return items;
+}
+
+export async function deleteReadingList(listId: number) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+
+  await db.delete(readingListItems).where(eq(readingListItems.listId, listId));
+  await db.delete(readingLists).where(eq(readingLists.id, listId));
+  return { success: true };
+}
+
+// ─── Bulk Import ───────────────────────────────────────────────────────────
+
+export async function bulkImportDocuments(docs: Array<{ title: string; category: string; content: string }>) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+
+  const results = [];
+  for (const doc of docs) {
+    const slug = doc.title.replace(/[^a-zA-Z0-9\s-]/g, '').replace(/\s+/g, '-');
+    const wordCount = doc.content.split(/\s+/).filter(Boolean).length;
+    try {
+      await db.insert(documents).values({
+        slug,
+        title: doc.title,
+        category: doc.category,
+        filename: `${slug}.md`,
+        content: doc.content,
+        wordCount,
+      });
+      results.push({ title: doc.title, status: 'created' });
+    } catch (err: any) {
+      results.push({ title: doc.title, status: 'error', error: err.message });
+    }
+  }
+  return results;
+}
+
+// ─── AI Summary ────────────────────────────────────────────────────────────
+
+export async function saveSummary(slug: string, summary: string) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+
+  await db.update(documents).set({ summary }).where(eq(documents.slug, slug));
+  return { success: true };
 }

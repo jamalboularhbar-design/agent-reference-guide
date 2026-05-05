@@ -2,16 +2,9 @@ import { int, mediumtext, mysqlEnum, mysqlTable, text, timestamp, varchar } from
 
 /**
  * Core user table backing auth flow.
- * Extend this file with additional tables as your product grows.
- * Columns use camelCase to match both database fields and generated types.
  */
 export const users = mysqlTable("users", {
-  /**
-   * Surrogate primary key. Auto-incremented numeric value managed by the database.
-   * Use this for relations between tables.
-   */
   id: int("id").autoincrement().primaryKey(),
-  /** Manus OAuth identifier (openId) returned from the OAuth callback. Unique per user. */
   openId: varchar("openId", { length: 64 }).notNull().unique(),
   name: text("name"),
   email: varchar("email", { length: 320 }),
@@ -34,9 +27,46 @@ export const documents = mysqlTable("documents", {
   filename: varchar("filename", { length: 500 }).notNull(),
   content: mediumtext("content"),
   wordCount: int("wordCount").default(0),
+  viewCount: int("viewCount").default(0),
+  upvotes: int("upvotes").default(0),
+  downvotes: int("downvotes").default(0),
+  summary: text("summary"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
 
 export type Document = typeof documents.$inferSelect;
 export type InsertDocument = typeof documents.$inferInsert;
+
+// Document ratings - tracks individual user votes
+export const documentRatings = mysqlTable("document_ratings", {
+  id: int("id").autoincrement().primaryKey(),
+  documentSlug: varchar("documentSlug", { length: 255 }).notNull(),
+  visitorId: varchar("visitorId", { length: 100 }).notNull(), // localStorage-based visitor ID
+  rating: mysqlEnum("rating", ["up", "down"]).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type DocumentRating = typeof documentRatings.$inferSelect;
+
+// Reading lists - user-created collections of documents
+export const readingLists = mysqlTable("reading_lists", {
+  id: int("id").autoincrement().primaryKey(),
+  visitorId: varchar("visitorId", { length: 100 }).notNull(),
+  name: varchar("name", { length: 200 }).notNull(),
+  description: text("description"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type ReadingList = typeof readingLists.$inferSelect;
+
+// Reading list items - documents in a reading list
+export const readingListItems = mysqlTable("reading_list_items", {
+  id: int("id").autoincrement().primaryKey(),
+  listId: int("listId").notNull(),
+  documentSlug: varchar("documentSlug", { length: 255 }).notNull(),
+  addedAt: timestamp("addedAt").defaultNow().notNull(),
+});
+
+export type ReadingListItem = typeof readingListItems.$inferSelect;

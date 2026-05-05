@@ -76,3 +76,13 @@
 - [x] Admin document editor (create/edit/delete) at /admin/editor
 - [x] Compare button + Admin link in header navigation
 - [x] View All link in expanded categories to navigate to category page
+- [x] Document ratings system (thumbs up/down per document, stored in DB)
+- [x] Document view count tracking (increment on detail page visit)
+- [x] Reading lists/collections (users can create named lists and add docs) at /lists
+- [x] Bulk import via CSV upload (admin feature) at /admin/import
+- [x] Document templates (5 pre-built templates) at /templates
+- [x] Table of Contents index page at /toc showing all documents organized hierarchically
+- [x] Inter-document linking (related docs by category + category landing pages)
+- [x] Quick actions floating toolbar on document detail (print, share, favorite, add-to-list)
+- [x] AI-powered document summarization (generate TL;DR via LLM on demand)
+- [x] Popular/trending documents section based on view counts and ratings

@@ -9,6 +9,10 @@ import DocumentDetail from "./pages/DocumentDetail";
 import AdminEditor from "./pages/AdminEditor";
 import CategoryPage from "./pages/CategoryPage";
 import CompareDocuments from "./pages/CompareDocuments";
+import ReadingListsPage from "./pages/ReadingListsPage";
+import TOCPage from "./pages/TOCPage";
+import BulkImportPage from "./pages/BulkImportPage";
+import DocumentTemplates from "./pages/DocumentTemplates";
 import KeyboardShortcutsModal from "./components/KeyboardShortcutsModal";
 
 function Router() {
@@ -19,7 +23,11 @@ function Router() {
       <Route path={"/docs/:slug"} component={DocumentDetail} />
       <Route path={"/category/:category"} component={CategoryPage} />
       <Route path={"/compare"} component={CompareDocuments} />
+      <Route path={"/toc"} component={TOCPage} />
+      <Route path={"/lists"} component={ReadingListsPage} />
+      <Route path={"/templates"} component={DocumentTemplates} />
       <Route path={"/admin/editor"} component={AdminEditor} />
+      <Route path={"/admin/import"} component={BulkImportPage} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />
