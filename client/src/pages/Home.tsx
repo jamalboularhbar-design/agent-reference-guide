@@ -165,7 +165,7 @@ export default function Home() {
           <p className="text-base sm:text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto mb-6 sm:mb-8 leading-relaxed px-2">
             A comprehensive interactive guide for managing operational processes across Riad & Routes and your creative design studio. Seamlessly switch between personas and explore detailed process frameworks.
           </p>
-          <div className="max-w-lg mx-auto">
+          <div className="max-w-lg mx-auto" data-tour="search">
             <SearchAutocomplete placeholder="Quick search 525+ documents..." className="text-left" />
           </div>
         </div>
@@ -173,7 +173,7 @@ export default function Home() {
         {/* Persona Selection Tabs */}
         <div className="mb-10 sm:mb-16">
           <Tabs value={activePersona} onValueChange={(value) => setActivePersona(value as 'travel' | 'artkech')} className="w-full">
-            <TabsList className="grid w-full max-w-sm sm:max-w-md mx-auto grid-cols-2 mb-8 sm:mb-12 bg-card/50 border border-border/50 p-1 rounded-lg">
+            <TabsList data-tour="personas" className="grid w-full max-w-sm sm:max-w-md mx-auto grid-cols-2 mb-8 sm:mb-12 bg-card/50 border border-border/50 p-1 rounded-lg">
               <TabsTrigger value="travel" className="flex items-center gap-2">
                 <Plane className="w-4 h-4" />
                 <span>Riad & Routes</span>
@@ -282,7 +282,9 @@ export default function Home() {
         </section>
 
         {/* Document Library Section */}
-        <DocumentLibrary />
+        <div data-tour="library">
+          <DocumentLibrary />
+        </div>
 
         {/* Operational Guidelines Section */}
         <section className="mt-16 sm:mt-24 pt-8 sm:pt-12 border-t border-border/50">

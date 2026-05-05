@@ -25,6 +25,11 @@ import {
   getReadingGoal, setReadingGoal, recordReadingCompletion, getWeeklyProgress,
   getDocumentTemplates, createDocumentTemplate, getDocumentTemplateById, incrementTemplateUsage, deleteDocumentTemplate,
   logAuditEntry, getAuditTrail, getAnalyticsExportData, getDocumentSummariesForAI,
+  getBookmarkNotes, getBookmarkNote, upsertBookmarkNote, deleteBookmarkNote,
+  createShareLink, getShareLinkByToken, getShareLinksForDocument, incrementShareLinkAccess, deleteShareLink,
+  schedulePublish, getScheduledPublishes, getScheduledPublishForDoc, cancelScheduledPublish, processScheduledPublishes,
+  renameTag, mergeTags, deleteTagGlobally, getAllTagsWithCounts,
+  importDocumentFromContent, getDocumentsInReview, approveDocument, rejectDocument,
 } from "./db";
 import { invokeLLM } from "./_core/llm";
 import { notifyOwner } from "./_core/notification";
@@ -740,6 +745,171 @@ export const appRouter = router({
         } catch {
           return [];
         }
+      }),
+  }),
+
+  // ==================== Batch 11: Bookmark Notes ====================
+  bookmarkNotes: router({
+    list: publicProcedure
+      .input(z.object({ visitorId: z.string() }))
+      .query(async ({ input }) => getBookmarkNotes(input.visitorId)),
+
+    get: publicProcedure
+      .input(z.object({ visitorId: z.string(), documentSlug: z.string() }))
+      .query(async ({ input }) => getBookmarkNote(input.visitorId, input.documentSlug)),
+
+    upsert: publicProcedure
+      .input(z.object({ visitorId: z.string(), documentSlug: z.string(), note: z.string().min(1).max(2000) }))
+      .mutation(async ({ input }) => upsertBookmarkNote(input.visitorId, input.documentSlug, input.note)),
+
+    delete: publicProcedure
+      .input(z.object({ visitorId: z.string(), documentSlug: z.string() }))
+      .mutation(async ({ input }) => deleteBookmarkNote(input.visitorId, input.documentSlug)),
+  }),
+
+  // ==================== Batch 11: Share Links ====================
+  shareLinks: router({
+    create: adminProcedure
+      .input(z.object({
+        documentSlug: z.string(),
+        expiresInHours: z.number().min(1).max(720).default(24),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        const token = Array.from(crypto.getRandomValues(new Uint8Array(32))).map(b => b.toString(16).padStart(2, '0')).join('');
+        const expiresAt = new Date(Date.now() + input.expiresInHours * 60 * 60 * 1000);
+        return createShareLink(input.documentSlug, token, expiresAt, ctx.user?.name || 'admin');
+      }),
+
+    listForDoc: adminProcedure
+      .input(z.object({ documentSlug: z.string() }))
+      .query(async ({ input }) => getShareLinksForDocument(input.documentSlug)),
+
+    resolve: publicProcedure
+      .input(z.object({ token: z.string() }))
+      .query(async ({ input }) => {
+        const link = await getShareLinkByToken(input.token);
+        if (!link) return { valid: false as const, slug: null, document: null, expiresAt: null };
+        if (new Date(link.expiresAt) < new Date()) return { valid: false as const, slug: null, expired: true, document: null, expiresAt: link.expiresAt };
+        await incrementShareLinkAccess(input.token);
+        // Fetch the document so share page can render it directly (even draft/private)
+        const doc = await getDocumentBySlug(link.documentSlug);
+        return {
+          valid: true as const,
+          slug: link.documentSlug,
+          expired: false,
+          expiresAt: link.expiresAt,
+          document: doc ? { title: doc.title, content: doc.content, category: doc.category, status: doc.status, readingTime: Math.ceil((doc.wordCount || 200) / 200) } : null,
+        };
+      }),
+
+    delete: adminProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => deleteShareLink(input.id)),
+  }),
+
+  // ==================== Batch 11: Scheduled Publish ====================
+  scheduledPublish: router({
+    schedule: adminProcedure
+      .input(z.object({
+        documentSlug: z.string(),
+        publishAt: z.string(), // ISO date string
+      }))
+      .mutation(async ({ input, ctx }) => {
+        const publishDate = new Date(input.publishAt);
+        if (publishDate <= new Date()) throw new Error('Publish date must be in the future');
+        return schedulePublish(input.documentSlug, publishDate, ctx.user?.name || 'admin');
+      }),
+
+    list: adminProcedure
+      .query(async () => getScheduledPublishes()),
+
+    getForDoc: adminProcedure
+      .input(z.object({ documentSlug: z.string() }))
+      .query(async ({ input }) => getScheduledPublishForDoc(input.documentSlug)),
+
+    cancel: adminProcedure
+      .input(z.object({ documentSlug: z.string() }))
+      .mutation(async ({ input }) => cancelScheduledPublish(input.documentSlug)),
+
+    process: adminProcedure
+      .mutation(async () => processScheduledPublishes()),
+  }),
+
+  // ==================== Batch 11: Approval Queue ====================
+  approvals: router({
+    list: adminProcedure
+      .query(async () => getDocumentsInReview()),
+
+    approve: adminProcedure
+      .input(z.object({ slug: z.string() }))
+      .mutation(async ({ input }) => {
+        await approveDocument(input.slug);
+        await logAuditEntry({ documentSlug: input.slug, action: 'approved', field: 'status', oldValue: 'review', newValue: 'published', changedBy: 'admin' });
+        await logActivity('approve', input.slug, undefined, 'Approved for publishing');
+        return { success: true };
+      }),
+
+    reject: adminProcedure
+      .input(z.object({ slug: z.string(), reason: z.string().optional() }))
+      .mutation(async ({ input }) => {
+        await rejectDocument(input.slug);
+        await logAuditEntry({ documentSlug: input.slug, action: 'rejected', field: 'status', oldValue: 'review', newValue: 'draft', changedBy: 'admin' });
+        await logActivity('reject', input.slug, undefined, input.reason || 'Rejected - returned to draft');
+        return { success: true };
+      }),
+  }),
+
+  // ==================== Batch 11: Bulk Tag Management ====================
+  tagManagement: router({
+    listWithCounts: adminProcedure
+      .query(async () => getAllTagsWithCounts()),
+
+    rename: adminProcedure
+      .input(z.object({ oldTag: z.string(), newTag: z.string().min(1).max(100) }))
+      .mutation(async ({ input }) => {
+        const affected = await renameTag(input.oldTag, input.newTag.toLowerCase().trim());
+        return { affected };
+      }),
+
+    merge: adminProcedure
+      .input(z.object({ sourceTag: z.string(), targetTag: z.string() }))
+      .mutation(async ({ input }) => {
+        const merged = await mergeTags(input.sourceTag, input.targetTag);
+        return { merged };
+      }),
+
+    deleteGlobally: adminProcedure
+      .input(z.object({ tag: z.string() }))
+      .mutation(async ({ input }) => {
+        const deleted = await deleteTagGlobally(input.tag);
+        return { deleted };
+      }),
+  }),
+
+  // ==================== Batch 11: Import from URL ====================
+  importFromUrl: router({
+    import: adminProcedure
+      .input(z.object({
+        url: z.string().url(),
+        title: z.string().min(1).max(500),
+        category: z.string().min(1).max(100),
+        locale: z.string().max(10).optional().default('en'),
+      }))
+      .mutation(async ({ input }) => {
+        // Fetch content from URL
+        const response = await fetch(input.url);
+        if (!response.ok) throw new Error(`Failed to fetch URL: ${response.status}`);
+        const html = await response.text();
+        // Simple HTML-to-text extraction (strip tags)
+        const content = html.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+          .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+          .replace(/<[^>]+>/g, '\n')
+          .replace(/\n{3,}/g, '\n\n')
+          .trim();
+        const slug = input.title.replace(/[^a-zA-Z0-9]+/g, '-').replace(/^-|-$/g, '').toLowerCase();
+        const result = await importDocumentFromContent(slug, input.title, input.category, content, input.locale);
+        await logActivity('import_url', slug, undefined, `Imported from: ${input.url}`);
+        return result;
       }),
   }),
 });

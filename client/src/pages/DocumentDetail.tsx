@@ -23,6 +23,9 @@ import DocumentDependencies from '@/components/DocumentDependencies';
 import ReadingProgressBar from '@/components/ReadingProgressBar';
 import TableOfContents from '@/components/TableOfContents';
 import AISuggestions from '@/components/AISuggestions';
+import DistractionFreeMode from '@/components/DistractionFreeMode';
+import ShareLinkManager from '@/components/ShareLinkManager';
+import '@/styles/print.css';
 import GlossaryAutoLink from '@/components/GlossaryAutoLink';
 import DocumentComparisonView from '@/components/DocumentComparisonView';
 
@@ -293,6 +296,12 @@ export default function DocumentDetail() {
 
   return (
     <div className="min-h-screen bg-background">
+      {/* Print-only branded header */}
+      <div className="print-header hidden">
+        <h1>{document.title}</h1>
+        <div className="subtitle">Riad & Routes — Operational Reference Guide | {document.category} | Last updated: {new Date(document.updatedAt || document.createdAt).toLocaleDateString()}</div>
+      </div>
+
       {/* Reading Progress Bar */}
       <div className="fixed top-0 left-0 right-0 z-[60] h-0.5 bg-border/30">
         <div
@@ -365,8 +374,10 @@ export default function DocumentDetail() {
               <ExternalLink className="w-5 h-5 sm:w-4 sm:h-4" />
             </button>
             {document && <ShareDocument title={document.title} slug={document.slug} category={document.category} />}
+            {document && <DistractionFreeMode><ReactMarkdown remarkPlugins={[remarkGfm]}>{document.content || ''}</ReactMarkdown></DistractionFreeMode>}
           </div>
         </div>
+        {document && <ShareLinkManager documentSlug={document.slug} />}
       </header>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -673,6 +684,11 @@ function MobileTOC({ headings, activeHeading }: { headings: { id: string; text: 
           ))}
         </nav>
       )}
+
+      {/* Print-only branded footer */}
+      <div className="print-footer hidden">
+        Riad & Routes — riadandroutes.com | Confidential — For internal use only | Printed: {new Date().toLocaleDateString()}
+      </div>
     </div>
   );
 }

@@ -22,21 +22,27 @@ export function ThemeProvider({
   switchable = false,
 }: ThemeProviderProps) {
   const [theme, setTheme] = useState<Theme>(() => {
+    // Always check localStorage for user preference
+    const stored = localStorage.getItem("preferred_theme") as Theme | null;
+    if (stored) return stored;
     if (switchable) {
-      const stored = localStorage.getItem("theme");
-      return (stored as Theme) || defaultTheme;
+      const legacyStored = localStorage.getItem("theme") as Theme | null;
+      if (legacyStored) return legacyStored;
     }
     return defaultTheme;
   });
 
   useEffect(() => {
     const root = document.documentElement;
-    if (theme === "dark") {
-      root.classList.add("dark");
-    } else {
-      root.classList.remove("dark");
-    }
+    // Add smooth transition for theme changes
+    root.style.transition = "background-color 0.3s ease, color 0.3s ease";
+    
+    root.classList.remove("dark", "light");
+    root.classList.add(theme);
 
+    // Persist to localStorage
+    localStorage.setItem("preferred_theme", theme);
+    // Also keep legacy key for backward compat
     if (switchable) {
       localStorage.setItem("theme", theme);
     }

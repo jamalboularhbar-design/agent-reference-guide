@@ -1,4 +1,4 @@
-import { Sparkles, Moon, Sun, Columns, Settings, BookOpen, List, FileText, Tag, BarChart3, Activity, Megaphone, FolderPlus, AlertTriangle, Book, Target, Code, PieChart, Columns3, Clock } from 'lucide-react';
+import { Sparkles, Moon, Sun, Columns, Settings, BookOpen, List, FileText, Tag, BarChart3, Activity, Megaphone, FolderPlus, AlertTriangle, Book, Target, Code, PieChart, Columns3, Clock, CheckCircle, CalendarClock, Bookmark } from 'lucide-react';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useLocation } from 'wouter';
 import { useAuth } from '@/_core/hooks/useAuth';
@@ -79,6 +79,13 @@ export default function Header() {
           >
             <Code className="w-4 h-4" />
           </button>
+          <button
+            onClick={() => navigate('/bookmarks')}
+            className="hidden lg:block p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-card/80 border border-border/50 transition-colors active:bg-card/60"
+            title="My Bookmarks"
+          >
+            <Bookmark className="w-4 h-4" />
+          </button>
           {user?.role === 'admin' && (
             <>
               <button
@@ -143,6 +150,27 @@ export default function Header() {
                 title="Audit Trail"
               >
                 <Clock className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => navigate('/admin/approvals')}
+                className="hidden lg:block p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-card/80 border border-border/50 transition-colors active:bg-card/60"
+                title="Approval Queue"
+              >
+                <CheckCircle className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => navigate('/admin/tags')}
+                className="hidden lg:block p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-card/80 border border-border/50 transition-colors active:bg-card/60"
+                title="Tag Management"
+              >
+                <Tag className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => navigate('/admin/scheduled')}
+                className="hidden lg:block p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-card/80 border border-border/50 transition-colors active:bg-card/60"
+                title="Scheduled Publishing"
+              >
+                <CalendarClock className="w-4 h-4" />
               </button>
             </>
           )}

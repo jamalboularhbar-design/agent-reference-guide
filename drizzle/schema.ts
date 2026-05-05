@@ -247,3 +247,40 @@ export const documentAuditTrail = mysqlTable("document_audit_trail", {
 });
 
 export type DocumentAuditEntry = typeof documentAuditTrail.$inferSelect;
+
+// Bookmark notes - personal notes attached to bookmarks
+export const bookmarkNotes = mysqlTable("bookmark_notes", {
+  id: int("id").autoincrement().primaryKey(),
+  visitorId: varchar("visitorId", { length: 100 }).notNull(),
+  documentSlug: varchar("documentSlug", { length: 255 }).notNull(),
+  note: text("note").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type BookmarkNote = typeof bookmarkNotes.$inferSelect;
+
+// Share links - time-limited share URLs for documents
+export const shareLinks = mysqlTable("share_links", {
+  id: int("id").autoincrement().primaryKey(),
+  documentSlug: varchar("documentSlug", { length: 255 }).notNull(),
+  token: varchar("token", { length: 64 }).notNull().unique(),
+  expiresAt: timestamp("expiresAt").notNull(),
+  createdBy: varchar("createdBy", { length: 100 }),
+  accessCount: int("accessCount").default(0).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type ShareLink = typeof shareLinks.$inferSelect;
+
+// Scheduled publish - future publish dates for draft documents
+export const scheduledPublish = mysqlTable("scheduled_publish", {
+  id: int("id").autoincrement().primaryKey(),
+  documentSlug: varchar("documentSlug", { length: 255 }).notNull().unique(),
+  publishAt: timestamp("publishAt").notNull(),
+  createdBy: varchar("createdBy", { length: 100 }),
+  status: mysqlEnum("status", ["pending", "published", "cancelled"]).default("pending").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type ScheduledPublishEntry = typeof scheduledPublish.$inferSelect;

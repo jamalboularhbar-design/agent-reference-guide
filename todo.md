@@ -127,3 +127,13 @@
 - [x] Admin document audit trail (detailed changelog per document showing who changed what and when)
 - [x] Related documents AI suggestions (use LLM to suggest related docs based on content similarity)
 - [x] Table of contents sidebar for long documents (auto-generated from markdown headings, sticky on scroll)
+- [x] Dark/light mode toggle per user with localStorage persistence and smooth transition animation
+- [x] Document approval queue page (/admin/approvals) with one-click approve/reject buttons for review-status docs
+- [x] Scheduled content publishing (admin sets future publish date, draft docs auto-transition to published)
+- [x] Document bookmarks with notes (users can add personal notes to their bookmarks, viewable in /bookmarks)
+- [x] Full-screen distraction-free reading mode (toggle button on document detail, hides header/sidebar/chrome)
+- [x] Document print layout improvements (custom print stylesheet with branded header/footer, page breaks)
+- [x] Admin bulk tag editor page (/admin/tags) with rename, merge, and delete operations across all documents
+- [x] Document sharing with expiring links (generate time-limited share URLs for private/draft documents)
+- [x] Onboarding tour for first-time visitors (step-by-step tooltip walkthrough of key features)
+- [x] Admin document import from URL (paste a URL, auto-fetch content and create document from it)

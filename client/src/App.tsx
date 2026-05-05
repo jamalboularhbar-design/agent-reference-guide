@@ -30,6 +30,13 @@ import ReadingGoalsPage from "./pages/ReadingGoalsPage";
 import ApiDocsPage from "./pages/ApiDocsPage";
 import AdminKanbanPage from "./pages/AdminKanbanPage";
 import AdminAuditTrailPage from "./pages/AdminAuditTrailPage";
+import AdminApprovalsPage from "./pages/AdminApprovalsPage";
+import AdminTagsPage from "./pages/AdminTagsPage";
+import AdminImportUrlPage from "./pages/AdminImportUrlPage";
+import AdminScheduledPage from "./pages/AdminScheduledPage";
+import BookmarksPage from "./pages/BookmarksPage";
+import ShareLinkPage from "./pages/ShareLinkPage";
+import OnboardingTour from "./components/OnboardingTour";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -59,6 +66,12 @@ function Router() {
       <Route path={"/api/docs"} component={ApiDocsPage} />
       <Route path={"/admin/kanban"} component={AdminKanbanPage} />
       <Route path={"/admin/audit"} component={AdminAuditTrailPage} />
+      <Route path={"/admin/approvals"} component={AdminApprovalsPage} />
+      <Route path={"/admin/tags"} component={AdminTagsPage} />
+      <Route path={"/admin/import-url"} component={AdminImportUrlPage} />
+      <Route path={"/admin/scheduled"} component={AdminScheduledPage} />
+      <Route path={"/bookmarks"} component={BookmarksPage} />
+      <Route path={"/share/:token"} component={ShareLinkPage} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />
@@ -85,6 +98,7 @@ function App() {
           </a>
           {/* Site-wide announcement banner */}
           <AnnouncementBanner />
+          <OnboardingTour />
           <main id="main-content" role="main">
             <Router />
           </main>

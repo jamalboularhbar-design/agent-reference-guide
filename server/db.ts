@@ -1,6 +1,6 @@
 import { eq, like, or, sql, desc, asc, count, and } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, documents, documentRatings, readingLists, readingListItems, searchAnalytics, documentTags, documentComments, documentVersions, customCategories, downloadHistory, announcements, activityLog, documentAuditTrail } from "../drizzle/schema";
+import { InsertUser, users, documents, documentRatings, readingLists, readingListItems, searchAnalytics, documentTags, documentComments, documentVersions, customCategories, downloadHistory, announcements, activityLog, documentAuditTrail, bookmarkNotes, shareLinks, scheduledPublish } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -1396,4 +1396,193 @@ export async function getDocumentSummariesForAI(excludeSlug: string, limit = 20)
   }).from(documents)
     .where(sql`${documents.slug} != ${excludeSlug} AND ${documents.status} = 'published'`)
     .limit(limit);
+}
+
+// ==================== Batch 11: Bookmark Notes ====================
+
+export async function getBookmarkNotes(visitorId: string) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(bookmarkNotes).where(eq(bookmarkNotes.visitorId, visitorId)).orderBy(desc(bookmarkNotes.updatedAt));
+}
+
+export async function getBookmarkNote(visitorId: string, documentSlug: string) {
+  const db = await getDb();
+  if (!db) return null;
+  const rows = await db.select().from(bookmarkNotes).where(and(eq(bookmarkNotes.visitorId, visitorId), eq(bookmarkNotes.documentSlug, documentSlug)));
+  return rows[0] || null;
+}
+
+export async function upsertBookmarkNote(visitorId: string, documentSlug: string, note: string) {
+  const db = await getDb();
+  if (!db) return null;
+  const existing = await getBookmarkNote(visitorId, documentSlug);
+  if (existing) {
+    await db.update(bookmarkNotes).set({ note }).where(eq(bookmarkNotes.id, existing.id));
+    return { ...existing, note };
+  }
+  const result = await db.insert(bookmarkNotes).values({ visitorId, documentSlug, note });
+  return { id: Number(result[0].insertId), visitorId, documentSlug, note };
+}
+
+export async function deleteBookmarkNote(visitorId: string, documentSlug: string) {
+  const db = await getDb();
+  if (!db) return;
+  await db.delete(bookmarkNotes).where(and(eq(bookmarkNotes.visitorId, visitorId), eq(bookmarkNotes.documentSlug, documentSlug)));
+}
+
+// ==================== Batch 11: Share Links ====================
+
+export async function createShareLink(documentSlug: string, token: string, expiresAt: Date, createdBy?: string) {
+  const db = await getDb();
+  if (!db) return null;
+  const result = await db.insert(shareLinks).values({ documentSlug, token, expiresAt, createdBy });
+  return { id: Number(result[0].insertId), documentSlug, token, expiresAt, createdBy };
+}
+
+export async function getShareLinkByToken(token: string) {
+  const db = await getDb();
+  if (!db) return null;
+  const rows = await db.select().from(shareLinks).where(eq(shareLinks.token, token));
+  return rows[0] || null;
+}
+
+export async function getShareLinksForDocument(documentSlug: string) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(shareLinks).where(eq(shareLinks.documentSlug, documentSlug)).orderBy(desc(shareLinks.createdAt));
+}
+
+export async function incrementShareLinkAccess(token: string) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(shareLinks).set({ accessCount: sql`${shareLinks.accessCount} + 1` }).where(eq(shareLinks.token, token));
+}
+
+export async function deleteShareLink(id: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.delete(shareLinks).where(eq(shareLinks.id, id));
+}
+
+// ==================== Batch 11: Scheduled Publish ====================
+
+export async function schedulePublish(documentSlug: string, publishAt: Date, createdBy?: string) {
+  const db = await getDb();
+  if (!db) return null;
+  // Cancel any existing schedule for this doc
+  await db.update(scheduledPublish).set({ status: 'cancelled' }).where(and(eq(scheduledPublish.documentSlug, documentSlug), eq(scheduledPublish.status, 'pending')));
+  const result = await db.insert(scheduledPublish).values({ documentSlug, publishAt, createdBy });
+  return { id: Number(result[0].insertId), documentSlug, publishAt, status: 'pending' };
+}
+
+export async function getScheduledPublishes() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(scheduledPublish).where(eq(scheduledPublish.status, 'pending')).orderBy(asc(scheduledPublish.publishAt));
+}
+
+export async function getScheduledPublishForDoc(documentSlug: string) {
+  const db = await getDb();
+  if (!db) return null;
+  const rows = await db.select().from(scheduledPublish).where(and(eq(scheduledPublish.documentSlug, documentSlug), eq(scheduledPublish.status, 'pending')));
+  return rows[0] || null;
+}
+
+export async function cancelScheduledPublish(documentSlug: string) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(scheduledPublish).set({ status: 'cancelled' }).where(and(eq(scheduledPublish.documentSlug, documentSlug), eq(scheduledPublish.status, 'pending')));
+}
+
+export async function processScheduledPublishes() {
+  const db = await getDb();
+  if (!db) return [];
+  const now = new Date();
+  // Find all pending items where publishAt <= now
+  const due = await db.select().from(scheduledPublish).where(and(eq(scheduledPublish.status, 'pending'), sql`${scheduledPublish.publishAt} <= ${now}`));
+  const published: string[] = [];
+  for (const item of due) {
+    await db.update(documents).set({ status: 'published' }).where(eq(documents.slug, item.documentSlug));
+    await db.update(scheduledPublish).set({ status: 'published' }).where(eq(scheduledPublish.id, item.id));
+    published.push(item.documentSlug);
+  }
+  return published;
+}
+
+// ==================== Batch 11: Bulk Tag Operations ====================
+
+export async function renameTag(oldTag: string, newTag: string) {
+  const db = await getDb();
+  if (!db) return 0;
+  const result = await db.update(documentTags).set({ tag: newTag }).where(eq(documentTags.tag, oldTag));
+  return result[0]?.affectedRows || 0;
+}
+
+export async function mergeTags(sourceTag: string, targetTag: string) {
+  const db = await getDb();
+  if (!db) return 0;
+  // Get all docs with source tag
+  const sourceDocs = await db.select().from(documentTags).where(eq(documentTags.tag, sourceTag));
+  // Get all docs with target tag already
+  const targetDocs = await db.select().from(documentTags).where(eq(documentTags.tag, targetTag));
+  const targetSlugs = new Set(targetDocs.map(d => d.documentSlug));
+  
+  let merged = 0;
+  for (const doc of sourceDocs) {
+    if (!targetSlugs.has(doc.documentSlug)) {
+      // Move to target tag
+      await db.update(documentTags).set({ tag: targetTag }).where(eq(documentTags.id, doc.id));
+      merged++;
+    } else {
+      // Already has target tag, just delete source
+      await db.delete(documentTags).where(eq(documentTags.id, doc.id));
+    }
+  }
+  return merged;
+}
+
+export async function deleteTagGlobally(tag: string) {
+  const db = await getDb();
+  if (!db) return 0;
+  const result = await db.delete(documentTags).where(eq(documentTags.tag, tag));
+  return result[0]?.affectedRows || 0;
+}
+
+export async function getAllTagsWithCounts() {
+  const db = await getDb();
+  if (!db) return [];
+  const rows = await db.select({ tag: documentTags.tag, count: count() }).from(documentTags).groupBy(documentTags.tag).orderBy(desc(count()));
+  return rows;
+}
+
+// ==================== Batch 11: Import from URL ====================
+
+export async function importDocumentFromContent(slug: string, title: string, category: string, content: string, locale?: string) {
+  const db = await getDb();
+  if (!db) return null;
+  const filename = `ARG-Builder-${slug}.md`;
+  const wordCount = content.split(/\s+/).filter(Boolean).length;
+  const result = await db.insert(documents).values({ slug, title, category, filename, content, wordCount, status: 'draft', locale: locale || 'en' });
+  return { id: Number(result[0].insertId), slug, title, category, wordCount };
+}
+
+// ==================== Batch 11: Approval Queue ====================
+
+export async function getDocumentsInReview() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(documents).where(eq(documents.status, 'review')).orderBy(desc(documents.updatedAt));
+}
+
+export async function approveDocument(slug: string) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(documents).set({ status: 'published' }).where(eq(documents.slug, slug));
+}
+
+export async function rejectDocument(slug: string) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(documents).set({ status: 'draft' }).where(eq(documents.slug, slug));
 }

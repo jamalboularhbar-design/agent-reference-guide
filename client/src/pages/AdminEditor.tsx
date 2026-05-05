@@ -33,7 +33,7 @@ export default function AdminEditor() {
   const [statusFilter, setStatusFilter] = useState<'all' | DocStatus>('all');
   const [editingDoc, setEditingDoc] = useState<{
     slug?: string; title: string; category: string; content: string;
-    status: DocStatus; reviewBy?: string; locale?: string;
+    status: DocStatus; reviewBy?: string; locale?: string; scheduledPublishAt?: string;
   } | null>(null);
   const [deleteSlug, setDeleteSlug] = useState<string | null>(null);
   const [loadingSlug, setLoadingSlug] = useState<string | null>(null);
@@ -177,6 +177,13 @@ export default function AdminEditor() {
         reviewBy: editingDoc.reviewBy || undefined,
         locale: editingDoc.locale || 'en',
       });
+      // Schedule publish if date is set and status is draft
+      if (editingDoc.scheduledPublishAt && editingDoc.status === 'draft') {
+        scheduleMutation.mutate({
+          documentSlug: editingDoc.slug,
+          publishAt: new Date(editingDoc.scheduledPublishAt).toISOString(),
+        });
+      }
     } else {
       createMutation.mutate({
         title: editingDoc.title,
@@ -188,6 +195,7 @@ export default function AdminEditor() {
     }
   };
 
+  const scheduleMutation = trpc.scheduledPublish.schedule.useMutation();
   const isSaving = createMutation.isPending || updateMutation.isPending;
   const selectedArray = Array.from(selectedSlugs);
 
@@ -411,6 +419,16 @@ export default function AdminEditor() {
                     <option value="pt">Portuguese</option>
                     <option value="ar">Arabic</option>
                   </select>
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground mb-1 block">Schedule Publish (optional)</label>
+                  <Input
+                    type="datetime-local"
+                    value={editingDoc.scheduledPublishAt || ''}
+                    onChange={e => setEditingDoc({ ...editingDoc, scheduledPublishAt: e.target.value })}
+                    className="text-sm"
+                  />
+                  <p className="text-[10px] text-muted-foreground mt-1">Set a future date to auto-publish this draft.</p>
                 </div>
               </div>
               <div>
