@@ -19,6 +19,7 @@ import DocumentTags from '@/components/DocumentTags';
 const DocumentComments = lazy(() => import('@/components/DocumentComments'));
 const DocumentVersionHistory = lazy(() => import('@/components/DocumentVersionHistory'));
 import { recordReadingDay } from '@/components/ReadingStreak';
+import DocumentDependencies from '@/components/DocumentDependencies';
 
 // Reading time calculation
 function getReadingTime(wordCount: number): string {
@@ -114,6 +115,7 @@ export default function DocumentDetail() {
 
   // Record view count
   const recordViewMutation = trpc.documents.recordView.useMutation();
+  const recordCompletionMutation = trpc.readingGoals.recordCompletion.useMutation();
 
   // Track recently viewed
   useEffect(() => {
@@ -124,6 +126,11 @@ export default function DocumentDetail() {
       recordViewMutation.mutate({ slug: document.slug });
       // Track reading streak
       recordReadingDay();
+      // Track reading goal progress
+      const visitorId = localStorage.getItem('arg-visitor-id');
+      if (visitorId) {
+        recordCompletionMutation.mutate({ visitorId, documentSlug: document.slug });
+      }
     }
   }, [document]);
 
@@ -487,6 +494,9 @@ export default function DocumentDetail() {
                 {document.content}
               </ReactMarkdown>
             </article>
+
+            {/* Document Dependencies */}
+            <DocumentDependencies slug={document.slug} />
 
             {/* Related Documents */}
             <RelatedDocuments slug={document.slug} category={document.category} />

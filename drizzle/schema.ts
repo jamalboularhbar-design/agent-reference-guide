@@ -37,6 +37,8 @@ export const documents = mysqlTable("documents", {
   pinned: int("pinned").default(0).notNull(),
   // Review/expiry reminder date
   reviewBy: timestamp("reviewBy"),
+  // Language/locale for i18n
+  locale: varchar("locale", { length: 10 }).default("en").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
@@ -170,3 +172,64 @@ export const activityLog = mysqlTable("activity_log", {
 });
 
 export type ActivityLogEntry = typeof activityLog.$inferSelect;
+
+// Glossary terms - definitions for key terms used across documents
+export const glossaryTerms = mysqlTable("glossary_terms", {
+  id: int("id").autoincrement().primaryKey(),
+  term: varchar("term", { length: 200 }).notNull().unique(),
+  definition: text("definition").notNull(),
+  category: varchar("category", { length: 100 }),
+  relatedTerms: text("relatedTerms"), // JSON array of related term strings
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type GlossaryTerm = typeof glossaryTerms.$inferSelect;
+
+// Document dependencies/prerequisites
+export const documentDependencies = mysqlTable("document_dependencies", {
+  id: int("id").autoincrement().primaryKey(),
+  documentSlug: varchar("documentSlug", { length: 255 }).notNull(),
+  prerequisiteSlug: varchar("prerequisiteSlug", { length: 255 }).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type DocumentDependency = typeof documentDependencies.$inferSelect;
+
+// Reading goals - weekly reading targets and progress
+export const readingGoals = mysqlTable("reading_goals", {
+  id: int("id").autoincrement().primaryKey(),
+  visitorId: varchar("visitorId", { length: 100 }).notNull(),
+  weeklyTarget: int("weeklyTarget").default(5).notNull(), // docs per week
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type ReadingGoal = typeof readingGoals.$inferSelect;
+
+// Reading progress entries - track individual document reads
+export const readingProgress = mysqlTable("reading_progress", {
+  id: int("id").autoincrement().primaryKey(),
+  visitorId: varchar("visitorId", { length: 100 }).notNull(),
+  documentSlug: varchar("documentSlug", { length: 255 }).notNull(),
+  completedAt: timestamp("completedAt").defaultNow().notNull(),
+  weekNumber: int("weekNumber").notNull(), // ISO week number
+  yearNumber: int("yearNumber").notNull(),
+});
+
+export type ReadingProgressEntry = typeof readingProgress.$inferSelect;
+
+// Document templates gallery - reusable document templates
+export const documentTemplates = mysqlTable("document_templates", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 200 }).notNull(),
+  description: text("description"),
+  category: varchar("category", { length: 100 }).notNull(),
+  content: mediumtext("content").notNull(),
+  icon: varchar("icon", { length: 50 }),
+  usageCount: int("usageCount").default(0).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type DocumentTemplate = typeof documentTemplates.$inferSelect;

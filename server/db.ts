@@ -250,6 +250,7 @@ export async function createDocument(data: {
   content: string;
   wordCount: number;
   status?: 'draft' | 'review' | 'published';
+  locale?: string;
 }) {
   const db = await getDb();
   if (!db) throw new Error('Database not available');
@@ -268,6 +269,7 @@ export async function updateDocument(slug: string, data: {
   status?: 'draft' | 'review' | 'published';
   pinned?: number;
   reviewBy?: Date | null;
+  locale?: string;
 }) {
   const db = await getDb();
   if (!db) throw new Error('Database not available');
@@ -282,8 +284,8 @@ export async function updateDocument(slug: string, data: {
   if (data.status !== undefined) updateSet.status = data.status;
   if (data.pinned !== undefined) updateSet.pinned = data.pinned;
   if (data.reviewBy !== undefined) updateSet.reviewBy = data.reviewBy;
-
-  if (Object.keys(updateSet).length === 0) return getDocumentBySlug(slug);
+  if (data.locale !== undefined) updateSet.locale = data.locale;
+  if (Object.keys(updateSet).length === 0) return getDocumentBySlug(slug);;
 
   await db.update(documents).set(updateSet).where(eq(documents.slug, slug));
   return getDocumentBySlug(slug);
@@ -955,4 +957,365 @@ export async function getActivityLog(limit = 100) {
   return db.select().from(activityLog)
     .orderBy(desc(activityLog.createdAt))
     .limit(limit);
+}
+
+// ─── Full-text Relevance Search ──────────────────────────────────────────
+
+export async function searchWithRelevance(query: string, opts: { category?: string; locale?: string; limit?: number } = {}) {
+  const db = await getDb();
+  if (!db) return [];
+
+  const { category, locale, limit = 30 } = opts;
+  const pattern = `%${query.toLowerCase()}%`;
+
+  const conditions = [
+    sql`${documents.status} = 'published'`,
+  ];
+  if (category) conditions.push(eq(documents.category, category));
+  if (locale) conditions.push(eq(documents.locale, locale));
+
+  // Weighted scoring: title match = 10, tag match = 5, body match = 1
+  const results = await db
+    .select({
+      slug: documents.slug,
+      title: documents.title,
+      category: documents.category,
+      wordCount: documents.wordCount,
+      locale: documents.locale,
+      relevance: sql<number>`(
+        CASE WHEN LOWER(${documents.title}) LIKE ${pattern} THEN 10 ELSE 0 END +
+        CASE WHEN LOWER(${documents.content}) LIKE ${pattern} THEN 1 ELSE 0 END
+      )`,
+      snippet: sql<string>`SUBSTRING(${documents.content}, GREATEST(1, LOCATE(LOWER(${query}), LOWER(${documents.content})) - 60), 200)`,
+    })
+    .from(documents)
+    .where(sql`${sql.join(conditions, sql` AND `)} AND (LOWER(${documents.title}) LIKE ${pattern} OR LOWER(${documents.content}) LIKE ${pattern})`)
+    .orderBy(sql`(
+      CASE WHEN LOWER(${documents.title}) LIKE ${pattern} THEN 10 ELSE 0 END +
+      CASE WHEN LOWER(${documents.content}) LIKE ${pattern} THEN 1 ELSE 0 END
+    ) DESC`)
+    .limit(limit);
+
+  // Boost results that have matching tags
+  const tagResults = await db
+    .select({ slug: documentTags.documentSlug })
+    .from(documentTags)
+    .where(sql`LOWER(${documentTags.tag}) LIKE ${pattern}`);
+  const tagSlugs = new Set(tagResults.map(r => r.slug));
+
+  return results.map(r => ({
+    ...r,
+    relevance: Number(r.relevance) + (tagSlugs.has(r.slug) ? 5 : 0),
+  })).sort((a, b) => b.relevance - a.relevance);
+}
+
+// ─── Document Analytics ──────────────────────────────────────────────────
+
+export async function getViewsOverTime(days = 30) {
+  const db = await getDb();
+  if (!db) return [];
+
+  return db.select({
+    date: sql<string>`DATE(${activityLog.createdAt})`,
+    views: count(),
+  })
+    .from(activityLog)
+    .where(sql`${activityLog.action} = 'view' AND ${activityLog.createdAt} >= DATE_SUB(NOW(), INTERVAL ${days} DAY)`)
+    .groupBy(sql`DATE(${activityLog.createdAt})`)
+    .orderBy(sql`DATE(${activityLog.createdAt})`);
+}
+
+export async function getTopDocuments(limit = 10) {
+  const db = await getDb();
+  if (!db) return [];
+
+  return db.select({
+    slug: documents.slug,
+    title: documents.title,
+    category: documents.category,
+    viewCount: documents.viewCount,
+    upvotes: documents.upvotes,
+    downvotes: documents.downvotes,
+  })
+    .from(documents)
+    .orderBy(desc(documents.viewCount))
+    .limit(limit);
+}
+
+export async function getDownloadTrends(days = 30) {
+  const db = await getDb();
+  if (!db) return [];
+
+  return db.select({
+    date: sql<string>`DATE(${downloadHistory.createdAt})`,
+    downloads: count(),
+  })
+    .from(downloadHistory)
+    .where(sql`${downloadHistory.createdAt} >= DATE_SUB(NOW(), INTERVAL ${days} DAY)`)
+    .groupBy(sql`DATE(${downloadHistory.createdAt})`)
+    .orderBy(sql`DATE(${downloadHistory.createdAt})`);
+}
+
+export async function getCategoryDistribution() {
+  const db = await getDb();
+  if (!db) return [];
+
+  return db.select({
+    category: documents.category,
+    count: count(),
+    totalViews: sql<number>`COALESCE(SUM(${documents.viewCount}), 0)`,
+  })
+    .from(documents)
+    .groupBy(documents.category)
+    .orderBy(desc(count()));
+}
+
+// ─── Glossary ────────────────────────────────────────────────────────────
+
+import { glossaryTerms, documentDependencies, readingGoals, readingProgress, documentTemplates } from "../drizzle/schema";
+
+export async function getGlossaryTerms(category?: string) {
+  const db = await getDb();
+  if (!db) return [];
+
+  if (category) {
+    return db.select().from(glossaryTerms)
+      .where(eq(glossaryTerms.category, category))
+      .orderBy(asc(glossaryTerms.term));
+  }
+  return db.select().from(glossaryTerms).orderBy(asc(glossaryTerms.term));
+}
+
+export async function createGlossaryTerm(data: { term: string; definition: string; category?: string; relatedTerms?: string }) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+
+  const result = await db.insert(glossaryTerms).values({
+    term: data.term,
+    definition: data.definition,
+    category: data.category || null,
+    relatedTerms: data.relatedTerms || null,
+  });
+  return { id: result[0].insertId };
+}
+
+export async function updateGlossaryTerm(id: number, data: { term?: string; definition?: string; category?: string; relatedTerms?: string }) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+
+  const updateSet: Record<string, unknown> = {};
+  if (data.term !== undefined) updateSet.term = data.term;
+  if (data.definition !== undefined) updateSet.definition = data.definition;
+  if (data.category !== undefined) updateSet.category = data.category;
+  if (data.relatedTerms !== undefined) updateSet.relatedTerms = data.relatedTerms;
+
+  await db.update(glossaryTerms).set(updateSet).where(eq(glossaryTerms.id, id));
+  return { success: true };
+}
+
+export async function deleteGlossaryTerm(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+
+  await db.delete(glossaryTerms).where(eq(glossaryTerms.id, id));
+  return { success: true };
+}
+
+// ─── Document Dependencies ───────────────────────────────────────────────
+
+export async function getDocumentDependencies(slug: string) {
+  const db = await getDb();
+  if (!db) return [];
+
+  return db.select({
+    prerequisiteSlug: documentDependencies.prerequisiteSlug,
+    title: documents.title,
+    category: documents.category,
+  })
+    .from(documentDependencies)
+    .innerJoin(documents, eq(documentDependencies.prerequisiteSlug, documents.slug))
+    .where(eq(documentDependencies.documentSlug, slug));
+}
+
+export async function getDependentDocuments(slug: string) {
+  const db = await getDb();
+  if (!db) return [];
+
+  return db.select({
+    documentSlug: documentDependencies.documentSlug,
+    title: documents.title,
+    category: documents.category,
+  })
+    .from(documentDependencies)
+    .innerJoin(documents, eq(documentDependencies.documentSlug, documents.slug))
+    .where(eq(documentDependencies.prerequisiteSlug, slug));
+}
+
+export async function addDocumentDependency(documentSlug: string, prerequisiteSlug: string) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+
+  const existing = await db.select().from(documentDependencies)
+    .where(and(eq(documentDependencies.documentSlug, documentSlug), eq(documentDependencies.prerequisiteSlug, prerequisiteSlug)))
+    .limit(1);
+  if (existing.length > 0) return { alreadyExists: true };
+
+  await db.insert(documentDependencies).values({ documentSlug, prerequisiteSlug });
+  return { alreadyExists: false };
+}
+
+export async function removeDocumentDependency(documentSlug: string, prerequisiteSlug: string) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+
+  await db.delete(documentDependencies)
+    .where(and(eq(documentDependencies.documentSlug, documentSlug), eq(documentDependencies.prerequisiteSlug, prerequisiteSlug)));
+  return { success: true };
+}
+
+// ─── Reading Goals & Progress ────────────────────────────────────────────
+
+export async function getReadingGoal(visitorId: string) {
+  const db = await getDb();
+  if (!db) return null;
+
+  const result = await db.select().from(readingGoals)
+    .where(eq(readingGoals.visitorId, visitorId))
+    .limit(1);
+  return result[0] || null;
+}
+
+export async function setReadingGoal(visitorId: string, weeklyTarget: number) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+
+  const existing = await db.select().from(readingGoals)
+    .where(eq(readingGoals.visitorId, visitorId))
+    .limit(1);
+
+  if (existing.length > 0) {
+    await db.update(readingGoals).set({ weeklyTarget }).where(eq(readingGoals.visitorId, visitorId));
+  } else {
+    await db.insert(readingGoals).values({ visitorId, weeklyTarget });
+  }
+  return { success: true };
+}
+
+export async function recordReadingCompletion(visitorId: string, documentSlug: string) {
+  const db = await getDb();
+  if (!db) return;
+
+  const now = new Date();
+  // Calculate ISO week number
+  const startOfYear = new Date(now.getFullYear(), 0, 1);
+  const weekNumber = Math.ceil(((now.getTime() - startOfYear.getTime()) / 86400000 + startOfYear.getDay() + 1) / 7);
+
+  // Check if already recorded this week
+  const existing = await db.select().from(readingProgress)
+    .where(and(
+      eq(readingProgress.visitorId, visitorId),
+      eq(readingProgress.documentSlug, documentSlug),
+      eq(readingProgress.weekNumber, weekNumber),
+      eq(readingProgress.yearNumber, now.getFullYear()),
+    ))
+    .limit(1);
+
+  if (existing.length === 0) {
+    await db.insert(readingProgress).values({
+      visitorId,
+      documentSlug,
+      weekNumber,
+      yearNumber: now.getFullYear(),
+    });
+  }
+}
+
+export async function getWeeklyProgress(visitorId: string) {
+  const db = await getDb();
+  if (!db) return { docsRead: 0, target: 5, badges: [] };
+
+  const now = new Date();
+  const startOfYear = new Date(now.getFullYear(), 0, 1);
+  const weekNumber = Math.ceil(((now.getTime() - startOfYear.getTime()) / 86400000 + startOfYear.getDay() + 1) / 7);
+
+  const goal = await getReadingGoal(visitorId);
+  const target = goal?.weeklyTarget ?? 5;
+
+  const thisWeek = await db.select({ count: count() }).from(readingProgress)
+    .where(and(
+      eq(readingProgress.visitorId, visitorId),
+      eq(readingProgress.weekNumber, weekNumber),
+      eq(readingProgress.yearNumber, now.getFullYear()),
+    ));
+
+  const docsRead = thisWeek[0]?.count ?? 0;
+
+  // Calculate badges based on total reads
+  const totalReads = await db.select({ count: count() }).from(readingProgress)
+    .where(eq(readingProgress.visitorId, visitorId));
+  const total = totalReads[0]?.count ?? 0;
+
+  const badges: string[] = [];
+  if (total >= 5) badges.push('Bookworm');
+  if (total >= 25) badges.push('Scholar');
+  if (total >= 50) badges.push('Expert');
+  if (total >= 100) badges.push('Master');
+  if (docsRead >= target) badges.push('Weekly Goal Met');
+
+  return { docsRead, target, badges, totalReads: total };
+}
+
+// ─── Document Templates Gallery ──────────────────────────────────────────
+
+export async function getDocumentTemplates(category?: string) {
+  const db = await getDb();
+  if (!db) return [];
+
+  if (category) {
+    return db.select().from(documentTemplates)
+      .where(eq(documentTemplates.category, category))
+      .orderBy(desc(documentTemplates.usageCount));
+  }
+  return db.select().from(documentTemplates).orderBy(desc(documentTemplates.usageCount));
+}
+
+export async function createDocumentTemplate(data: { name: string; description?: string; category: string; content: string; icon?: string }) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+
+  const result = await db.insert(documentTemplates).values({
+    name: data.name,
+    description: data.description || null,
+    category: data.category,
+    content: data.content,
+    icon: data.icon || null,
+  });
+  return { id: result[0].insertId };
+}
+
+export async function getDocumentTemplateById(id: number) {
+  const db = await getDb();
+  if (!db) return null;
+
+  const result = await db.select().from(documentTemplates)
+    .where(eq(documentTemplates.id, id))
+    .limit(1);
+  return result[0] || null;
+}
+
+export async function incrementTemplateUsage(id: number) {
+  const db = await getDb();
+  if (!db) return;
+
+  await db.update(documentTemplates)
+    .set({ usageCount: sql`${documentTemplates.usageCount} + 1` })
+    .where(eq(documentTemplates.id, id));
+}
+
+export async function deleteDocumentTemplate(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+
+  await db.delete(documentTemplates).where(eq(documentTemplates.id, id));
+  return { success: true };
 }

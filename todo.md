@@ -106,3 +106,13 @@
 - [x] Document download history log (track who downloaded what, admin viewable)
 - [x] Admin user activity page (/admin/activity) showing recent actions (views, ratings, comments, downloads)
 - [x] Site-wide announcement banner (admin-configurable dismissible banner at top of all pages)
+- [x] Role-based access control (restrict admin routes server-side, only owner can manage docs/announcements/categories)
+- [x] Full-text search with relevance scoring (weighted ranking: title matches > tag matches > body content)
+- [x] Document analytics dashboard (/admin/dashboard) with charts (views over time, top docs, download trends)
+- [x] Multi-language/i18n support (language selector, store document locale, filter by language)
+- [x] Document templates gallery (/templates/gallery) with preview, clone-to-new-doc, and category-specific templates
+- [x] Glossary/definitions system (/glossary) with term definitions, auto-linking terms in documents
+- [x] Document dependencies/prerequisites (link docs as prerequisites, show dependency tree on detail page)
+- [x] Reading goals and progress tracking (set weekly reading goals, track completion %, gamification badges)
+- [x] Document approval workflow notifications (notify owner when doc moves to review, approval actions)
+- [x] Public REST API documentation endpoint (/api/docs) with OpenAPI-style reference for external integrations

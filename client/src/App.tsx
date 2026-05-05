@@ -23,6 +23,11 @@ import AdminCategoriesPage from "./pages/AdminCategoriesPage";
 import AdminStaleDocsPage from "./pages/AdminStaleDocsPage";
 import KeyboardShortcutsModal from "./components/KeyboardShortcutsModal";
 import AnnouncementBanner from "./components/AnnouncementBanner";
+import AdminDashboardPage from "./pages/AdminDashboardPage";
+import GlossaryPage from "./pages/GlossaryPage";
+import TemplatesGalleryPage from "./pages/TemplatesGalleryPage";
+import ReadingGoalsPage from "./pages/ReadingGoalsPage";
+import ApiDocsPage from "./pages/ApiDocsPage";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -45,6 +50,11 @@ function Router() {
       <Route path={"/admin/announcements"} component={AdminAnnouncementsPage} />
       <Route path={"/admin/categories"} component={AdminCategoriesPage} />
       <Route path={"/admin/stale"} component={AdminStaleDocsPage} />
+      <Route path={"/admin/dashboard"} component={AdminDashboardPage} />
+      <Route path={"/glossary"} component={GlossaryPage} />
+      <Route path={"/templates/gallery"} component={TemplatesGalleryPage} />
+      <Route path={"/reading-goals"} component={ReadingGoalsPage} />
+      <Route path={"/api/docs"} component={ApiDocsPage} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />

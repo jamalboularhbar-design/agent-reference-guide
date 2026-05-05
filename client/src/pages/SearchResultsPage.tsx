@@ -19,6 +19,8 @@ export default function SearchResultsPage() {
   const [minReadingTime, setMinReadingTime] = useState<number | undefined>();
   const [maxReadingTime, setMaxReadingTime] = useState<number | undefined>();
   const [showFilters, setShowFilters] = useState(false);
+  const [useRelevance, setUseRelevance] = useState(true);
+  const [locale, setLocale] = useState<string>('');
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedQuery(query), 300);
@@ -32,7 +34,15 @@ export default function SearchResultsPage() {
     }
   }, [debouncedQuery]);
 
-  const { data: results, isLoading } = trpc.documents.list.useQuery({
+  // Use relevance search when enabled
+  const { data: relevanceResults } = trpc.relevanceSearch.search.useQuery({
+    query: debouncedQuery,
+    category: selectedCategory || undefined,
+    locale: locale || undefined,
+    limit: 50,
+  }, { enabled: useRelevance && debouncedQuery.length >= 1 });
+
+  const { data: standardResults, isLoading } = trpc.documents.list.useQuery({
     search: debouncedQuery || undefined,
     category: selectedCategory || undefined,
     sort,
@@ -41,7 +51,12 @@ export default function SearchResultsPage() {
     tags: selectedTags.length > 0 ? selectedTags : undefined,
     minReadingTime,
     maxReadingTime,
-  }, { enabled: debouncedQuery.length >= 1 });
+  }, { enabled: !useRelevance && debouncedQuery.length >= 1 });
+
+  // Merge results based on mode
+  const results = useRelevance && relevanceResults
+    ? { documents: relevanceResults, total: relevanceResults.length }
+    : standardResults;
 
   const { data: categories } = trpc.documents.categories.useQuery();
   const { data: allTags } = trpc.tags.all.useQuery();
@@ -172,11 +187,36 @@ export default function SearchResultsPage() {
                   value={sort}
                   onChange={(e) => setSort(e.target.value as any)}
                   className="h-8 text-xs rounded border border-border bg-background px-2"
+                  disabled={useRelevance}
                 >
                   <option value="alpha">A-Z</option>
                   <option value="reading_time">Reading Time</option>
                   <option value="newest">Newest</option>
                 </select>
+              </div>
+              <div>
+                <label className="text-xs font-medium text-muted-foreground mb-1 block">Language</label>
+                <select
+                  value={locale}
+                  onChange={(e) => setLocale(e.target.value)}
+                  className="h-8 text-xs rounded border border-border bg-background px-2"
+                >
+                  <option value="">All</option>
+                  <option value="en">English</option>
+                  <option value="es">Spanish</option>
+                  <option value="fr">French</option>
+                  <option value="de">German</option>
+                  <option value="ja">Japanese</option>
+                </select>
+              </div>
+              <div className="flex items-center gap-2">
+                <label className="text-xs font-medium text-muted-foreground">Relevance</label>
+                <button
+                  onClick={() => setUseRelevance(!useRelevance)}
+                  className={`w-9 h-5 rounded-full transition-colors ${useRelevance ? 'bg-[#d4af37]' : 'bg-gray-600'}`}
+                >
+                  <div className={`w-4 h-4 rounded-full bg-white transition-transform ${useRelevance ? 'translate-x-4.5' : 'translate-x-0.5'}`} />
+                </button>
               </div>
               {(selectedCategory || selectedTags.length > 0 || minReadingTime || maxReadingTime) && (
                 <Button

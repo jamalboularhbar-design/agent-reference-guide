@@ -32,7 +32,7 @@ export default function AdminEditor() {
   const [statusFilter, setStatusFilter] = useState<'all' | DocStatus>('all');
   const [editingDoc, setEditingDoc] = useState<{
     slug?: string; title: string; category: string; content: string;
-    status: DocStatus; reviewBy?: string;
+    status: DocStatus; reviewBy?: string; locale?: string;
   } | null>(null);
   const [deleteSlug, setDeleteSlug] = useState<string | null>(null);
   const [loadingSlug, setLoadingSlug] = useState<string | null>(null);
@@ -104,6 +104,7 @@ export default function AdminEditor() {
           content: doc.content || '',
           status: (doc.status as DocStatus) || 'published',
           reviewBy: doc.reviewBy ? new Date(doc.reviewBy).toISOString().split('T')[0] : '',
+          locale: (doc as any).locale || 'en',
         });
       } else {
         toast.error('Document not found');
@@ -173,6 +174,7 @@ export default function AdminEditor() {
         content: editingDoc.content,
         status: editingDoc.status,
         reviewBy: editingDoc.reviewBy || undefined,
+        locale: editingDoc.locale || 'en',
       });
     } else {
       createMutation.mutate({
@@ -180,6 +182,7 @@ export default function AdminEditor() {
         category: editingDoc.category,
         content: editingDoc.content,
         status: editingDoc.status,
+        locale: editingDoc.locale || 'en',
       });
     }
   };
@@ -390,6 +393,23 @@ export default function AdminEditor() {
                     value={editingDoc.reviewBy || ''}
                     onChange={e => setEditingDoc({ ...editingDoc, reviewBy: e.target.value })}
                   />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground mb-1 block">Language</label>
+                  <select
+                    value={editingDoc.locale || 'en'}
+                    onChange={e => setEditingDoc({ ...editingDoc, locale: e.target.value })}
+                    className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm"
+                  >
+                    <option value="en">English</option>
+                    <option value="es">Spanish</option>
+                    <option value="fr">French</option>
+                    <option value="de">German</option>
+                    <option value="ja">Japanese</option>
+                    <option value="zh">Chinese</option>
+                    <option value="pt">Portuguese</option>
+                    <option value="ar">Arabic</option>
+                  </select>
                 </div>
               </div>
               <div>

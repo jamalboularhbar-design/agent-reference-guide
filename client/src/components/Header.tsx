@@ -1,4 +1,4 @@
-import { Sparkles, Moon, Sun, Columns, Settings, BookOpen, List, FileText, Tag, BarChart3, Activity, Megaphone, FolderPlus, AlertTriangle } from 'lucide-react';
+import { Sparkles, Moon, Sun, Columns, Settings, BookOpen, List, FileText, Tag, BarChart3, Activity, Megaphone, FolderPlus, AlertTriangle, Book, Target, Code, PieChart } from 'lucide-react';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useLocation } from 'wouter';
 import { useAuth } from '@/_core/hooks/useAuth';
@@ -58,6 +58,27 @@ export default function Header() {
           >
             <Columns className="w-4 h-4" />
           </button>
+          <button
+            onClick={() => navigate('/glossary')}
+            className="hidden sm:block p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-card/80 border border-border/50 transition-colors active:bg-card/60"
+            title="Glossary"
+          >
+            <Book className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => navigate('/reading-goals')}
+            className="hidden lg:block p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-card/80 border border-border/50 transition-colors active:bg-card/60"
+            title="Reading Goals"
+          >
+            <Target className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => navigate('/api/docs')}
+            className="hidden lg:block p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-card/80 border border-border/50 transition-colors active:bg-card/60"
+            title="API Documentation"
+          >
+            <Code className="w-4 h-4" />
+          </button>
           {user?.role === 'admin' && (
             <>
               <button
@@ -73,6 +94,13 @@ export default function Header() {
                 title="Search Analytics"
               >
                 <BarChart3 className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => navigate('/admin/dashboard')}
+                className="hidden sm:block p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-card/80 border border-border/50 transition-colors active:bg-card/60"
+                title="Analytics Dashboard"
+              >
+                <PieChart className="w-4 h-4" />
               </button>
               <button
                 onClick={() => navigate('/admin/activity')}

@@ -43,6 +43,13 @@
       "when": 1778014615465,
       "tag": "0005_sparkling_randall",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "5",
+      "when": 1778016894130,
+      "tag": "0006_zippy_gorilla_man",
+      "breakpoints": true
     }
   ]
 }

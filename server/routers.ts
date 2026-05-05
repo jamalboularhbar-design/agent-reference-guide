@@ -19,6 +19,11 @@ import {
   getStaleDocuments, logDownload, getDownloadHistory,
   getActiveAnnouncements, getAllAnnouncements, createAnnouncement, updateAnnouncement, deleteAnnouncement,
   logActivity, getActivityLog,
+  searchWithRelevance, getViewsOverTime, getTopDocuments, getDownloadTrends, getCategoryDistribution,
+  getGlossaryTerms, createGlossaryTerm, updateGlossaryTerm, deleteGlossaryTerm,
+  getDocumentDependencies, getDependentDocuments, addDocumentDependency, removeDocumentDependency,
+  getReadingGoal, setReadingGoal, recordReadingCompletion, getWeeklyProgress,
+  getDocumentTemplates, createDocumentTemplate, getDocumentTemplateById, incrementTemplateUsage, deleteDocumentTemplate,
 } from "./db";
 import { invokeLLM } from "./_core/llm";
 import { notifyOwner } from "./_core/notification";
@@ -150,12 +155,13 @@ export const appRouter = router({
         category: z.string().min(1).max(100),
         content: z.string().min(1),
         status: z.enum(['draft', 'review', 'published']).optional().default('published'),
+        locale: z.string().max(10).optional().default('en'),
       }))
       .mutation(async ({ input }) => {
         const slug = input.title.replace(/[^a-zA-Z0-9]+/g, '-').replace(/^-|-$/g, '');
         const filename = `ARG-Builder-${slug}.md`;
         const wordCount = input.content.split(/\s+/).filter(Boolean).length;
-        const result = await createDocument({ slug, title: input.title, category: input.category, filename, content: input.content, wordCount, status: input.status });
+        const result = await createDocument({ slug, title: input.title, category: input.category, filename, content: input.content, wordCount, status: input.status, locale: input.locale });
 
         await notifyOwner({
           title: `New Document Created: ${input.title}`,
@@ -175,6 +181,7 @@ export const appRouter = router({
         status: z.enum(['draft', 'review', 'published']).optional(),
         pinned: z.number().min(0).max(1).optional(),
         reviewBy: z.string().optional(),
+        locale: z.string().max(10).optional(),
         changeNote: z.string().optional(),
       }))
       .mutation(async ({ input, ctx }) => {
@@ -192,6 +199,15 @@ export const appRouter = router({
         }
 
         await logActivity('update', slug, undefined, changeNote || `Updated document`);
+
+        // Notify owner when document moves to review status
+        if (data.status === 'review') {
+          await notifyOwner({
+            title: `Document submitted for review: ${existing?.title || slug}`,
+            content: `The document "${existing?.title || slug}" has been moved to review status and requires approval.`,
+          });
+        }
+
         return updateDocument(slug, updateData);
       }),
 
@@ -481,6 +497,174 @@ export const appRouter = router({
       .input(z.object({ limit: z.number().min(1).max(200).optional().default(50) }))
       .query(async ({ input }) => {
         return getDownloadHistory(input.limit);
+      }),
+  }),
+
+  // Relevance Search
+  relevanceSearch: router({
+    search: publicProcedure
+      .input(z.object({
+        query: z.string().min(1),
+        category: z.string().optional(),
+        locale: z.string().optional(),
+        limit: z.number().min(1).max(50).optional().default(30),
+      }))
+      .query(async ({ input }) => {
+        return searchWithRelevance(input.query, input);
+      }),
+  }),
+
+  // Analytics Dashboard
+  analytics: router({
+    viewsOverTime: adminProcedure
+      .input(z.object({ days: z.number().min(1).max(90).optional().default(30) }))
+      .query(async ({ input }) => {
+        return getViewsOverTime(input.days);
+      }),
+
+    topDocuments: adminProcedure
+      .input(z.object({ limit: z.number().min(1).max(50).optional().default(10) }))
+      .query(async ({ input }) => {
+        return getTopDocuments(input.limit);
+      }),
+
+    downloadTrends: adminProcedure
+      .input(z.object({ days: z.number().min(1).max(90).optional().default(30) }))
+      .query(async ({ input }) => {
+        return getDownloadTrends(input.days);
+      }),
+
+    categoryDistribution: adminProcedure.query(async () => {
+      return getCategoryDistribution();
+    }),
+  }),
+
+  // Glossary
+  glossary: router({
+    list: publicProcedure
+      .input(z.object({ category: z.string().optional() }))
+      .query(async ({ input }) => {
+        return getGlossaryTerms(input.category);
+      }),
+
+    create: adminProcedure
+      .input(z.object({
+        term: z.string().min(1).max(200),
+        definition: z.string().min(1),
+        category: z.string().optional(),
+        relatedTerms: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        return createGlossaryTerm(input);
+      }),
+
+    update: adminProcedure
+      .input(z.object({
+        id: z.number(),
+        term: z.string().optional(),
+        definition: z.string().optional(),
+        category: z.string().optional(),
+        relatedTerms: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const { id, ...data } = input;
+        return updateGlossaryTerm(id, data);
+      }),
+
+    delete: adminProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        return deleteGlossaryTerm(input.id);
+      }),
+  }),
+
+  // Document Dependencies
+  dependencies: router({
+    prerequisites: publicProcedure
+      .input(z.object({ slug: z.string() }))
+      .query(async ({ input }) => {
+        return getDocumentDependencies(input.slug);
+      }),
+
+    dependents: publicProcedure
+      .input(z.object({ slug: z.string() }))
+      .query(async ({ input }) => {
+        return getDependentDocuments(input.slug);
+      }),
+
+    add: adminProcedure
+      .input(z.object({ documentSlug: z.string(), prerequisiteSlug: z.string() }))
+      .mutation(async ({ input }) => {
+        return addDocumentDependency(input.documentSlug, input.prerequisiteSlug);
+      }),
+
+    remove: adminProcedure
+      .input(z.object({ documentSlug: z.string(), prerequisiteSlug: z.string() }))
+      .mutation(async ({ input }) => {
+        return removeDocumentDependency(input.documentSlug, input.prerequisiteSlug);
+      }),
+  }),
+
+  // Reading Goals & Progress
+  readingGoals: router({
+    get: publicProcedure
+      .input(z.object({ visitorId: z.string() }))
+      .query(async ({ input }) => {
+        return getWeeklyProgress(input.visitorId);
+      }),
+
+    setGoal: publicProcedure
+      .input(z.object({ visitorId: z.string(), weeklyTarget: z.number().min(1).max(50) }))
+      .mutation(async ({ input }) => {
+        return setReadingGoal(input.visitorId, input.weeklyTarget);
+      }),
+
+    recordCompletion: publicProcedure
+      .input(z.object({ visitorId: z.string(), documentSlug: z.string() }))
+      .mutation(async ({ input }) => {
+        await recordReadingCompletion(input.visitorId, input.documentSlug);
+        return { success: true };
+      }),
+  }),
+
+  // Document Templates Gallery
+  templates: router({
+    list: publicProcedure
+      .input(z.object({ category: z.string().optional() }))
+      .query(async ({ input }) => {
+        return getDocumentTemplates(input.category);
+      }),
+
+    getById: publicProcedure
+      .input(z.object({ id: z.number() }))
+      .query(async ({ input }) => {
+        return getDocumentTemplateById(input.id);
+      }),
+
+    create: adminProcedure
+      .input(z.object({
+        name: z.string().min(1).max(200),
+        description: z.string().optional(),
+        category: z.string().min(1).max(100),
+        content: z.string().min(1),
+        icon: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        return createDocumentTemplate(input);
+      }),
+
+    use: publicProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        await incrementTemplateUsage(input.id);
+        const template = await getDocumentTemplateById(input.id);
+        return template;
+      }),
+
+    delete: adminProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        return deleteDocumentTemplate(input.id);
       }),
   }),
 });
