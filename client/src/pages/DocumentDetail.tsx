@@ -6,7 +6,7 @@ import remarkGfm from 'remark-gfm';
 import {
   ArrowLeft, FileText, Clock, BookOpen, Copy, Download,
   Bookmark, BookmarkCheck, Printer, ChevronRight, Loader2,
-  Hash, AlertCircle
+  Hash, AlertCircle, ArrowUp, ExternalLink
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
@@ -200,44 +200,49 @@ export default function DocumentDetail() {
             <span>Back to Library</span>
           </button>
           
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 sm:gap-2">
             <button
               onClick={handleToggleFavorite}
-              className={`p-2 rounded-lg transition-colors ${
+              className={`p-2.5 sm:p-2 rounded-lg transition-colors ${
                 isFavorited 
                   ? 'text-amber-400 bg-amber-400/10 hover:bg-amber-400/20' 
                   : 'text-muted-foreground hover:text-foreground hover:bg-card/80'
               }`}
               title={isFavorited ? 'Remove from favorites' : 'Add to favorites'}
             >
-              {isFavorited ? <BookmarkCheck className="w-4 h-4" /> : <Bookmark className="w-4 h-4" />}
+              {isFavorited ? <BookmarkCheck className="w-5 h-5 sm:w-4 sm:h-4" /> : <Bookmark className="w-5 h-5 sm:w-4 sm:h-4" />}
             </button>
             <button
               onClick={handleCopy}
-              className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-card/80 transition-colors"
+              className="p-2.5 sm:p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-card/80 transition-colors"
               title="Copy markdown"
             >
-              <Copy className="w-4 h-4" />
+              <Copy className="w-5 h-5 sm:w-4 sm:h-4" />
             </button>
             <button
               onClick={handleDownload}
-              className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-card/80 transition-colors"
+              className="p-2.5 sm:p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-card/80 transition-colors"
               title="Download .md file"
             >
-              <Download className="w-4 h-4" />
+              <Download className="w-5 h-5 sm:w-4 sm:h-4" />
             </button>
             <button
               onClick={handlePrint}
-              className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-card/80 transition-colors"
+              className="hidden sm:block p-2.5 sm:p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-card/80 transition-colors"
               title="Print document"
             >
-              <Printer className="w-4 h-4" />
+              <Printer className="w-5 h-5 sm:w-4 sm:h-4" />
             </button>
           </div>
         </div>
       </header>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Mobile TOC */}
+        {headings.length > 3 && (
+          <MobileTOC headings={headings} activeHeading={activeHeading} />
+        )}
+
         <div className="flex gap-8">
           {/* Table of Contents Sidebar */}
           {headings.length > 3 && (
@@ -272,11 +277,13 @@ export default function DocumentDetail() {
             {/* Document Header */}
             <div className="mb-8 pb-6 border-b border-border/50">
               {/* Breadcrumb */}
-              <div className="flex items-center gap-2 text-xs text-muted-foreground mb-4">
-                <button onClick={() => navigate('/')} className="hover:text-accent transition-colors">Library</button>
-                <ChevronRight className="w-3 h-3" />
-                <span className="text-foreground">{document.category}</span>
-              </div>
+              <nav className="flex items-center gap-2 text-xs text-muted-foreground mb-4 flex-wrap">
+                <button onClick={() => navigate('/')} className="hover:text-accent transition-colors">Home</button>
+                <ChevronRight className="w-3 h-3 flex-shrink-0" />
+                <button onClick={() => navigate('/')} className="hover:text-accent transition-colors">{document.category}</button>
+                <ChevronRight className="w-3 h-3 flex-shrink-0" />
+                <span className="text-foreground truncate max-w-[200px] sm:max-w-none">{document.title}</span>
+              </nav>
 
               <h1 className="font-display text-3xl md:text-4xl text-foreground mb-4">{document.title}</h1>
               
@@ -342,6 +349,9 @@ export default function DocumentDetail() {
               </ReactMarkdown>
             </article>
 
+            {/* Related Documents */}
+            <RelatedDocuments slug={document.slug} category={document.category} />
+
             {/* Bottom Navigation */}
             <div className="mt-12 pt-6 border-t border-border/50 flex items-center justify-between">
               <button
@@ -371,6 +381,111 @@ export default function DocumentDetail() {
           </main>
         </div>
       </div>
+
+      {/* Scroll to Top Button */}
+      <ScrollToTop />
+    </div>
+  );
+}
+
+// Related Documents Component
+function RelatedDocuments({ slug, category }: { slug: string; category: string }) {
+  const [, navigate] = useLocation();
+  const { data: related } = trpc.documents.related.useQuery(
+    { slug, category, limit: 5 },
+    { enabled: !!slug && !!category }
+  );
+
+  if (!related || related.length === 0) return null;
+
+  return (
+    <div className="mt-12 pt-8 border-t border-border/50">
+      <h3 className="text-sm font-semibold text-foreground mb-4 flex items-center gap-2">
+        <ExternalLink className="w-4 h-4 text-accent" />
+        Related Documents in {category}
+      </h3>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        {related.map(doc => (
+          <button
+            key={doc.slug}
+            onClick={() => navigate(`/docs/${doc.slug}`)}
+            className="flex items-start gap-3 p-3 rounded-lg bg-card/30 border border-border/50 hover:border-accent/30 transition-colors text-left group"
+          >
+            <FileText className="w-4 h-4 text-muted-foreground mt-0.5 flex-shrink-0 group-hover:text-accent transition-colors" />
+            <div className="min-w-0">
+              <p className="text-sm font-medium text-foreground group-hover:text-accent transition-colors line-clamp-2">{doc.title}</p>
+              {doc.wordCount && (
+                <p className="text-[10px] text-muted-foreground mt-1">{Math.ceil((doc.wordCount || 0) / 200)} min read</p>
+              )}
+            </div>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// Scroll to Top Button
+function ScrollToTop() {
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setVisible(window.scrollY > 500);
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  if (!visible) return null;
+
+  return (
+    <button
+      onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+      className="fixed bottom-6 right-6 z-50 p-3 rounded-full bg-accent/20 border border-accent/40 text-accent hover:bg-accent/30 transition-all shadow-lg no-print"
+      title="Scroll to top"
+    >
+      <ArrowUp className="w-5 h-5" />
+    </button>
+  );
+}
+
+// Mobile Table of Contents (collapsible)
+function MobileTOC({ headings, activeHeading }: { headings: { id: string; text: string; level: number }[]; activeHeading: string }) {
+  const [isOpen, setIsOpen] = useState(false);
+
+  return (
+    <div className="xl:hidden mb-6">
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full flex items-center justify-between p-3 rounded-lg bg-card/50 border border-border/50 text-sm"
+      >
+        <span className="font-medium text-foreground flex items-center gap-2">
+          <Hash className="w-4 h-4 text-accent" />
+          Table of Contents
+        </span>
+        {isOpen ? <ChevronRight className="w-4 h-4 text-muted-foreground rotate-90 transition-transform" /> : <ChevronRight className="w-4 h-4 text-muted-foreground transition-transform" />}
+      </button>
+      {isOpen && (
+        <nav className="mt-2 p-3 rounded-lg bg-card/30 border border-border/30 space-y-1 max-h-64 overflow-y-auto">
+          {headings.map((heading, i) => (
+            <a
+              key={i}
+              href={`#${heading.id}`}
+              onClick={() => setIsOpen(false)}
+              className={`block text-xs py-1 transition-colors ${
+                heading.level === 1 ? 'pl-2' : heading.level === 2 ? 'pl-4' : 'pl-6'
+              } ${
+                activeHeading === heading.id
+                  ? 'text-accent font-medium'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              {heading.text}
+            </a>
+          ))}
+        </nav>
+      )}
     </div>
   );
 }

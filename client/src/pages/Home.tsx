@@ -10,6 +10,7 @@ import Search from '@/components/Search';
 import CommandPalette from '@/components/CommandPalette';
 import ProcessTimeline from '@/components/ProcessTimeline';
 import DocumentLibrary from '@/components/DocumentLibrary';
+import DocumentStats from '@/components/DocumentStats';
 import RecentlyViewed from '@/components/RecentlyViewed';
 import Favorites from '@/components/Favorites';
 import { generatePersonaContent, exportToPDF } from '@/lib/exportPdf';
@@ -250,6 +251,11 @@ export default function Home() {
         {/* Favorites & Recently Viewed */}
         <Favorites />
         <RecentlyViewed />
+
+        {/* Document Statistics */}
+        <section className="mt-16">
+          <DocumentStats />
+        </section>
 
         {/* Document Library Section */}
         <DocumentLibrary />

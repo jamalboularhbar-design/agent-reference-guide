@@ -109,7 +109,7 @@ export async function getDocuments(opts: {
   if (search) {
     const pattern = `%${search.toLowerCase()}%`;
     conditions.push(
-      sql`(LOWER(${documents.title}) LIKE ${pattern} OR LOWER(${documents.category}) LIKE ${pattern})`
+      sql`(LOWER(${documents.title}) LIKE ${pattern} OR LOWER(${documents.category}) LIKE ${pattern} OR LOWER(${documents.content}) LIKE ${pattern})`
     );
   }
 
@@ -187,4 +187,40 @@ export async function getDocumentCategories() {
     .orderBy(asc(documents.category));
 
   return result;
+}
+
+export async function getRelatedDocuments(slug: string, category: string, limit = 5) {
+  const db = await getDb();
+  if (!db) return [];
+
+  const result = await db
+    .select({
+      id: documents.id,
+      slug: documents.slug,
+      title: documents.title,
+      category: documents.category,
+      wordCount: documents.wordCount,
+    })
+    .from(documents)
+    .where(sql`${documents.category} = ${category} AND ${documents.slug} != ${slug}`)
+    .orderBy(sql`RAND()`)
+    .limit(limit);
+
+  return result;
+}
+
+export async function getDocumentStats() {
+  const db = await getDb();
+  if (!db) return null;
+
+  const totalResult = await db.select({ total: count() }).from(documents);
+  const wordResult = await db.select({ totalWords: sql<number>`COALESCE(SUM(${documents.wordCount}), 0)` }).from(documents);
+  const catResult = await db.select({ cats: sql<number>`COUNT(DISTINCT ${documents.category})` }).from(documents);
+
+  return {
+    totalDocuments: totalResult[0]?.total ?? 0,
+    totalWords: Number(wordResult[0]?.totalWords ?? 0),
+    totalCategories: Number(catResult[0]?.cats ?? 0),
+    avgReadingTime: Math.ceil(Number(wordResult[0]?.totalWords ?? 0) / (totalResult[0]?.total || 1) / 200),
+  };
 }

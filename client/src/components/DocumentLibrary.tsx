@@ -6,8 +6,10 @@ import {
   FileText, Search, Filter, ChevronDown, ChevronUp,
   Server, Users, DollarSign, ShieldCheck, BarChart3,
   Megaphone, Package, Heart, Scale, Handshake, Database,
-  Settings, Bot, Briefcase, Loader2
+  Settings, Bot, Briefcase
 } from 'lucide-react';
+import DocumentLibrarySkeleton from './DocumentLibrarySkeleton';
+import BulkExport from './BulkExport';
 
 const CATEGORY_ICONS: Record<string, any> = {
   'Engineering': Server,
@@ -143,7 +145,7 @@ export default function DocumentLibrary() {
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
           <input
             type="text"
-            placeholder="Search across all documents..."
+            placeholder="Search titles and content across all documents..."
             value={searchQuery}
             onChange={e => { setSearchQuery(e.target.value); setVisibleCount(ITEMS_PER_PAGE); }}
             className="w-full pl-12 pr-4 py-3.5 rounded-xl bg-card border border-border/50 text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-accent/50 focus:ring-1 focus:ring-accent/20 transition-all text-sm"
@@ -193,12 +195,7 @@ export default function DocumentLibrary() {
       </div>
 
       {/* Loading State */}
-      {isLoading && (
-        <div className="flex items-center justify-center py-16">
-          <Loader2 className="w-8 h-8 text-accent animate-spin" />
-          <span className="ml-3 text-muted-foreground">Loading documents...</span>
-        </div>
-      )}
+      {isLoading && <DocumentLibrarySkeleton />}
 
       {/* Error State */}
       {documentsError && !isLoading && (
@@ -243,6 +240,7 @@ export default function DocumentLibrary() {
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
+                      <BulkExport category={cat} />
                       <Badge variant="secondary" className="text-xs">{count}</Badge>
                       {isExpanded ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
                     </div>

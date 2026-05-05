@@ -34,3 +34,13 @@
 - [x] Category icons and visual improvements
 - [x] Print-friendly document view (CSS @media print)
 - [x] Document table of contents sidebar on detail page
+- [x] Full-text content search (search within document body, not just titles)
+- [x] Related documents section at bottom of detail page (same category)
+- [x] Breadcrumb navigation on detail page (Home > Category > Document)
+- [x] Document statistics dashboard (total docs, categories, word count, avg reading time)
+- [x] Bulk export (download all documents in a category as index)
+- [x] Tag-based filtering (category filter pills with icons)
+- [x] Scroll-to-top button on long pages
+- [x] Dark/light theme toggle in header
+- [x] Responsive mobile improvements (collapsible TOC, touch-friendly buttons)
+- [x] Loading skeleton states (shimmer placeholders instead of spinner)
