@@ -1,0 +1,24 @@
+# Project TODO
+
+- [x] Basic homepage layout with dual persona system
+- [x] Navigation menu with search and command palette
+- [x] Premium dark theme with gold accents (Playfair Display + Inter)
+- [x] Dual persona tabs (Luxury Travel Concierge + ArtKech Studio)
+- [x] Process timeline component (7-stage workflows)
+- [x] General capabilities section
+- [x] Operational guidelines section
+- [x] Document Library component with search and category filtering
+- [x] Generate 515 ARG-Builder operational documents
+- [x] Static document catalog (documentCatalog.ts)
+- [x] Upgrade to full-stack (tRPC + Express + MySQL/Drizzle ORM + Manus Auth)
+- [x] Resolve Home.tsx merge conflict (keep existing UI)
+- [x] Create documents table in database schema
+- [x] Push database schema migration
+- [x] Seed all 515 documents into database
+- [x] Create tRPC API endpoints for documents (list, search, filter by category)
+- [x] Update frontend DocumentLibrary to fetch from API instead of static catalog
+- [x] Case-insensitive search (LOWER() for utf8mb4_bin collation)
+- [x] Write vitest tests for document API endpoints
+- [x] Save checkpoint
+- [x] Fix DocumentLibrary to fetch full 515-document dataset (limit: 600)
+- [x] Add error state for failed queries in DocumentLibrary

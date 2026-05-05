@@ -9,6 +9,7 @@ import Header from '@/components/Header';
 import Search from '@/components/Search';
 import CommandPalette from '@/components/CommandPalette';
 import ProcessTimeline from '@/components/ProcessTimeline';
+import DocumentLibrary from '@/components/DocumentLibrary';
 import { generatePersonaContent, exportToPDF } from '@/lib/exportPdf';
 
 export default function Home() {
@@ -243,6 +244,9 @@ export default function Home() {
             ))}
           </div>
         </section>
+
+        {/* Document Library Section */}
+        <DocumentLibrary />
 
         {/* Operational Guidelines Section */}
         <section className="mt-24 pt-12 border-t border-border/50">
