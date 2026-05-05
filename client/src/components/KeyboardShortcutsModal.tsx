@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Keyboard } from 'lucide-react';
 
@@ -8,10 +8,17 @@ const shortcuts = [
   { keys: ['Esc'], description: 'Go back / close modal' },
   { keys: ['/'], description: 'Focus search input' },
   { keys: ['Ctrl', 'P'], description: 'Print current document' },
+  { keys: ['G', 'H'], description: 'Go to Home page' },
+  { keys: ['G', 'L'], description: 'Go to Document Library' },
+  { keys: ['G', 'G'], description: 'Go to Glossary' },
+  { keys: ['G', 'T'], description: 'Go to Templates Gallery' },
+  { keys: ['G', 'D'], description: 'Go to Admin Dashboard' },
 ];
 
 export default function KeyboardShortcutsModal() {
   const [open, setOpen] = useState(false);
+  const pendingG = useRef(false);
+  const gTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -22,15 +29,49 @@ export default function KeyboardShortcutsModal() {
       if (e.key === '?' && !e.ctrlKey && !e.metaKey) {
         e.preventDefault();
         setOpen(true);
+        return;
       }
+
       if (e.key === '/' && !e.ctrlKey && !e.metaKey) {
         e.preventDefault();
         const searchInput = document.querySelector('input[placeholder*="Search"]') as HTMLInputElement;
         searchInput?.focus();
+        return;
+      }
+
+      // G-prefix navigation shortcuts
+      if (e.key === 'g' && !e.ctrlKey && !e.metaKey && !pendingG.current) {
+        pendingG.current = true;
+        if (gTimeout.current) clearTimeout(gTimeout.current);
+        gTimeout.current = setTimeout(() => { pendingG.current = false; }, 800);
+        return;
+      }
+
+      if (pendingG.current) {
+        pendingG.current = false;
+        if (gTimeout.current) clearTimeout(gTimeout.current);
+
+        const routes: Record<string, string> = {
+          'h': '/',
+          'l': '/',       // Home is also the library
+          'g': '/glossary',
+          't': '/templates/gallery',
+          'd': '/admin/dashboard',
+        };
+
+        const route = routes[e.key.toLowerCase()];
+        if (route) {
+          e.preventDefault();
+          window.location.href = route;
+        }
       }
     };
+
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      if (gTimeout.current) clearTimeout(gTimeout.current);
+    };
   }, []);
 
   return (

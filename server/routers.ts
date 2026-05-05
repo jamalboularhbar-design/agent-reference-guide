@@ -24,6 +24,7 @@ import {
   getDocumentDependencies, getDependentDocuments, addDocumentDependency, removeDocumentDependency,
   getReadingGoal, setReadingGoal, recordReadingCompletion, getWeeklyProgress,
   getDocumentTemplates, createDocumentTemplate, getDocumentTemplateById, incrementTemplateUsage, deleteDocumentTemplate,
+  logAuditEntry, getAuditTrail, getAnalyticsExportData, getDocumentSummariesForAI,
 } from "./db";
 import { invokeLLM } from "./_core/llm";
 import { notifyOwner } from "./_core/notification";
@@ -169,6 +170,7 @@ export const appRouter = router({
         });
 
         await logActivity('create', slug, undefined, `Created: ${input.title}`);
+        await logAuditEntry({ documentSlug: slug, action: 'created', field: undefined, oldValue: undefined, newValue: input.title, changedBy: 'admin' });
         return result;
       }),
 
@@ -200,6 +202,20 @@ export const appRouter = router({
 
         await logActivity('update', slug, undefined, changeNote || `Updated document`);
 
+        // Log audit entries for changed fields
+        if (data.title && existing && data.title !== existing.title) {
+          await logAuditEntry({ documentSlug: slug, action: 'updated', field: 'title', oldValue: existing.title, newValue: data.title, changedBy: ctx.user?.name || 'admin' });
+        }
+        if (data.status && existing && data.status !== existing.status) {
+          await logAuditEntry({ documentSlug: slug, action: 'status_changed', field: 'status', oldValue: existing.status || 'published', newValue: data.status, changedBy: ctx.user?.name || 'admin' });
+        }
+        if (data.category && existing && data.category !== existing.category) {
+          await logAuditEntry({ documentSlug: slug, action: 'updated', field: 'category', oldValue: existing.category, newValue: data.category, changedBy: ctx.user?.name || 'admin' });
+        }
+        if (data.content && existing && data.content !== existing.content) {
+          await logAuditEntry({ documentSlug: slug, action: 'updated', field: 'content', oldValue: '(previous version)', newValue: '(new version)', changedBy: ctx.user?.name || 'admin' });
+        }
+
         // Notify owner when document moves to review status
         if (data.status === 'review') {
           await notifyOwner({
@@ -215,6 +231,7 @@ export const appRouter = router({
       .input(z.object({ slug: z.string() }))
       .mutation(async ({ input }) => {
         await logActivity('delete', input.slug, undefined, `Deleted document`);
+        await logAuditEntry({ documentSlug: input.slug, action: 'deleted', field: undefined, oldValue: input.slug, newValue: undefined, changedBy: 'admin' });
         return deleteDocument(input.slug);
       }),
 
@@ -223,6 +240,7 @@ export const appRouter = router({
       .input(z.object({ slug: z.string() }))
       .mutation(async ({ input }) => {
         await logActivity('pin', input.slug);
+        await logAuditEntry({ documentSlug: input.slug, action: 'pinned', field: 'pinned', oldValue: '0', newValue: '1', changedBy: 'admin' });
         return pinDocument(input.slug);
       }),
 
@@ -230,6 +248,7 @@ export const appRouter = router({
       .input(z.object({ slug: z.string() }))
       .mutation(async ({ input }) => {
         await logActivity('unpin', input.slug);
+        await logAuditEntry({ documentSlug: input.slug, action: 'unpinned', field: 'pinned', oldValue: '1', newValue: '0', changedBy: 'admin' });
         return unpinDocument(input.slug);
       }),
 
@@ -661,12 +680,67 @@ export const appRouter = router({
         return template;
       }),
 
-    delete: adminProcedure
+     delete: adminProcedure
       .input(z.object({ id: z.number() }))
       .mutation(async ({ input }) => {
         return deleteDocumentTemplate(input.id);
       }),
   }),
-});
 
+  // ─── Audit Trail ─────────────────────────────────────────────────────────
+  audit: router({
+    log: adminProcedure
+      .input(z.object({
+        documentSlug: z.string(),
+        action: z.string(),
+        field: z.string().optional(),
+        oldValue: z.string().optional(),
+        newValue: z.string().optional(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        await logAuditEntry({ ...input, changedBy: ctx.user?.name || 'admin' });
+        return { success: true };
+      }),
+    get: adminProcedure
+      .input(z.object({ slug: z.string(), limit: z.number().optional() }))
+      .query(async ({ input }) => {
+        return getAuditTrail(input.slug, input.limit);
+      }),
+  }),
+
+  // ─── Analytics Export ────────────────────────────────────────────────────
+  analyticsExport: router({
+    csv: adminProcedure.query(async () => {
+      return getAnalyticsExportData();
+    }),
+  }),
+
+  // ─── AI Related Suggestions ──────────────────────────────────────────────
+  aiSuggestions: router({
+    related: publicProcedure
+      .input(z.object({ slug: z.string() }))
+      .query(async ({ input }) => {
+        const doc = await getDocumentBySlug(input.slug);
+        if (!doc) return [];
+        const candidates = await getDocumentSummariesForAI(input.slug, 20);
+        if (candidates.length === 0) return [];
+
+        const candidateList = candidates.map(c => `- ${c.slug}: ${c.title} (${c.category})${c.summary ? ' - ' + c.summary.substring(0, 100) : ''}`).join('\n');
+
+        try {
+          const response = await invokeLLM({
+            messages: [
+              { role: 'system', content: 'You are a document recommendation engine. Given a source document and a list of candidates, return the top 5 most related document slugs as a JSON array of strings. Only return the JSON array, nothing else.' },
+              { role: 'user', content: `Source document: "${doc.title}" (${doc.category})\nSummary: ${doc.summary || doc.content?.substring(0, 200) || ''}\n\nCandidates:\n${candidateList}\n\nReturn top 5 related slugs as JSON array:` },
+            ],
+          });
+          const content = String(response.choices?.[0]?.message?.content || '[]');
+          const slugs = JSON.parse(content.replace(/```json?\n?|```/g, '').trim());
+          return Array.isArray(slugs) ? slugs.slice(0, 5) : [];
+        } catch {
+          return [];
+        }
+      }),
+  }),
+});
 export type AppRouter = typeof appRouter;

@@ -8,6 +8,64 @@ export default function AdminDashboardPage() {
   const { data: topDocs } = trpc.analytics.topDocuments.useQuery({ limit: 10 });
   const { data: downloadData } = trpc.analytics.downloadTrends.useQuery({ days: 30 });
   const { data: catDist } = trpc.analytics.categoryDistribution.useQuery();
+  const utils = trpc.useUtils();
+
+  const handleExportCSV = async () => {
+    try {
+      const exportData = await utils.analyticsExport.csv.fetch();
+      const sections: string[] = [];
+
+      // Section 1: Documents Overview
+      sections.push('=== DOCUMENTS OVERVIEW ===');
+      const docHeaders = ['Slug', 'Title', 'Category', 'Views', 'Upvotes', 'Downvotes', 'Words', 'Status', 'Locale', 'Created'];
+      const docRows = exportData.documents.map((d: any) => [
+        d.slug, `"${(d.title || '').replace(/"/g, '""')}"`, d.category, d.viewCount, d.upvotes, d.downvotes, d.wordCount, d.status, d.locale || 'en', d.createdAt
+      ]);
+      sections.push(docHeaders.join(','));
+      sections.push(...docRows.map((r: any[]) => r.join(',')));
+
+      // Section 2: Download History
+      sections.push('');
+      sections.push('=== DOWNLOAD HISTORY ===');
+      const dlHeaders = ['Document Slug', 'Format', 'Visitor ID', 'Downloaded At'];
+      const dlRows = exportData.downloads.map((d: any) => [
+        d.documentSlug, d.format, d.visitorId || 'anonymous', d.createdAt
+      ]);
+      sections.push(dlHeaders.join(','));
+      sections.push(...dlRows.map((r: any[]) => r.join(',')));
+
+      // Section 3: Top Documents by Views (from current query data)
+      if (topDocs && topDocs.length > 0) {
+        sections.push('');
+        sections.push('=== TOP DOCUMENTS BY VIEWS ===');
+        sections.push('Rank,Slug,Title,Views');
+        topDocs.forEach((d: any, i: number) => {
+          sections.push(`${i + 1},${d.slug},"${(d.title || '').replace(/"/g, '""')}",${d.viewCount}`);
+        });
+      }
+
+      // Section 4: Views Over Time (from current query data)
+      if (viewsData && viewsData.length > 0) {
+        sections.push('');
+        sections.push('=== VIEWS OVER TIME (30 DAYS) ===');
+        sections.push('Date,Views');
+        viewsData.forEach((d: any) => {
+          sections.push(`${d.date},${d.views}`);
+        });
+      }
+
+      const csv = sections.join('\n');
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `analytics-export-${new Date().toISOString().split('T')[0]}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      console.error('Export failed', e);
+    }
+  };
 
   const viewsChartRef = useRef<HTMLCanvasElement>(null);
   const downloadsChartRef = useRef<HTMLCanvasElement>(null);
@@ -110,9 +168,18 @@ export default function AdminDashboardPage() {
             <h1 className="text-3xl font-bold text-[#d4af37]">Analytics Dashboard</h1>
             <p className="text-gray-400 mt-1">Document engagement and usage metrics</p>
           </div>
-          <Link href="/admin/editor" className="text-sm text-gray-400 hover:text-[#d4af37]">
-            ← Back to Admin
-          </Link>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handleExportCSV}
+              className="flex items-center gap-2 px-3 py-2 bg-[#d4af37]/10 border border-[#d4af37]/30 rounded-lg text-sm text-[#d4af37] hover:bg-[#d4af37]/20 transition-colors"
+            >
+              <Download className="w-4 h-4" />
+              Export CSV
+            </button>
+            <Link href="/admin/editor" className="text-sm text-gray-400 hover:text-[#d4af37]">
+              ← Back to Admin
+            </Link>
+          </div>
         </div>
 
         {/* Charts Grid */}

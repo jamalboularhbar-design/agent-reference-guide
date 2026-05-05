@@ -28,6 +28,8 @@ import GlossaryPage from "./pages/GlossaryPage";
 import TemplatesGalleryPage from "./pages/TemplatesGalleryPage";
 import ReadingGoalsPage from "./pages/ReadingGoalsPage";
 import ApiDocsPage from "./pages/ApiDocsPage";
+import AdminKanbanPage from "./pages/AdminKanbanPage";
+import AdminAuditTrailPage from "./pages/AdminAuditTrailPage";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -55,6 +57,8 @@ function Router() {
       <Route path={"/templates/gallery"} component={TemplatesGalleryPage} />
       <Route path={"/reading-goals"} component={ReadingGoalsPage} />
       <Route path={"/api/docs"} component={ApiDocsPage} />
+      <Route path={"/admin/kanban"} component={AdminKanbanPage} />
+      <Route path={"/admin/audit"} component={AdminAuditTrailPage} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />

@@ -1,6 +1,6 @@
 import { eq, like, or, sql, desc, asc, count, and } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, documents, documentRatings, readingLists, readingListItems, searchAnalytics, documentTags, documentComments, documentVersions, customCategories, downloadHistory, announcements, activityLog } from "../drizzle/schema";
+import { InsertUser, users, documents, documentRatings, readingLists, readingListItems, searchAnalytics, documentTags, documentComments, documentVersions, customCategories, downloadHistory, announcements, activityLog, documentAuditTrail } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -1318,4 +1318,82 @@ export async function deleteDocumentTemplate(id: number) {
 
   await db.delete(documentTemplates).where(eq(documentTemplates.id, id));
   return { success: true };
+}
+
+// ─── Document Audit Trail ────────────────────────────────────────────────────
+
+export async function logAuditEntry(data: {
+  documentSlug: string;
+  action: string;
+  field?: string;
+  oldValue?: string;
+  newValue?: string;
+  changedBy?: string;
+}) {
+  const db = await getDb();
+  if (!db) return;
+
+  await db.insert(documentAuditTrail).values({
+    documentSlug: data.documentSlug,
+    action: data.action,
+    field: data.field || null,
+    oldValue: data.oldValue || null,
+    newValue: data.newValue || null,
+    changedBy: data.changedBy || null,
+  });
+}
+
+export async function getAuditTrail(slug: string, limit = 50) {
+  const db = await getDb();
+  if (!db) return [];
+
+  return db.select().from(documentAuditTrail)
+    .where(eq(documentAuditTrail.documentSlug, slug))
+    .orderBy(sql`${documentAuditTrail.createdAt} DESC`)
+    .limit(limit);
+}
+
+// ─── Analytics CSV Export ────────────────────────────────────────────────────
+
+export async function getAnalyticsExportData() {
+  const db = await getDb();
+  if (!db) return { documents: [], downloads: [], views: [] };
+
+  const docs = await db.select({
+    slug: documents.slug,
+    title: documents.title,
+    category: documents.category,
+    viewCount: documents.viewCount,
+    upvotes: documents.upvotes,
+    downvotes: documents.downvotes,
+    wordCount: documents.wordCount,
+    status: documents.status,
+    locale: documents.locale,
+    createdAt: documents.createdAt,
+  }).from(documents).orderBy(sql`${documents.viewCount} DESC`);
+
+  const downloads = await db.select({
+    documentSlug: downloadHistory.documentSlug,
+    format: downloadHistory.format,
+    visitorId: downloadHistory.visitorId,
+    createdAt: downloadHistory.createdAt,
+  }).from(downloadHistory).orderBy(sql`${downloadHistory.createdAt} DESC`).limit(1000);
+
+  return { documents: docs, downloads };
+}
+
+// ─── Related Documents AI ────────────────────────────────────────────────────
+
+export async function getDocumentSummariesForAI(excludeSlug: string, limit = 20) {
+  const db = await getDb();
+  if (!db) return [];
+
+  return db.select({
+    slug: documents.slug,
+    title: documents.title,
+    category: documents.category,
+    summary: documents.summary,
+  }).from(documents)
+    .where(sql`${documents.slug} != ${excludeSlug} AND ${documents.status} = 'published'`)
+    .limit(limit);
 }

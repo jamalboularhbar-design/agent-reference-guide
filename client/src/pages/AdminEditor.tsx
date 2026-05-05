@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { useLocation } from 'wouter';
 import { trpc } from '@/lib/trpc';
 import { useAuth } from '@/_core/hooks/useAuth';
+import AdminDependencyManager from '@/components/AdminDependencyManager';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -439,6 +440,13 @@ export default function AdminEditor() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Dependency Manager - shown when editing an existing doc */}
+      {editingDoc && editingDoc.slug && (
+        <div className="mt-4">
+          <AdminDependencyManager slug={editingDoc.slug} />
+        </div>
+      )}
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={!!deleteSlug} onOpenChange={open => !open && setDeleteSlug(null)}>

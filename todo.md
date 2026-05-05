@@ -117,3 +117,13 @@
 - [x] Document approval workflow notifications (notify owner when doc moves to review, approval actions)
 - [x] Public REST API documentation endpoint (/api/docs) with OpenAPI-style reference for external integrations
 - [x] Rename all "Atlas Elite" references to "Riad & Routes" (riadandroutes.com) throughout the application
+- [x] Auto-link glossary terms in document content (highlight defined terms inline with hover tooltips showing definitions)
+- [x] Admin dependency management UI (link/unlink prerequisite documents from the editor with search-select interface)
+- [x] Export analytics as CSV (download button on analytics dashboard for views, downloads, top-docs data)
+- [x] Document comparison/diff view (side-by-side comparison of two document versions with highlighted changes)
+- [x] Bulk document status workflow (visual Kanban-style board for moving docs between draft/review/published)
+- [x] Keyboard shortcuts help modal (? key opens overlay showing all available shortcuts)
+- [x] Document reading progress bar (sticky progress indicator at top of document detail page based on scroll position)
+- [x] Admin document audit trail (detailed changelog per document showing who changed what and when)
+- [x] Related documents AI suggestions (use LLM to suggest related docs based on content similarity)
+- [x] Table of contents sidebar for long documents (auto-generated from markdown headings, sticky on scroll)

@@ -20,6 +20,11 @@ const DocumentComments = lazy(() => import('@/components/DocumentComments'));
 const DocumentVersionHistory = lazy(() => import('@/components/DocumentVersionHistory'));
 import { recordReadingDay } from '@/components/ReadingStreak';
 import DocumentDependencies from '@/components/DocumentDependencies';
+import ReadingProgressBar from '@/components/ReadingProgressBar';
+import TableOfContents from '@/components/TableOfContents';
+import AISuggestions from '@/components/AISuggestions';
+import GlossaryAutoLink from '@/components/GlossaryAutoLink';
+import DocumentComparisonView from '@/components/DocumentComparisonView';
 
 // Reading time calculation
 function getReadingTime(wordCount: number): string {
@@ -489,6 +494,12 @@ export default function DocumentDetail() {
                     const id = text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
                     return <h3 id={id} className="group relative" {...props}>{children}<HeadingAnchor id={id} /></h3>;
                   },
+                  p: ({ children }) => {
+                    return <p><GlossaryAutoLink>{children}</GlossaryAutoLink></p>;
+                  },
+                  li: ({ children }) => {
+                    return <li><GlossaryAutoLink>{children}</GlossaryAutoLink></li>;
+                  },
                 }}
               >
                 {document.content}
@@ -497,6 +508,9 @@ export default function DocumentDetail() {
 
             {/* Document Dependencies */}
             <DocumentDependencies slug={document.slug} />
+
+            {/* AI-Suggested Related Documents */}
+            <AISuggestions slug={document.slug} />
 
             {/* Related Documents */}
             <RelatedDocuments slug={document.slug} category={document.category} />
@@ -510,6 +524,9 @@ export default function DocumentDetail() {
             <Suspense fallback={<div className="animate-pulse h-24 bg-card/50 rounded-xl" />}>
               <DocumentVersionHistory slug={document.slug} />
             </Suspense>
+
+            {/* Version Comparison */}
+            <DocumentComparisonView slug={document.slug} />
 
             {/* Bottom Navigation */}
             <div className="mt-8 sm:mt-12 pt-4 sm:pt-6 border-t border-border/50 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">

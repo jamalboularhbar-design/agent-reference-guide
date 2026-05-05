@@ -233,3 +233,17 @@ export const documentTemplates = mysqlTable("document_templates", {
 });
 
 export type DocumentTemplate = typeof documentTemplates.$inferSelect;
+
+// Document audit trail - detailed changelog per document
+export const documentAuditTrail = mysqlTable("document_audit_trail", {
+  id: int("id").autoincrement().primaryKey(),
+  documentSlug: varchar("documentSlug", { length: 255 }).notNull(),
+  action: varchar("action", { length: 50 }).notNull(), // created, updated, status_changed, pinned, unpinned, deleted
+  field: varchar("field", { length: 100 }), // which field was changed
+  oldValue: text("oldValue"),
+  newValue: text("newValue"),
+  changedBy: varchar("changedBy", { length: 100 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type DocumentAuditEntry = typeof documentAuditTrail.$inferSelect;
