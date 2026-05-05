@@ -25,6 +25,7 @@ export const appRouter = router({
         z.object({
           category: z.string().optional(),
           search: z.string().optional(),
+          sort: z.enum(['alpha', 'reading_time', 'newest']).optional().default('alpha'),
           limit: z.number().min(1).max(600).optional().default(50),
           offset: z.number().min(0).optional().default(0),
         })

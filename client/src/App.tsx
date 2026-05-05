@@ -6,6 +6,7 @@ import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import Home from "./pages/Home";
 import DocumentDetail from "./pages/DocumentDetail";
+import KeyboardShortcutsModal from "./components/KeyboardShortcutsModal";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -29,6 +30,7 @@ function App() {
       >
         <TooltipProvider>
           <Toaster />
+          <KeyboardShortcutsModal />
           <Router />
         </TooltipProvider>
       </ThemeProvider>

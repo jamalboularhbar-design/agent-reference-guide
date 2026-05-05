@@ -94,13 +94,14 @@ export async function getUserByOpenId(openId: string) {
 export async function getDocuments(opts: {
   category?: string;
   search?: string;
+  sort?: 'alpha' | 'reading_time' | 'newest';
   limit?: number;
   offset?: number;
 }) {
   const db = await getDb();
   if (!db) return { documents: [], total: 0 };
 
-  const { category, search, limit = 50, offset = 0 } = opts;
+  const { category, search, sort = 'alpha', limit = 50, offset = 0 } = opts;
 
   const conditions = [];
   if (category) {
@@ -125,35 +126,30 @@ export async function getDocuments(opts: {
     : await db.select({ total: count() }).from(documents);
   const total = countResult[0]?.total ?? 0;
 
-  // Get paginated results (without content for list view)
+  // When searching, include a snippet of matched content
+  const selectFields = {
+    id: documents.id,
+    slug: documents.slug,
+    title: documents.title,
+    category: documents.category,
+    filename: documents.filename,
+    wordCount: documents.wordCount,
+    createdAt: documents.createdAt,
+    ...(search ? { snippet: sql<string>`SUBSTRING(${documents.content}, GREATEST(1, LOCATE(LOWER(${search}), LOWER(${documents.content})) - 60), 200)` } : {}),
+  };
+
   const rows = whereClause
     ? await db
-        .select({
-          id: documents.id,
-          slug: documents.slug,
-          title: documents.title,
-          category: documents.category,
-          filename: documents.filename,
-          wordCount: documents.wordCount,
-          createdAt: documents.createdAt,
-        })
+        .select(selectFields)
         .from(documents)
         .where(whereClause)
-        .orderBy(asc(documents.title))
+        .orderBy(sort === 'reading_time' ? asc(documents.wordCount) : sort === 'newest' ? desc(documents.createdAt) : asc(documents.title))
         .limit(limit)
         .offset(offset)
     : await db
-        .select({
-          id: documents.id,
-          slug: documents.slug,
-          title: documents.title,
-          category: documents.category,
-          filename: documents.filename,
-          wordCount: documents.wordCount,
-          createdAt: documents.createdAt,
-        })
+        .select(selectFields)
         .from(documents)
-        .orderBy(asc(documents.title))
+        .orderBy(sort === 'reading_time' ? asc(documents.wordCount) : sort === 'newest' ? desc(documents.createdAt) : asc(documents.title))
         .limit(limit)
         .offset(offset);
 

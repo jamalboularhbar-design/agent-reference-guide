@@ -6,7 +6,7 @@ import remarkGfm from 'remark-gfm';
 import {
   ArrowLeft, FileText, Clock, BookOpen, Copy, Download,
   Bookmark, BookmarkCheck, Printer, ChevronRight, Loader2,
-  Hash, AlertCircle, ArrowUp, ExternalLink
+  Hash, AlertCircle, ArrowUp, ExternalLink, Link2, Calendar
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
@@ -64,6 +64,29 @@ function addToRecentlyViewed(slug: string, title: string) {
   } catch { /* ignore */ }
 }
 
+// Heading anchor for copy-link-to-section
+function HeadingAnchor({ id }: { id: string }) {
+  const handleCopyLink = (e: React.MouseEvent) => {
+    e.preventDefault();
+    const url = `${window.location.origin}${window.location.pathname}#${id}`;
+    navigator.clipboard.writeText(url).then(() => {
+      toast.success('Link copied to clipboard');
+    }).catch(() => {
+      toast.error('Failed to copy link');
+    });
+  };
+
+  return (
+    <button
+      onClick={handleCopyLink}
+      className="inline-flex ml-2 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-accent align-middle"
+      title="Copy link to section"
+    >
+      <Link2 className="w-4 h-4" />
+    </button>
+  );
+}
+
 export default function DocumentDetail() {
   const params = useParams<{ slug: string }>();
   const [, navigate] = useLocation();
@@ -82,6 +105,18 @@ export default function DocumentDetail() {
     if (document) {
       addToRecentlyViewed(document.slug, document.title);
       setIsFavorited(getFavorites().includes(document.slug));
+    }
+  }, [document]);
+
+  // Restore scroll position when navigating back
+  useEffect(() => {
+    // Scroll to hash if present (for copy-link-to-section)
+    if (window.location.hash) {
+      const id = window.location.hash.slice(1);
+      setTimeout(() => {
+        const el = window.document.getElementById(id);
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 300);
     }
   }, [document]);
 
@@ -147,6 +182,20 @@ export default function DocumentDetail() {
     window.print();
   }, []);
 
+  // Reading progress tracking
+  const [readingProgress, setReadingProgress] = useState(0);
+  useEffect(() => {
+    const handleScroll = () => {
+      const scrollTop = window.scrollY;
+      const docHeight = window.document.documentElement.scrollHeight - window.innerHeight;
+      if (docHeight > 0) {
+        setReadingProgress(Math.min(100, Math.round((scrollTop / docHeight) * 100)));
+      }
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
   // Keyboard navigation
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -189,6 +238,14 @@ export default function DocumentDetail() {
 
   return (
     <div className="min-h-screen bg-background">
+      {/* Reading Progress Bar */}
+      <div className="fixed top-0 left-0 right-0 z-[60] h-0.5 bg-border/30">
+        <div
+          className="h-full bg-accent transition-all duration-150 ease-out"
+          style={{ width: `${readingProgress}%` }}
+        />
+      </div>
+
       {/* Top Navigation Bar */}
       <header className="sticky top-0 z-50 bg-background/95 backdrop-blur-sm border-b border-border/50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between">
@@ -303,6 +360,12 @@ export default function DocumentDetail() {
                   <FileText className="w-3.5 h-3.5" />
                   <span>{document.filename}</span>
                 </div>
+                {document.createdAt && (
+                  <div className="flex items-center gap-1.5">
+                    <Calendar className="w-3.5 h-3.5" />
+                    <span>{new Date(document.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}</span>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -331,17 +394,17 @@ export default function DocumentDetail() {
                   h1: ({ children, ...props }) => {
                     const text = String(children);
                     const id = text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-                    return <h1 id={id} {...props}>{children}</h1>;
+                    return <h1 id={id} className="group relative" {...props}>{children}<HeadingAnchor id={id} /></h1>;
                   },
                   h2: ({ children, ...props }) => {
                     const text = String(children);
                     const id = text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-                    return <h2 id={id} {...props}>{children}</h2>;
+                    return <h2 id={id} className="group relative" {...props}>{children}<HeadingAnchor id={id} /></h2>;
                   },
                   h3: ({ children, ...props }) => {
                     const text = String(children);
                     const id = text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-                    return <h3 id={id} {...props}>{children}</h3>;
+                    return <h3 id={id} className="group relative" {...props}>{children}<HeadingAnchor id={id} /></h3>;
                   },
                 }}
               >

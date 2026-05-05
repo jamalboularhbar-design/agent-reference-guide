@@ -45,3 +45,13 @@
 - [x] Responsive mobile improvements (collapsible TOC, touch-friendly buttons)
 - [x] Loading skeleton states (shimmer placeholders instead of spinner)
 - [x] Fix nested button error (BulkExport button inside category expand button)
+- [x] Reading progress indicator bar at top of document detail page
+- [x] Back-to-position: remember scroll position when navigating from library to detail
+- [x] Document sorting options (alphabetical, reading time, newest)
+- [x] Category description tooltips on hover
+- [x] Keyboard shortcuts help modal (? key to open)
+- [x] Copy-link-to-section (click heading anchor icon to copy URL with hash)
+- [x] Document last-updated date display
+- [x] Search result snippets showing matched content excerpt
+- [x] Pagination controls (page numbers instead of just Load More)
+- [x] Smooth animated transitions between pages (hash-based scroll)

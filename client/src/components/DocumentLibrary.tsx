@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useLocation } from 'wouter';
 import { Badge } from '@/components/ui/badge';
 import { trpc } from '@/lib/trpc';
@@ -6,10 +6,17 @@ import {
   FileText, Search, Filter, ChevronDown, ChevronUp,
   Server, Users, DollarSign, ShieldCheck, BarChart3,
   Megaphone, Package, Heart, Scale, Handshake, Database,
-  Settings, Bot, Briefcase
+  Settings, Bot, Briefcase, ArrowUpDown
 } from 'lucide-react';
+import {
+  Pagination, PaginationContent, PaginationItem,
+  PaginationLink, PaginationPrevious, PaginationNext, PaginationEllipsis
+} from '@/components/ui/pagination';
 import DocumentLibrarySkeleton from './DocumentLibrarySkeleton';
 import BulkExport from './BulkExport';
+import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
+
+const SCROLL_POSITION_KEY = 'doclib_scroll_position';
 
 const CATEGORY_ICONS: Record<string, any> = {
   'Engineering': Server,
@@ -26,6 +33,23 @@ const CATEGORY_ICONS: Record<string, any> = {
   'Operations': Settings,
   'AI & Developer': Bot,
   'Strategy & Operations': Briefcase,
+};
+
+const CATEGORY_DESCRIPTIONS: Record<string, string> = {
+  'Engineering': 'Infrastructure, architecture, and development processes',
+  'Customer Success': 'Client onboarding, retention, and support workflows',
+  'Sales': 'Pipeline management, deal execution, and revenue processes',
+  'Marketing': 'Brand strategy, campaigns, and demand generation',
+  'Product': 'Roadmap planning, feature delivery, and user research',
+  'People & Culture': 'Hiring, onboarding, culture, and team development',
+  'Finance & Legal': 'Budgeting, compliance, contracts, and financial operations',
+  'Security & Compliance': 'Data protection, audits, and regulatory frameworks',
+  'Revenue & Pricing': 'Pricing strategy, monetization, and revenue optimization',
+  'Partnerships & GTM': 'Partner programs, co-selling, and go-to-market motions',
+  'Data & Analytics': 'Data pipelines, BI, and analytics infrastructure',
+  'Operations': 'Internal tooling, process automation, and operational efficiency',
+  'AI & Developer': 'AI/ML workflows, developer experience, and platform tools',
+  'Strategy & Operations': 'Strategic planning, OKRs, and cross-functional alignment',
 };
 
 const CATEGORY_COLORS: Record<string, string> = {
@@ -70,8 +94,25 @@ export default function DocumentLibrary() {
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
-  const [visibleCount, setVisibleCount] = useState(ITEMS_PER_PAGE);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [sortBy, setSortBy] = useState<'alpha' | 'reading_time' | 'newest'>('alpha');
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
+
+  // Restore scroll position when returning from detail page
+  useEffect(() => {
+    const saved = sessionStorage.getItem(SCROLL_POSITION_KEY);
+    if (saved) {
+      const pos = parseInt(saved, 10);
+      setTimeout(() => window.scrollTo(0, pos), 100);
+      sessionStorage.removeItem(SCROLL_POSITION_KEY);
+    }
+  }, []);
+
+  // Save scroll position before navigating to detail page
+  const navigateToDoc = useCallback((slug: string) => {
+    sessionStorage.setItem(SCROLL_POSITION_KEY, String(window.scrollY));
+    navigate(`/docs/${slug}`);
+  }, [navigate]);
 
   // Debounce search input
   useEffect(() => {
@@ -86,6 +127,7 @@ export default function DocumentLibrary() {
   const { data: documentsData, isLoading: documentsLoading, error: documentsError } = trpc.documents.list.useQuery({
     category: selectedCategory !== 'All' ? selectedCategory : undefined,
     search: debouncedSearch.trim() || undefined,
+    sort: sortBy,
     limit: 600,
     offset: 0,
   });
@@ -109,8 +151,9 @@ export default function DocumentLibrary() {
     return groups;
   }, [documents]);
 
-  const visibleDocs = documents.slice(0, visibleCount);
-  const hasMore = visibleCount < documents.length;
+  const totalPages = Math.ceil(documents.length / ITEMS_PER_PAGE);
+  const visibleDocs = documents.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+  const hasMore = currentPage < totalPages;
 
   const isLoading = categoriesLoading || documentsLoading;
 
@@ -147,7 +190,7 @@ export default function DocumentLibrary() {
             type="text"
             placeholder="Search titles and content across all documents..."
             value={searchQuery}
-            onChange={e => { setSearchQuery(e.target.value); setVisibleCount(ITEMS_PER_PAGE); }}
+            onChange={e => { setSearchQuery(e.target.value); setCurrentPage(1); }}
             className="w-full pl-12 pr-4 py-3.5 rounded-xl bg-card border border-border/50 text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-accent/50 focus:ring-1 focus:ring-accent/20 transition-all text-sm"
           />
           {searchQuery && (
@@ -163,7 +206,7 @@ export default function DocumentLibrary() {
         {/* Category Filter Pills */}
         <div className="flex flex-wrap gap-2">
           <button
-            onClick={() => { setSelectedCategory('All'); setVisibleCount(ITEMS_PER_PAGE); }}
+            onClick={() => { setSelectedCategory('All'); setCurrentPage(1); }}
             className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all border ${
               selectedCategory === 'All'
                 ? 'bg-accent/20 text-accent border-accent/40'
@@ -174,21 +217,30 @@ export default function DocumentLibrary() {
           </button>
           {Object.entries(categoryCounts)
             .sort((a, b) => b[1] - a[1])
-            .map(([cat, count]) => {
+            .map(([cat, catCount]) => {
               const Icon = CATEGORY_ICONS[cat] || FileText;
+              const description = CATEGORY_DESCRIPTIONS[cat];
               return (
-                <button
-                  key={cat}
-                  onClick={() => { setSelectedCategory(cat === selectedCategory ? 'All' : cat); setVisibleCount(ITEMS_PER_PAGE); }}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all border flex items-center gap-1.5 ${
-                    selectedCategory === cat
-                      ? 'bg-accent/20 text-accent border-accent/40'
-                      : 'bg-card/50 text-muted-foreground border-border/50 hover:border-accent/30'
-                  }`}
-                >
-                  <Icon className="w-3 h-3" />
-                  {cat} ({count})
-                </button>
+                <Tooltip key={cat}>
+                  <TooltipTrigger asChild>
+                    <button
+                      onClick={() => { setSelectedCategory(cat === selectedCategory ? 'All' : cat); setCurrentPage(1); }}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all border flex items-center gap-1.5 ${
+                        selectedCategory === cat
+                          ? 'bg-accent/20 text-accent border-accent/40'
+                          : 'bg-card/50 text-muted-foreground border-border/50 hover:border-accent/30'
+                      }`}
+                    >
+                      <Icon className="w-3 h-3" />
+                      {cat} ({catCount})
+                    </button>
+                  </TooltipTrigger>
+                  {description && (
+                    <TooltipContent side="bottom" className="max-w-[200px] text-center">
+                      <p className="text-xs">{description}</p>
+                    </TooltipContent>
+                  )}
+                </Tooltip>
               );
             })}
         </div>
@@ -205,12 +257,29 @@ export default function DocumentLibrary() {
         </div>
       )}
 
-      {/* Results Count */}
-      {!isLoading && searchQuery && (
-        <p className="text-sm text-muted-foreground mb-6">
-          Found <span className="text-accent font-semibold">{filteredTotal}</span> document{filteredTotal !== 1 ? 's' : ''} matching "{searchQuery}"
-          {selectedCategory !== 'All' && ` in ${selectedCategory}`}
-        </p>
+      {/* Sort Controls & Results Count */}
+      {!isLoading && (searchQuery || selectedCategory !== 'All') && (
+        <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
+          <p className="text-sm text-muted-foreground">
+            {searchQuery ? (
+              <>Found <span className="text-accent font-semibold">{filteredTotal}</span> document{filteredTotal !== 1 ? 's' : ''} matching "{searchQuery}"{selectedCategory !== 'All' && ` in ${selectedCategory}`}</>
+            ) : (
+              <><span className="text-accent font-semibold">{filteredTotal}</span> documents in {selectedCategory}</>
+            )}
+          </p>
+          <div className="flex items-center gap-2">
+            <ArrowUpDown className="w-3.5 h-3.5 text-muted-foreground" />
+            <select
+              value={sortBy}
+              onChange={(e) => { setSortBy(e.target.value as any); setCurrentPage(1); }}
+              className="text-xs bg-card border border-border/50 rounded-lg px-2 py-1.5 text-foreground focus:outline-none focus:border-accent/50"
+            >
+              <option value="alpha">A-Z</option>
+              <option value="reading_time">Reading Time</option>
+              <option value="newest">Newest</option>
+            </select>
+          </div>
+        </div>
       )}
 
       {/* Category View (when no search and All selected) */}
@@ -255,7 +324,7 @@ export default function DocumentLibrary() {
                         {catDocs.map(doc => (
                           <button
                             key={doc.slug}
-                            onClick={() => navigate(`/docs/${doc.slug}`)}
+                            onClick={() => navigateToDoc(doc.slug)}
                             className="p-3 rounded-lg bg-background/50 border border-border/30 hover:border-accent/30 transition-colors group text-left w-full"
                           >
                             <div className="flex items-start gap-2.5">
@@ -285,7 +354,7 @@ export default function DocumentLibrary() {
               return (
                 <button
                   key={doc.slug}
-                  onClick={() => navigate(`/docs/${doc.slug}`)}
+                  onClick={() => navigateToDoc(doc.slug)}
                   className="p-4 rounded-xl bg-card/30 border border-border/50 hover:border-accent/30 transition-all group text-left"
                 >
                   <div className="flex items-start gap-3">
@@ -294,6 +363,14 @@ export default function DocumentLibrary() {
                       <p className="text-sm font-medium text-foreground group-hover:text-accent transition-colors">
                         <HighlightText text={doc.title} query={debouncedSearch} />
                       </p>
+                      {debouncedSearch && (doc as any).snippet && (
+                        <p className="text-[11px] text-muted-foreground mt-1 line-clamp-2">
+                          ...{(() => {
+                            const raw = (doc as any).snippet.replace(/^#.*\n?/gm, '').replace(/\n/g, ' ').trim().substring(0, 140);
+                            return <HighlightText text={raw + '...'} query={debouncedSearch} />;
+                          })()}
+                        </p>
+                      )}
                       <div className="flex items-center gap-2 mt-2">
                         <Badge variant="outline" className={`text-[10px] px-2 py-0 border ${colorClass}`}>
                           {doc.category}
@@ -309,14 +386,53 @@ export default function DocumentLibrary() {
             })}
           </div>
           
-          {hasMore && (
-            <div className="mt-8 text-center">
-              <button
-                onClick={() => setVisibleCount(prev => prev + ITEMS_PER_PAGE)}
-                className="px-6 py-2.5 rounded-lg bg-accent/10 border border-accent/30 text-accent text-sm font-medium hover:bg-accent/20 transition-colors"
-              >
-                Load More ({documents.length - visibleCount} remaining)
-              </button>
+          {totalPages > 1 && (
+            <div className="mt-8">
+              <Pagination>
+                <PaginationContent>
+                  {currentPage > 1 && (
+                    <PaginationItem>
+                      <PaginationPrevious href="#" onClick={(e) => { e.preventDefault(); setCurrentPage(p => Math.max(1, p - 1)); }} />
+                    </PaginationItem>
+                  )}
+                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                    let page: number;
+                    if (totalPages <= 5) {
+                      page = i + 1;
+                    } else if (currentPage <= 3) {
+                      page = i + 1;
+                    } else if (currentPage >= totalPages - 2) {
+                      page = totalPages - 4 + i;
+                    } else {
+                      page = currentPage - 2 + i;
+                    }
+                    return (
+                      <PaginationItem key={page}>
+                        <PaginationLink
+                          href="#"
+                          isActive={page === currentPage}
+                          onClick={(e) => { e.preventDefault(); setCurrentPage(page); }}
+                        >
+                          {page}
+                        </PaginationLink>
+                      </PaginationItem>
+                    );
+                  })}
+                  {totalPages > 5 && currentPage < totalPages - 2 && (
+                    <PaginationItem>
+                      <PaginationEllipsis />
+                    </PaginationItem>
+                  )}
+                  {currentPage < totalPages && (
+                    <PaginationItem>
+                      <PaginationNext href="#" onClick={(e) => { e.preventDefault(); setCurrentPage(p => Math.min(totalPages, p + 1)); }} />
+                    </PaginationItem>
+                  )}
+                </PaginationContent>
+              </Pagination>
+              <p className="text-center text-xs text-muted-foreground mt-2">
+                Page {currentPage} of {totalPages} ({documents.length} documents)
+              </p>
             </div>
           )}
           
