@@ -1,4 +1,5 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useLocation } from 'wouter';
 import { Badge } from '@/components/ui/badge';
 import { trpc } from '@/lib/trpc';
 import {
@@ -44,11 +45,37 @@ const CATEGORY_COLORS: Record<string, string> = {
 
 const ITEMS_PER_PAGE = 24;
 
+// Highlight matching text in search results
+function HighlightText({ text, query }: { text: string; query: string }) {
+  if (!query.trim()) return <>{text}</>;
+  const regex = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+  const parts = text.split(regex);
+  return (
+    <>
+      {parts.map((part, i) =>
+        regex.test(part) ? (
+          <mark key={i} className="bg-accent/30 text-accent rounded-sm px-0.5">{part}</mark>
+        ) : (
+          <span key={i}>{part}</span>
+        )
+      )}
+    </>
+  );
+}
+
 export default function DocumentLibrary() {
+  const [, navigate] = useLocation();
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [visibleCount, setVisibleCount] = useState(ITEMS_PER_PAGE);
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
+
+  // Debounce search input
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(searchQuery), 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
   // Fetch categories from database
   const { data: categoriesData, isLoading: categoriesLoading } = trpc.documents.categories.useQuery();
@@ -56,7 +83,7 @@ export default function DocumentLibrary() {
   // Fetch documents from database - fetch all for category view, paginate for filtered
   const { data: documentsData, isLoading: documentsLoading, error: documentsError } = trpc.documents.list.useQuery({
     category: selectedCategory !== 'All' ? selectedCategory : undefined,
-    search: searchQuery.trim() || undefined,
+    search: debouncedSearch.trim() || undefined,
     limit: 600,
     offset: 0,
   });
@@ -225,17 +252,21 @@ export default function DocumentLibrary() {
                     <div className="border-t border-border/30 p-4">
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                         {catDocs.map(doc => (
-                          <div
+                          <button
                             key={doc.slug}
-                            className="p-3 rounded-lg bg-background/50 border border-border/30 hover:border-accent/30 transition-colors group"
+                            onClick={() => navigate(`/docs/${doc.slug}`)}
+                            className="p-3 rounded-lg bg-background/50 border border-border/30 hover:border-accent/30 transition-colors group text-left w-full"
                           >
                             <div className="flex items-start gap-2.5">
                               <FileText className="w-4 h-4 text-muted-foreground mt-0.5 flex-shrink-0 group-hover:text-accent transition-colors" />
-                              <div className="min-w-0">
+                              <div className="min-w-0 flex-1">
                                 <p className="text-sm font-medium text-foreground truncate group-hover:text-accent transition-colors">{doc.title}</p>
+                                {doc.wordCount && (
+                                  <p className="text-[10px] text-muted-foreground mt-1">{Math.ceil((doc.wordCount || 0) / 200)} min read</p>
+                                )}
                               </div>
                             </div>
-                          </div>
+                          </button>
                         ))}
                       </div>
                     </div>
@@ -251,20 +282,28 @@ export default function DocumentLibrary() {
             {visibleDocs.map(doc => {
               const colorClass = CATEGORY_COLORS[doc.category] || 'bg-muted/30 text-muted-foreground border-border/50';
               return (
-                <div
+                <button
                   key={doc.slug}
-                  className="p-4 rounded-xl bg-card/30 border border-border/50 hover:border-accent/30 transition-all group"
+                  onClick={() => navigate(`/docs/${doc.slug}`)}
+                  className="p-4 rounded-xl bg-card/30 border border-border/50 hover:border-accent/30 transition-all group text-left"
                 >
                   <div className="flex items-start gap-3">
                     <FileText className="w-4 h-4 text-muted-foreground mt-1 flex-shrink-0 group-hover:text-accent transition-colors" />
                     <div className="min-w-0">
-                      <p className="text-sm font-medium text-foreground group-hover:text-accent transition-colors">{doc.title}</p>
-                      <Badge variant="outline" className={`mt-2 text-[10px] px-2 py-0 border ${colorClass}`}>
-                        {doc.category}
-                      </Badge>
+                      <p className="text-sm font-medium text-foreground group-hover:text-accent transition-colors">
+                        <HighlightText text={doc.title} query={debouncedSearch} />
+                      </p>
+                      <div className="flex items-center gap-2 mt-2">
+                        <Badge variant="outline" className={`text-[10px] px-2 py-0 border ${colorClass}`}>
+                          {doc.category}
+                        </Badge>
+                        {doc.wordCount && (
+                          <span className="text-[10px] text-muted-foreground">{Math.ceil((doc.wordCount || 0) / 200)} min read</span>
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
+                </button>
               );
             })}
           </div>

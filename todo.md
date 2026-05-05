@@ -24,3 +24,13 @@
 - [x] Add error state for failed queries in DocumentLibrary
 - [x] Generate 10 new follow-up documents (Round 53): Privacy/Consent, Data Residency, Community-Led Growth, Ops Dashboard BI, CS Capacity Planning, FinOps Governance, Feature Deprecation, Deal Desk, Knowledge Transfer, Competitive Battlecards
 - [x] Seed 10 new documents into database (total: 525)
+- [x] Document detail page (/docs/:slug) with full markdown rendering
+- [x] Document export (copy markdown to clipboard, download as .md file)
+- [x] Improved search UX with debounce (300ms delay)
+- [x] Reading time display and word count badges on documents
+- [x] Favorites/bookmarks system using localStorage
+- [x] Recently viewed documents tracking
+- [x] Keyboard navigation enhancements (Escape to go back, Ctrl+P to print)
+- [x] Category icons and visual improvements
+- [x] Print-friendly document view (CSS @media print)
+- [x] Document table of contents sidebar on detail page

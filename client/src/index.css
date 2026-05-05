@@ -205,3 +205,48 @@
     }
   }
 }
+/* Print-friendly styles */
+@media print {
+  body {
+    background: white !important;
+    color: black !important;
+  }
+  
+  header, nav, aside, .no-print {
+    display: none !important;
+  }
+  
+  article {
+    max-width: 100% !important;
+    padding: 0 !important;
+  }
+  
+  .prose {
+    color: black !important;
+  }
+  
+  .prose h1, .prose h2, .prose h3 {
+    color: black !important;
+    page-break-after: avoid;
+  }
+  
+  .prose table {
+    border-collapse: collapse;
+  }
+  
+  .prose th, .prose td {
+    border: 1px solid #333 !important;
+    padding: 4px 8px !important;
+  }
+  
+  .prose pre {
+    white-space: pre-wrap;
+    border: 1px solid #ccc !important;
+    background: #f5f5f5 !important;
+  }
+  
+  .prose code {
+    background: #f0f0f0 !important;
+    color: #333 !important;
+  }
+}
