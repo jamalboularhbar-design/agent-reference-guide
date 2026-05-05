@@ -226,9 +226,12 @@ export default function DocumentLibrary() {
               
               return (
                 <div key={cat} className="rounded-xl border border-border/50 bg-card/30 overflow-hidden">
-                  <button
+                  <div
+                    className="w-full flex items-center justify-between p-4 hover:bg-card/50 transition-colors cursor-pointer"
                     onClick={() => toggleCategoryExpand(cat)}
-                    className="w-full flex items-center justify-between p-4 hover:bg-card/50 transition-colors"
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleCategoryExpand(cat); } }}
                   >
                     <div className="flex items-center gap-3">
                       <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${colorClass.split(' ')[0]}`}>
@@ -239,12 +242,12 @@ export default function DocumentLibrary() {
                         <p className="text-xs text-muted-foreground">{count} document{count !== 1 ? 's' : ''}</p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                       <BulkExport category={cat} />
                       <Badge variant="secondary" className="text-xs">{count}</Badge>
                       {isExpanded ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
                     </div>
-                  </button>
+                  </div>
                   
                   {isExpanded && (
                     <div className="border-t border-border/30 p-4">

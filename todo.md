@@ -44,3 +44,4 @@
 - [x] Dark/light theme toggle in header
 - [x] Responsive mobile improvements (collapsible TOC, touch-friendly buttons)
 - [x] Loading skeleton states (shimmer placeholders instead of spinner)
+- [x] Fix nested button error (BulkExport button inside category expand button)
