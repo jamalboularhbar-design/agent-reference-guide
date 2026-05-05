@@ -1,6 +1,6 @@
 import { eq, like, or, sql, desc, asc, count, and } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, documents, documentRatings, readingLists, readingListItems } from "../drizzle/schema";
+import { InsertUser, users, documents, documentRatings, readingLists, readingListItems, searchAnalytics, documentTags, documentComments, documentVersions } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -350,7 +350,7 @@ export async function getPopularDocuments(limit = 10) {
       downvotes: documents.downvotes,
     })
     .from(documents)
-    .orderBy(sql`(${documents.viewCount} + ${documents.upvotes} * 3 - ${documents.downvotes}) DESC`)
+    .orderBy(desc(sql`(${documents.viewCount} + ${documents.upvotes} * 3 - ${documents.downvotes})`))
     .limit(limit);
 
   return result;
@@ -472,4 +472,220 @@ export async function saveSummary(slug: string, summary: string) {
 
   await db.update(documents).set({ summary }).where(eq(documents.slug, slug));
   return { success: true };
+}
+
+// ─── Search Analytics ─────────────────────────────────────────────────────
+
+export async function logSearchQuery(query: string, resultCount: number, visitorId?: string) {
+  const db = await getDb();
+  if (!db) return;
+
+  await db.insert(searchAnalytics).values({
+    query: query.substring(0, 500),
+    resultCount,
+    visitorId: visitorId || null,
+    clickedSlug: null,
+  });
+}
+
+export async function logSearchClick(query: string, clickedSlug: string, visitorId?: string) {
+  const db = await getDb();
+  if (!db) return;
+
+  await db.insert(searchAnalytics).values({
+    query: query.substring(0, 500),
+    resultCount: 0,
+    visitorId: visitorId || null,
+    clickedSlug,
+  });
+}
+
+export async function getPopularSearches(limit = 20) {
+  const db = await getDb();
+  if (!db) return [];
+
+  const result = await db
+    .select({
+      query: searchAnalytics.query,
+      searchCount: count(searchAnalytics.id),
+    })
+    .from(searchAnalytics)
+    .where(sql`${searchAnalytics.clickedSlug} IS NULL`)
+    .groupBy(searchAnalytics.query)
+    .orderBy(desc(count(searchAnalytics.id)))
+    .limit(limit);
+
+  return result;
+}
+
+export async function getSearchAnalyticsSummary() {
+  const db = await getDb();
+  if (!db) return { totalSearches: 0, uniqueQueries: 0, avgResultCount: 0, zeroResultQueries: [] };
+
+  const totalResult = await db.select({ total: count() }).from(searchAnalytics).where(sql`${searchAnalytics.clickedSlug} IS NULL`);
+  const totalSearches = totalResult[0]?.total || 0;
+
+  const uniqueResult = await db.select({ unique: sql<number>`COUNT(DISTINCT ${searchAnalytics.query})` }).from(searchAnalytics);
+  const uniqueQueries = (uniqueResult[0] as any)?.unique || 0;
+
+  const avgResult = await db.select({ avg: sql<number>`AVG(${searchAnalytics.resultCount})` }).from(searchAnalytics).where(sql`${searchAnalytics.clickedSlug} IS NULL`);
+  const avgResultCount = Math.round((avgResult[0] as any)?.avg || 0);
+
+  const zeroResults = await db
+    .select({ query: searchAnalytics.query, searchCount: count(searchAnalytics.id) })
+    .from(searchAnalytics)
+    .where(and(sql`${searchAnalytics.clickedSlug} IS NULL`, eq(searchAnalytics.resultCount, 0)))
+    .groupBy(searchAnalytics.query)
+    .orderBy(desc(count(searchAnalytics.id)))
+    .limit(10);
+
+  return { totalSearches, uniqueQueries, avgResultCount, zeroResultQueries: zeroResults };
+}
+
+// ─── Document Tags ────────────────────────────────────────────────────────
+
+export async function addTag(documentSlug: string, tag: string) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+
+  // Check if tag already exists for this document
+  const existing = await db.select().from(documentTags)
+    .where(and(eq(documentTags.documentSlug, documentSlug), eq(documentTags.tag, tag)))
+    .limit(1);
+
+  if (existing.length > 0) return { alreadyExists: true };
+
+  await db.insert(documentTags).values({ documentSlug, tag });
+  return { alreadyExists: false };
+}
+
+export async function removeTag(documentSlug: string, tag: string) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+
+  await db.delete(documentTags)
+    .where(and(eq(documentTags.documentSlug, documentSlug), eq(documentTags.tag, tag)));
+  return { success: true };
+}
+
+export async function getDocumentTags(documentSlug: string) {
+  const db = await getDb();
+  if (!db) return [];
+
+  const tags = await db.select({ tag: documentTags.tag })
+    .from(documentTags)
+    .where(eq(documentTags.documentSlug, documentSlug))
+    .orderBy(asc(documentTags.tag));
+
+  return tags.map(t => t.tag);
+}
+
+export async function getAllTags() {
+  const db = await getDb();
+  if (!db) return [];
+
+  const tags = await db
+    .select({ tag: documentTags.tag, docCount: count(documentTags.id) })
+    .from(documentTags)
+    .groupBy(documentTags.tag)
+    .orderBy(desc(count(documentTags.id)));
+
+  return tags;
+}
+
+export async function getDocumentsByTag(tag: string) {
+  const db = await getDb();
+  if (!db) return [];
+
+  const result = await db
+    .select({
+      slug: documents.slug,
+      title: documents.title,
+      category: documents.category,
+      wordCount: documents.wordCount,
+    })
+    .from(documentTags)
+    .innerJoin(documents, eq(documentTags.documentSlug, documents.slug))
+    .where(eq(documentTags.tag, tag))
+    .orderBy(asc(documents.title));
+
+  return result;
+}
+
+// ─── Document Comments ────────────────────────────────────────────────────
+
+export async function addComment(documentSlug: string, visitorId: string, content: string) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+
+  const result = await db.insert(documentComments).values({ documentSlug, visitorId, content });
+  return { id: result[0].insertId };
+}
+
+export async function getComments(documentSlug: string) {
+  const db = await getDb();
+  if (!db) return [];
+
+  const comments = await db.select()
+    .from(documentComments)
+    .where(eq(documentComments.documentSlug, documentSlug))
+    .orderBy(desc(documentComments.createdAt));
+
+  return comments;
+}
+
+export async function deleteComment(id: number, visitorId: string) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+
+  await db.delete(documentComments)
+    .where(and(eq(documentComments.id, id), eq(documentComments.visitorId, visitorId)));
+  return { success: true };
+}
+
+// ─── Document Versions ────────────────────────────────────────────────────
+
+export async function saveDocumentVersion(slug: string, title: string, content: string, editedBy?: string, changeNote?: string) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+
+  await db.insert(documentVersions).values({
+    documentSlug: slug,
+    title,
+    content,
+    editedBy: editedBy || null,
+    changeNote: changeNote || null,
+  });
+  return { success: true };
+}
+
+export async function getDocumentVersions(slug: string) {
+  const db = await getDb();
+  if (!db) return [];
+
+  const versions = await db.select({
+    id: documentVersions.id,
+    title: documentVersions.title,
+    editedBy: documentVersions.editedBy,
+    changeNote: documentVersions.changeNote,
+    createdAt: documentVersions.createdAt,
+  })
+    .from(documentVersions)
+    .where(eq(documentVersions.documentSlug, slug))
+    .orderBy(desc(documentVersions.createdAt))
+    .limit(20);
+
+  return versions;
+}
+
+export async function getDocumentVersionContent(id: number) {
+  const db = await getDb();
+  if (!db) return null;
+
+  const result = await db.select()
+    .from(documentVersions)
+    .where(eq(documentVersions.id, id))
+    .limit(1);
+
+  return result[0] || null;
 }

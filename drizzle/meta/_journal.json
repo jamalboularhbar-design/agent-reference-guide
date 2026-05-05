@@ -29,6 +29,13 @@
       "when": 1778006597117,
       "tag": "0003_last_war_machine",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "5",
+      "when": 1778010112497,
+      "tag": "0004_naive_sprite",
+      "breakpoints": true
     }
   ]
 }

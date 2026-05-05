@@ -15,6 +15,8 @@ import RecentlyViewed from '@/components/RecentlyViewed';
 import Favorites from '@/components/Favorites';
 import SearchAutocomplete from '@/components/SearchAutocomplete';
 import PopularDocuments from '@/components/PopularDocuments';
+import ReadingStreak from '@/components/ReadingStreak';
+import SmartSuggestions from '@/components/SmartSuggestions';
 import { generatePersonaContent, exportToPDF } from '@/lib/exportPdf';
 
 export default function Home() {
@@ -251,6 +253,16 @@ export default function Home() {
               </Card>
             ))}
           </div>
+        </section>
+
+        {/* Reading Streak */}
+        <section className="mt-8">
+          <ReadingStreak />
+        </section>
+
+        {/* Smart Suggestions */}
+        <section className="mt-6">
+          <SmartSuggestions />
         </section>
 
         {/* Favorites & Recently Viewed */}

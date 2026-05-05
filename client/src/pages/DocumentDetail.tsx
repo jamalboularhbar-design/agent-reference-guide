@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo, lazy, Suspense } from 'react';
 import { useParams, useLocation } from 'wouter';
 import { trpc } from '@/lib/trpc';
 import ReactMarkdown from 'react-markdown';
@@ -15,6 +15,10 @@ import ShareDocument from '@/components/ShareDocument';
 import DocumentRating from '@/components/DocumentRating';
 import AISummary from '@/components/AISummary';
 import QuickActionsToolbar from '@/components/QuickActionsToolbar';
+import DocumentTags from '@/components/DocumentTags';
+const DocumentComments = lazy(() => import('@/components/DocumentComments'));
+const DocumentVersionHistory = lazy(() => import('@/components/DocumentVersionHistory'));
+import { recordReadingDay } from '@/components/ReadingStreak';
 
 // Reading time calculation
 function getReadingTime(wordCount: number): string {
@@ -118,6 +122,8 @@ export default function DocumentDetail() {
       setIsFavorited(getFavorites().includes(document.slug));
       // Record view (fire and forget)
       recordViewMutation.mutate({ slug: document.slug });
+      // Track reading streak
+      recordReadingDay();
     }
   }, [document]);
 
@@ -190,7 +196,20 @@ export default function DocumentDetail() {
     toast.success(nowFavorited ? 'Added to favorites' : 'Removed from favorites');
   }, [document]);
 
-  // Print-friendly view
+  // Export as PDF (opens styled HTML in new tab for print-to-PDF)
+  const handleExportPdf = useCallback(() => {
+    if (!document) return;
+    const pdfUrl = `/api/export/pdf/${document.slug}`;
+    const printWindow = window.open(pdfUrl, '_blank');
+    if (printWindow) {
+      printWindow.addEventListener('load', () => {
+        setTimeout(() => printWindow.print(), 500);
+      });
+    }
+    toast.success('PDF export opened - use Save as PDF in print dialog');
+  }, [document]);
+
+  // Print current page
   const handlePrint = useCallback(() => {
     window.print();
   }, []);
@@ -303,6 +322,14 @@ export default function DocumentDetail() {
             >
               <Printer className="w-5 h-5 sm:w-4 sm:h-4" />
             </button>
+            <button
+              onClick={handleExportPdf}
+              className="p-2.5 sm:p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-card/80 transition-colors"
+              title="Export as PDF"
+              aria-label="Export document as PDF"
+            >
+              <FileText className="w-5 h-5 sm:w-4 sm:h-4" />
+            </button>
             {document && <ShareDocument title={document.title} slug={document.slug} category={document.category} />}
           </div>
         </div>
@@ -389,6 +416,9 @@ export default function DocumentDetail() {
               <div className="mt-4">
                 <AISummary slug={document.slug} existingSummary={(document as any).summary} />
               </div>
+              <div className="mt-3">
+                <DocumentTags slug={document.slug} />
+              </div>
             </div>
 
             {/* Markdown Content */}
@@ -438,6 +468,16 @@ export default function DocumentDetail() {
 
             {/* Related Documents */}
             <RelatedDocuments slug={document.slug} category={document.category} />
+
+            {/* Comments & Notes */}
+            <Suspense fallback={<div className="animate-pulse h-32 bg-card/50 rounded-xl" />}>
+              <DocumentComments slug={document.slug} />
+            </Suspense>
+
+            {/* Version History */}
+            <Suspense fallback={<div className="animate-pulse h-24 bg-card/50 rounded-xl" />}>
+              <DocumentVersionHistory slug={document.slug} />
+            </Suspense>
 
             {/* Bottom Navigation */}
             <div className="mt-8 sm:mt-12 pt-4 sm:pt-6 border-t border-border/50 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">

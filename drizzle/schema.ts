@@ -42,7 +42,7 @@ export type InsertDocument = typeof documents.$inferInsert;
 export const documentRatings = mysqlTable("document_ratings", {
   id: int("id").autoincrement().primaryKey(),
   documentSlug: varchar("documentSlug", { length: 255 }).notNull(),
-  visitorId: varchar("visitorId", { length: 100 }).notNull(), // localStorage-based visitor ID
+  visitorId: varchar("visitorId", { length: 100 }).notNull(),
   rating: mysqlEnum("rating", ["up", "down"]).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
@@ -70,3 +70,50 @@ export const readingListItems = mysqlTable("reading_list_items", {
 });
 
 export type ReadingListItem = typeof readingListItems.$inferSelect;
+
+// Search analytics - tracks search queries and their results
+export const searchAnalytics = mysqlTable("search_analytics", {
+  id: int("id").autoincrement().primaryKey(),
+  query: varchar("query", { length: 500 }).notNull(),
+  resultCount: int("resultCount").default(0),
+  visitorId: varchar("visitorId", { length: 100 }),
+  clickedSlug: varchar("clickedSlug", { length: 255 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type SearchAnalytic = typeof searchAnalytics.$inferSelect;
+
+// Document tags - multi-tag system for documents
+export const documentTags = mysqlTable("document_tags", {
+  id: int("id").autoincrement().primaryKey(),
+  documentSlug: varchar("documentSlug", { length: 255 }).notNull(),
+  tag: varchar("tag", { length: 100 }).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type DocumentTag = typeof documentTags.$inferSelect;
+
+// Document comments/notes - visitor-scoped annotations
+export const documentComments = mysqlTable("document_comments", {
+  id: int("id").autoincrement().primaryKey(),
+  documentSlug: varchar("documentSlug", { length: 255 }).notNull(),
+  visitorId: varchar("visitorId", { length: 100 }).notNull(),
+  content: text("content").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type DocumentComment = typeof documentComments.$inferSelect;
+
+// Document versions - track edit history
+export const documentVersions = mysqlTable("document_versions", {
+  id: int("id").autoincrement().primaryKey(),
+  documentSlug: varchar("documentSlug", { length: 255 }).notNull(),
+  title: varchar("title", { length: 500 }).notNull(),
+  content: mediumtext("content"),
+  editedBy: varchar("editedBy", { length: 100 }),
+  changeNote: varchar("changeNote", { length: 500 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type DocumentVersion = typeof documentVersions.$inferSelect;

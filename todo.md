@@ -86,3 +86,13 @@
 - [x] Quick actions floating toolbar on document detail (print, share, favorite, add-to-list)
 - [x] AI-powered document summarization (generate TL;DR via LLM on demand)
 - [x] Popular/trending documents section based on view counts and ratings
+- [x] Search analytics tracking (log queries, admin dashboard at /admin/analytics)
+- [x] Document tagging system (multi-tag per document, tags explorer at /tags)
+- [x] PDF export (browser print-to-PDF with print-friendly CSS already implemented)
+- [x] Reading streaks (track daily reading activity with localStorage, shown on home page)
+- [x] Smart suggestions (recommend docs based on reading history, shown on home page)
+- [x] Document comments/notes (visitor-scoped annotations per document)
+- [x] Accessibility: ARIA labels, keyboard nav, focus management, proper roles throughout
+- [x] Performance: pagination, debounced search, skeleton loading states
+- [x] Notification to owner when new documents are created via admin (notifyOwner in admin create)
+- [x] Content versioning (version history component on detail page)

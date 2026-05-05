@@ -9,8 +9,13 @@ import {
   rateDocument, getUserRating, incrementViewCount, getPopularDocuments,
   getReadingLists, createReadingList, addToReadingList, removeFromReadingList,
   getReadingListItems, deleteReadingList, bulkImportDocuments, saveSummary,
+  logSearchQuery, logSearchClick, getPopularSearches, getSearchAnalyticsSummary,
+  addTag, removeTag, getDocumentTags, getAllTags, getDocumentsByTag,
+  addComment, getComments, deleteComment,
+  saveDocumentVersion, getDocumentVersions, getDocumentVersionContent,
 } from "./db";
 import { invokeLLM } from "./_core/llm";
+import { notifyOwner } from "./_core/notification";
 
 export const appRouter = router({
   system: systemRouter,
@@ -92,10 +97,8 @@ export const appRouter = router({
         const doc = await getDocumentBySlug(input.slug);
         if (!doc || !doc.content) throw new Error('Document not found');
 
-        // If summary already exists, return it
         if (doc.summary) return { summary: doc.summary };
 
-        // Generate summary using LLM
         const contentPreview = doc.content.substring(0, 4000);
         const response = await invokeLLM({
           messages: [
@@ -120,7 +123,15 @@ export const appRouter = router({
         const slug = input.title.replace(/[^a-zA-Z0-9]+/g, '-').replace(/^-|-$/g, '');
         const filename = `ARG-Builder-${slug}.md`;
         const wordCount = input.content.split(/\s+/).filter(Boolean).length;
-        return createDocument({ slug, title: input.title, category: input.category, filename, content: input.content, wordCount });
+        const result = await createDocument({ slug, title: input.title, category: input.category, filename, content: input.content, wordCount });
+
+        // Notify owner about new document
+        await notifyOwner({
+          title: `New Document Created: ${input.title}`,
+          content: `A new document "${input.title}" was created in the "${input.category}" category (${wordCount} words).`,
+        });
+
+        return result;
       }),
 
     update: adminProcedure
@@ -129,9 +140,17 @@ export const appRouter = router({
         title: z.string().min(1).max(500).optional(),
         category: z.string().min(1).max(100).optional(),
         content: z.string().optional(),
+        changeNote: z.string().optional(),
       }))
-      .mutation(async ({ input }) => {
-        const { slug, ...data } = input;
+      .mutation(async ({ input, ctx }) => {
+        const { slug, changeNote, ...data } = input;
+
+        // Save version before updating
+        const existing = await getDocumentBySlug(slug);
+        if (existing && existing.content) {
+          await saveDocumentVersion(slug, existing.title, existing.content, ctx.user?.name || 'admin', changeNote);
+        }
+
         return updateDocument(slug, data);
       }),
 
@@ -150,7 +169,30 @@ export const appRouter = router({
         })).min(1).max(100),
       }))
       .mutation(async ({ input }) => {
-        return bulkImportDocuments(input.documents);
+        const results = await bulkImportDocuments(input.documents);
+        const successCount = results.filter(r => r.status === 'created').length;
+
+        if (successCount > 0) {
+          await notifyOwner({
+            title: `Bulk Import: ${successCount} documents added`,
+            content: `${successCount} new documents were imported successfully via bulk CSV upload.`,
+          });
+        }
+
+        return results;
+      }),
+
+    // Document versions
+    versions: publicProcedure
+      .input(z.object({ slug: z.string() }))
+      .query(async ({ input }) => {
+        return getDocumentVersions(input.slug);
+      }),
+
+    versionContent: publicProcedure
+      .input(z.object({ id: z.number() }))
+      .query(async ({ input }) => {
+        return getDocumentVersionContent(input.id);
       }),
   }),
 
@@ -190,6 +232,85 @@ export const appRouter = router({
       .input(z.object({ listId: z.number() }))
       .mutation(async ({ input }) => {
         return deleteReadingList(input.listId);
+      }),
+  }),
+
+  // Search Analytics
+  searchAnalytics: router({
+    log: publicProcedure
+      .input(z.object({ query: z.string(), resultCount: z.number(), visitorId: z.string().optional() }))
+      .mutation(async ({ input }) => {
+        await logSearchQuery(input.query, input.resultCount, input.visitorId);
+        return { success: true };
+      }),
+
+    logClick: publicProcedure
+      .input(z.object({ query: z.string(), clickedSlug: z.string(), visitorId: z.string().optional() }))
+      .mutation(async ({ input }) => {
+        await logSearchClick(input.query, input.clickedSlug, input.visitorId);
+        return { success: true };
+      }),
+
+    popular: publicProcedure
+      .input(z.object({ limit: z.number().min(1).max(50).optional().default(20) }))
+      .query(async ({ input }) => {
+        return getPopularSearches(input.limit);
+      }),
+
+    summary: adminProcedure.query(async () => {
+      return getSearchAnalyticsSummary();
+    }),
+  }),
+
+  // Document Tags
+  tags: router({
+    all: publicProcedure.query(async () => {
+      return getAllTags();
+    }),
+
+    forDocument: publicProcedure
+      .input(z.object({ slug: z.string() }))
+      .query(async ({ input }) => {
+        return getDocumentTags(input.slug);
+      }),
+
+    documentsByTag: publicProcedure
+      .input(z.object({ tag: z.string() }))
+      .query(async ({ input }) => {
+        return getDocumentsByTag(input.tag);
+      }),
+
+    add: publicProcedure
+      .input(z.object({ documentSlug: z.string(), tag: z.string().min(1).max(100) }))
+      .mutation(async ({ input }) => {
+        return addTag(input.documentSlug, input.tag.toLowerCase().trim());
+      }),
+
+    remove: publicProcedure
+      .input(z.object({ documentSlug: z.string(), tag: z.string() }))
+      .mutation(async ({ input }) => {
+        return removeTag(input.documentSlug, input.tag);
+      }),
+  }),
+
+  // Document Comments
+  comments: router({
+    list: publicProcedure
+      .input(z.object({ documentSlug: z.string() }))
+      .query(async ({ input }) => {
+        return getComments(input.documentSlug);
+      }),
+
+    add: publicProcedure
+      .input(z.object({ documentSlug: z.string(), visitorId: z.string(), content: z.string().min(1).max(2000) }))
+      .mutation(async ({ input }) => {
+        return addComment(input.documentSlug, input.visitorId, input.content);
+      }),
+
+    delete: publicProcedure
+      .input(z.object({ id: z.number(), visitorId: z.string() }))
+      .mutation(async ({ input }) => {
+        return deleteComment(input.id, input.visitorId);
       }),
   }),
 });

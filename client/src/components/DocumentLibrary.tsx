@@ -141,6 +141,14 @@ export default function DocumentLibrary() {
   const documents = documentsData?.documents ?? [];
   const filteredTotal = documentsData?.total ?? 0;
 
+  // Log search analytics
+  const logSearchMutation = trpc.searchAnalytics.log.useMutation();
+  useEffect(() => {
+    if (debouncedSearch.trim() && documentsData) {
+      logSearchMutation.mutate({ query: debouncedSearch.trim(), resultCount: filteredTotal });
+    }
+  }, [debouncedSearch, filteredTotal]);
+
   // Grouped by category for category view
   const groupedDocs = useMemo(() => {
     const groups: Record<string, typeof documents> = {};
@@ -192,11 +200,14 @@ export default function DocumentLibrary() {
             value={searchQuery}
             onChange={e => { setSearchQuery(e.target.value); setCurrentPage(1); }}
             className="w-full pl-10 sm:pl-12 pr-4 py-3 sm:py-3.5 rounded-xl bg-card border border-border/50 text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-accent/50 focus:ring-1 focus:ring-accent/20 transition-all text-sm"
+            aria-label="Search documents by title or content"
+            role="searchbox"
           />
           {searchQuery && (
             <button
               onClick={() => setSearchQuery('')}
               className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground text-xs"
+              aria-label="Clear search"
             >
               Clear
             </button>
