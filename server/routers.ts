@@ -2,11 +2,10 @@ import { z } from "zod";
 import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
-import { publicProcedure, router } from "./_core/trpc";
-import { getDocuments, getDocumentBySlug, getDocumentCategories, getRelatedDocuments, getDocumentStats } from "./db";
+import { publicProcedure, router, adminProcedure } from "./_core/trpc";
+import { getDocuments, getDocumentBySlug, getDocumentCategories, getRelatedDocuments, getDocumentStats, createDocument, updateDocument, deleteDocument } from "./db";
 
 export const appRouter = router({
-  // if you need to use socket.io, read and register route in server/_core/index.ts, all api should start with '/api/' so that the gateway can route correctly
   system: systemRouter,
   auth: router({
     me: publicProcedure.query(opts => opts.ctx.user),
@@ -53,6 +52,38 @@ export const appRouter = router({
     stats: publicProcedure.query(async () => {
       return getDocumentStats();
     }),
+
+    // Admin CRUD operations
+    create: adminProcedure
+      .input(z.object({
+        title: z.string().min(1).max(500),
+        category: z.string().min(1).max(100),
+        content: z.string().min(1),
+      }))
+      .mutation(async ({ input }) => {
+        const slug = input.title.replace(/[^a-zA-Z0-9]+/g, '-').replace(/^-|-$/g, '');
+        const filename = `ARG-Builder-${slug}.md`;
+        const wordCount = input.content.split(/\s+/).filter(Boolean).length;
+        return createDocument({ slug, title: input.title, category: input.category, filename, content: input.content, wordCount });
+      }),
+
+    update: adminProcedure
+      .input(z.object({
+        slug: z.string(),
+        title: z.string().min(1).max(500).optional(),
+        category: z.string().min(1).max(100).optional(),
+        content: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const { slug, ...data } = input;
+        return updateDocument(slug, data);
+      }),
+
+    delete: adminProcedure
+      .input(z.object({ slug: z.string() }))
+      .mutation(async ({ input }) => {
+        return deleteDocument(input.slug);
+      }),
   }),
 });
 

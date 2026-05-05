@@ -40,7 +40,7 @@ export default function RecentlyViewed() {
   if (items.length === 0) return null;
 
   return (
-    <section className="mt-12 pt-8 border-t border-border/30">
+    <section className="mt-8 sm:mt-12 pt-6 sm:pt-8 border-t border-border/30">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <Clock className="w-4 h-4 text-accent" />

@@ -76,7 +76,7 @@ export default function TravelConcierge() {
     <div className="space-y-8">
       {/* Persona Header */}
       <div className="card-premium">
-        <h2 className="font-display text-3xl mb-2">Atlas Elite Concierge</h2>
+        <h2 className="font-display text-2xl sm:text-3xl mb-2">Atlas Elite Concierge</h2>
         <p className="text-muted-foreground mb-4">Luxury Travel Company - Moroccan Experiences for HNW Americans</p>
         <div className="flex flex-wrap gap-2">
           <Badge variant="secondary">Sophisticated</Badge>

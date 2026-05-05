@@ -205,6 +205,53 @@ export async function getRelatedDocuments(slug: string, category: string, limit 
   return result;
 }
 
+// ─── Admin Document CRUD ────────────────────────────────────────────────────
+
+export async function createDocument(data: {
+  slug: string;
+  title: string;
+  category: string;
+  filename: string;
+  content: string;
+  wordCount: number;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+
+  await db.insert(documents).values(data);
+  return getDocumentBySlug(data.slug);
+}
+
+export async function updateDocument(slug: string, data: {
+  title?: string;
+  category?: string;
+  content?: string;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+
+  const updateSet: Record<string, unknown> = {};
+  if (data.title !== undefined) updateSet.title = data.title;
+  if (data.category !== undefined) updateSet.category = data.category;
+  if (data.content !== undefined) {
+    updateSet.content = data.content;
+    updateSet.wordCount = data.content.split(/\s+/).filter(Boolean).length;
+  }
+
+  if (Object.keys(updateSet).length === 0) return getDocumentBySlug(slug);
+
+  await db.update(documents).set(updateSet).where(eq(documents.slug, slug));
+  return getDocumentBySlug(slug);
+}
+
+export async function deleteDocument(slug: string) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+
+  await db.delete(documents).where(eq(documents.slug, slug));
+  return { success: true };
+}
+
 export async function getDocumentStats() {
   const db = await getDb();
   if (!db) return null;

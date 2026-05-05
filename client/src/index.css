@@ -180,9 +180,15 @@
     color: var(--card-foreground);
     border-radius: 0.65rem;
     border: 1px solid rgba(255, 255, 255, 0.1);
-    padding: 1.5rem;
+    padding: 1rem;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     transition: all 0.3s ease-out;
+  }
+
+  @media (min-width: 640px) {
+    .card-premium {
+      padding: 1.5rem;
+    }
   }
 
   .card-premium:hover {
@@ -205,6 +211,38 @@
     }
   }
 }
+/* Mobile responsive improvements */
+@media (max-width: 639px) {
+  /* Ensure minimum touch targets on mobile */
+  button, [role="button"], a {
+    min-height: 36px;
+  }
+
+  /* Prevent horizontal overflow */
+  body {
+    overflow-x: hidden;
+  }
+
+  /* Safe area padding for notched phones */
+  .container {
+    padding-left: max(1rem, env(safe-area-inset-left));
+    padding-right: max(1rem, env(safe-area-inset-right));
+  }
+}
+
+/* Smooth scrolling for all devices */
+html {
+  scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
+}
+
+/* iPad-specific: better use of space */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .container {
+    max-width: 900px;
+  }
+}
+
 /* Print-friendly styles */
 @media print {
   body {

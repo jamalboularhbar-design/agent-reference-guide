@@ -86,7 +86,7 @@ export default function CreativeStudio() {
     <div className="space-y-8">
       {/* Persona Header */}
       <div className="card-premium">
-        <h2 className="font-display text-3xl mb-2">ArtKech Lead Designer</h2>
+        <h2 className="font-display text-2xl sm:text-3xl mb-2">ArtKech Lead Designer</h2>
         <p className="text-muted-foreground mb-4">Full-Service Creative Studio - Premium Design & Independent Publishing</p>
         <div className="flex flex-wrap gap-2">
           <Badge variant="secondary">Visionary</Badge>
@@ -98,7 +98,7 @@ export default function CreativeStudio() {
 
       {/* Tabs for different sections */}
       <Tabs defaultValue="characteristics" className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4">
           <TabsTrigger value="characteristics">Characteristics</TabsTrigger>
           <TabsTrigger value="process">Process Flow</TabsTrigger>
           <TabsTrigger value="responsibilities">Responsibilities</TabsTrigger>

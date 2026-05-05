@@ -10,6 +10,8 @@ import {
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
+import { useReadingProgress } from '@/hooks/useReadingProgress';
+import ShareDocument from '@/components/ShareDocument';
 
 // Reading time calculation
 function getReadingTime(wordCount: number): string {
@@ -99,6 +101,9 @@ export default function DocumentDetail() {
 
   const [isFavorited, setIsFavorited] = useState(false);
   const [activeHeading, setActiveHeading] = useState('');
+
+  // Persist reading progress (auto-saves scroll position)
+  useReadingProgress(slug);
 
   // Track recently viewed
   useEffect(() => {
@@ -290,6 +295,7 @@ export default function DocumentDetail() {
             >
               <Printer className="w-5 h-5 sm:w-4 sm:h-4" />
             </button>
+            {document && <ShareDocument title={document.title} slug={document.slug} category={document.category} />}
           </div>
         </div>
       </header>
@@ -342,9 +348,9 @@ export default function DocumentDetail() {
                 <span className="text-foreground truncate max-w-[200px] sm:max-w-none">{document.title}</span>
               </nav>
 
-              <h1 className="font-display text-3xl md:text-4xl text-foreground mb-4">{document.title}</h1>
+              <h1 className="font-display text-xl sm:text-3xl md:text-4xl text-foreground mb-3 sm:mb-4 leading-tight">{document.title}</h1>
               
-              <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
+              <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-xs sm:text-sm text-muted-foreground">
                 <Badge variant="outline" className="text-xs">
                   {document.category}
                 </Badge>
@@ -372,21 +378,23 @@ export default function DocumentDetail() {
             {/* Markdown Content */}
             <article className="prose prose-invert prose-sm max-w-none
               prose-headings:font-display prose-headings:text-foreground
-              prose-h1:text-2xl prose-h1:mt-8 prose-h1:mb-4
-              prose-h2:text-xl prose-h2:mt-6 prose-h2:mb-3 prose-h2:border-b prose-h2:border-border/30 prose-h2:pb-2
-              prose-h3:text-lg prose-h3:mt-5 prose-h3:mb-2
-              prose-p:text-muted-foreground prose-p:leading-relaxed
-              prose-li:text-muted-foreground
+              prose-h1:text-xl prose-h1:sm:text-2xl prose-h1:mt-6 prose-h1:sm:mt-8 prose-h1:mb-3 prose-h1:sm:mb-4
+              prose-h2:text-lg prose-h2:sm:text-xl prose-h2:mt-5 prose-h2:sm:mt-6 prose-h2:mb-2 prose-h2:sm:mb-3 prose-h2:border-b prose-h2:border-border/30 prose-h2:pb-2
+              prose-h3:text-base prose-h3:sm:text-lg prose-h3:mt-4 prose-h3:sm:mt-5 prose-h3:mb-2
+              prose-p:text-muted-foreground prose-p:leading-relaxed prose-p:text-sm prose-p:sm:text-base
+              prose-li:text-muted-foreground prose-li:text-sm prose-li:sm:text-base
               prose-strong:text-foreground
               prose-a:text-accent prose-a:no-underline hover:prose-a:underline
-              prose-code:text-accent prose-code:bg-accent/10 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-xs
-              prose-pre:bg-card prose-pre:border prose-pre:border-border/50 prose-pre:rounded-xl
-              prose-table:border prose-table:border-border/50
-              prose-th:bg-card/50 prose-th:border prose-th:border-border/50 prose-th:px-3 prose-th:py-2 prose-th:text-foreground
-              prose-td:border prose-td:border-border/50 prose-td:px-3 prose-td:py-2
+              prose-code:text-accent prose-code:bg-accent/10 prose-code:px-1 prose-code:sm:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-[11px] prose-code:sm:text-xs
+              prose-pre:bg-card prose-pre:border prose-pre:border-border/50 prose-pre:rounded-xl prose-pre:overflow-x-auto prose-pre:text-xs
+              prose-table:border prose-table:border-border/50 prose-table:text-xs prose-table:sm:text-sm
+              prose-th:bg-card/50 prose-th:border prose-th:border-border/50 prose-th:px-2 prose-th:sm:px-3 prose-th:py-1.5 prose-th:sm:py-2 prose-th:text-foreground
+              prose-td:border prose-td:border-border/50 prose-td:px-2 prose-td:sm:px-3 prose-td:py-1.5 prose-td:sm:py-2
               prose-blockquote:border-accent/50 prose-blockquote:text-muted-foreground
               prose-hr:border-border/50
               print:prose-p:text-black print:prose-headings:text-black
+              [&_table]:block [&_table]:overflow-x-auto [&_table]:w-full
+              [&_pre]:max-w-[calc(100vw-3rem)] [&_pre]:sm:max-w-none
             ">
               <ReactMarkdown
                 remarkPlugins={[remarkGfm]}
@@ -416,7 +424,7 @@ export default function DocumentDetail() {
             <RelatedDocuments slug={document.slug} category={document.category} />
 
             {/* Bottom Navigation */}
-            <div className="mt-12 pt-6 border-t border-border/50 flex items-center justify-between">
+            <div className="mt-8 sm:mt-12 pt-4 sm:pt-6 border-t border-border/50 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <button
                 onClick={() => navigate('/')}
                 className="flex items-center gap-2 text-sm text-muted-foreground hover:text-accent transition-colors"
@@ -505,7 +513,7 @@ function ScrollToTop() {
   return (
     <button
       onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-      className="fixed bottom-6 right-6 z-50 p-3 rounded-full bg-accent/20 border border-accent/40 text-accent hover:bg-accent/30 transition-all shadow-lg no-print"
+      className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50 p-3 sm:p-3 rounded-full bg-accent/20 border border-accent/40 text-accent hover:bg-accent/30 active:bg-accent/40 transition-all shadow-lg no-print"
       title="Scroll to top"
     >
       <ArrowUp className="w-5 h-5" />

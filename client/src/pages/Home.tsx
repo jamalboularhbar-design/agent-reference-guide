@@ -13,6 +13,7 @@ import DocumentLibrary from '@/components/DocumentLibrary';
 import DocumentStats from '@/components/DocumentStats';
 import RecentlyViewed from '@/components/RecentlyViewed';
 import Favorites from '@/components/Favorites';
+import SearchAutocomplete from '@/components/SearchAutocomplete';
 import { generatePersonaContent, exportToPDF } from '@/lib/exportPdf';
 
 export default function Home() {
@@ -150,22 +151,25 @@ export default function Home() {
         )}
 
         {/* Hero Section */}
-        <div className="mb-16 text-center py-12">
-          <div className="inline-block mb-6 px-4 py-2 rounded-full bg-accent/10 border border-accent/20">
-            <p className="text-sm font-semibold text-accent">Dual Persona System</p>
+        <div className="mb-10 sm:mb-16 text-center py-8 sm:py-12">
+          <div className="inline-block mb-4 sm:mb-6 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full bg-accent/10 border border-accent/20">
+            <p className="text-xs sm:text-sm font-semibold text-accent">Dual Persona System</p>
           </div>
-          <h1 className="font-display text-5xl md:text-7xl mb-6 text-foreground leading-tight">
+          <h1 className="font-display text-3xl sm:text-5xl md:text-7xl mb-4 sm:mb-6 text-foreground leading-tight">
             Agent Reference Guide
           </h1>
-          <p className="text-xl text-muted-foreground max-w-3xl mx-auto mb-8 leading-relaxed">
+          <p className="text-base sm:text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto mb-6 sm:mb-8 leading-relaxed px-2">
             A comprehensive interactive guide for managing operational processes across your luxury travel company and creative design studio. Seamlessly switch between personas and explore detailed process frameworks.
           </p>
+          <div className="max-w-lg mx-auto">
+            <SearchAutocomplete placeholder="Quick search 525+ documents..." className="text-left" />
+          </div>
         </div>
 
         {/* Persona Selection Tabs */}
-        <div className="mb-16">
+        <div className="mb-10 sm:mb-16">
           <Tabs value={activePersona} onValueChange={(value) => setActivePersona(value as 'travel' | 'artkech')} className="w-full">
-            <TabsList className="grid w-full max-w-md mx-auto grid-cols-2 mb-12 bg-card/50 border border-border/50 p-1 rounded-lg">
+            <TabsList className="grid w-full max-w-sm sm:max-w-md mx-auto grid-cols-2 mb-8 sm:mb-12 bg-card/50 border border-border/50 p-1 rounded-lg">
               <TabsTrigger value="travel" className="flex items-center gap-2">
                 <Plane className="w-4 h-4" />
                 <span>Luxury Travel</span>
@@ -205,9 +209,9 @@ export default function Home() {
         </div>
 
         {/* General Capabilities Section */}
-        <section className="mt-24 mb-20 pt-12 border-t border-border/50">
-          <h2 className="font-display text-4xl md:text-5xl mb-3 text-foreground">General Capabilities</h2>
-          <p className="text-muted-foreground mb-8">Core competencies across both business operations</p>
+        <section className="mt-16 sm:mt-24 mb-12 sm:mb-20 pt-8 sm:pt-12 border-t border-border/50">
+          <h2 className="font-display text-2xl sm:text-4xl md:text-5xl mb-2 sm:mb-3 text-foreground">General Capabilities</h2>
+          <p className="text-muted-foreground text-sm sm:text-base mb-6 sm:mb-8">Core competencies across both business operations</p>
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {[
@@ -261,9 +265,9 @@ export default function Home() {
         <DocumentLibrary />
 
         {/* Operational Guidelines Section */}
-        <section className="mt-24 pt-12 border-t border-border/50">
-          <h2 className="font-display text-4xl md:text-5xl mb-3 text-foreground">Operational Guidelines</h2>
-          <p className="text-muted-foreground mb-8">Core principles guiding all operations</p>
+        <section className="mt-16 sm:mt-24 pt-8 sm:pt-12 border-t border-border/50">
+          <h2 className="font-display text-2xl sm:text-4xl md:text-5xl mb-2 sm:mb-3 text-foreground">Operational Guidelines</h2>
+          <p className="text-muted-foreground text-sm sm:text-base mb-6 sm:mb-8">Core principles guiding all operations</p>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {[

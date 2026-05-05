@@ -167,31 +167,31 @@ export default function DocumentLibrary() {
   };
 
   return (
-    <section className="mt-24 pt-12 border-t border-border/50">
+    <section className="mt-16 sm:mt-24 pt-8 sm:pt-12 border-t border-border/50">
       {/* Section Header */}
-      <div className="flex items-end justify-between mb-8 flex-wrap gap-4">
+      <div className="flex items-end justify-between mb-6 sm:mb-8 flex-wrap gap-3 sm:gap-4">
         <div>
-          <div className="inline-block mb-3 px-3 py-1.5 rounded-full bg-accent/10 border border-accent/20">
+          <div className="inline-block mb-2 sm:mb-3 px-3 py-1.5 rounded-full bg-accent/10 border border-accent/20">
             <p className="text-xs font-semibold text-accent tracking-wider uppercase">Complete Library</p>
           </div>
-          <h2 className="font-display text-4xl md:text-5xl mb-2 text-foreground">Document Library</h2>
-          <p className="text-muted-foreground">
-            <span className="text-accent font-semibold">{totalDocuments}</span> comprehensive operational documents across{' '}
+          <h2 className="font-display text-2xl sm:text-4xl md:text-5xl mb-2 text-foreground">Document Library</h2>
+          <p className="text-muted-foreground text-sm sm:text-base">
+            <span className="text-accent font-semibold">{totalDocuments}</span> operational documents across{' '}
             <span className="text-accent font-semibold">{categoryList.length}</span> categories
           </p>
         </div>
       </div>
 
       {/* Search & Filter Bar */}
-      <div className="mb-8 space-y-4">
+      <div className="mb-6 sm:mb-8 space-y-3 sm:space-y-4">
         <div className="relative">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+          <Search className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 w-4 sm:w-5 h-4 sm:h-5 text-muted-foreground" />
           <input
             type="text"
-            placeholder="Search titles and content across all documents..."
+            placeholder="Search documents..."
             value={searchQuery}
             onChange={e => { setSearchQuery(e.target.value); setCurrentPage(1); }}
-            className="w-full pl-12 pr-4 py-3.5 rounded-xl bg-card border border-border/50 text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-accent/50 focus:ring-1 focus:ring-accent/20 transition-all text-sm"
+            className="w-full pl-10 sm:pl-12 pr-4 py-3 sm:py-3.5 rounded-xl bg-card border border-border/50 text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-accent/50 focus:ring-1 focus:ring-accent/20 transition-all text-sm"
           />
           {searchQuery && (
             <button
@@ -204,7 +204,7 @@ export default function DocumentLibrary() {
         </div>
 
         {/* Category Filter Pills */}
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-1.5 sm:gap-2 max-h-[200px] overflow-y-auto sm:max-h-none sm:overflow-visible">
           <button
             onClick={() => { setSelectedCategory('All'); setCurrentPage(1); }}
             className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all border ${
@@ -320,6 +320,14 @@ export default function DocumentLibrary() {
                   
                   {isExpanded && (
                     <div className="border-t border-border/30 p-4">
+                      <div className="flex justify-end mb-3">
+                        <button
+                          onClick={() => navigate(`/category/${encodeURIComponent(cat)}`)}
+                          className="text-xs text-accent hover:text-accent/80 transition-colors"
+                        >
+                          View all {count} docs →
+                        </button>
+                      </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                         {catDocs.map(doc => (
                           <button
@@ -348,14 +356,14 @@ export default function DocumentLibrary() {
       ) : !isLoading ? (
         /* List View (when searching or category selected) */
         <>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3">
             {visibleDocs.map(doc => {
               const colorClass = CATEGORY_COLORS[doc.category] || 'bg-muted/30 text-muted-foreground border-border/50';
               return (
                 <button
                   key={doc.slug}
                   onClick={() => navigateToDoc(doc.slug)}
-                  className="p-4 rounded-xl bg-card/30 border border-border/50 hover:border-accent/30 transition-all group text-left"
+                  className="p-3 sm:p-4 rounded-xl bg-card/30 border border-border/50 hover:border-accent/30 active:bg-card/50 transition-all group text-left"
                 >
                   <div className="flex items-start gap-3">
                     <FileText className="w-4 h-4 text-muted-foreground mt-1 flex-shrink-0 group-hover:text-accent transition-colors" />

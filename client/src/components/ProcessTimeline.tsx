@@ -32,7 +32,7 @@ export default function ProcessTimeline({ stages, title, description }: ProcessT
           <div key={stage.number} className="relative">
             {/* Connector line */}
             {index < stages.length - 1 && (
-              <div className="absolute left-6 top-16 w-0.5 h-8 bg-gradient-to-b from-accent/50 to-accent/20" />
+              <div className="absolute left-5 sm:left-6 top-14 sm:top-16 w-0.5 h-6 sm:h-8 bg-gradient-to-b from-accent/50 to-accent/20" />
             )}
 
             {/* Stage card */}
@@ -41,19 +41,19 @@ export default function ProcessTimeline({ stages, title, description }: ProcessT
               className="w-full text-left transition-all duration-300"
             >
               <Card className="card-premium hover:border-accent/50 transition-all">
-                <CardHeader className="pb-3">
-                  <div className="flex items-start gap-4">
+                <CardHeader className="pb-2 sm:pb-3">
+                  <div className="flex items-start gap-3 sm:gap-4">
                     {/* Stage number badge */}
-                    <div className="flex-shrink-0 w-12 h-12 rounded-lg bg-gradient-to-br from-accent to-accent/70 flex items-center justify-center shadow-lg">
-                      <span className="font-display font-bold text-lg text-accent-foreground">
+                    <div className="flex-shrink-0 w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-gradient-to-br from-accent to-accent/70 flex items-center justify-center shadow-lg">
+                      <span className="font-display font-bold text-base sm:text-lg text-accent-foreground">
                         {stage.number}
                       </span>
                     </div>
 
                     {/* Stage content */}
                     <div className="flex-1 min-w-0">
-                      <CardTitle className="text-lg mb-1">{stage.title}</CardTitle>
-                      <p className="text-sm text-muted-foreground line-clamp-2">{stage.description}</p>
+                      <CardTitle className="text-base sm:text-lg mb-1">{stage.title}</CardTitle>
+                      <p className="text-xs sm:text-sm text-muted-foreground line-clamp-2">{stage.description}</p>
                     </div>
 
                     {/* Expand indicator */}

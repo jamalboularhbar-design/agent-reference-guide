@@ -6,6 +6,9 @@ import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import Home from "./pages/Home";
 import DocumentDetail from "./pages/DocumentDetail";
+import AdminEditor from "./pages/AdminEditor";
+import CategoryPage from "./pages/CategoryPage";
+import CompareDocuments from "./pages/CompareDocuments";
 import KeyboardShortcutsModal from "./components/KeyboardShortcutsModal";
 
 function Router() {
@@ -14,6 +17,9 @@ function Router() {
     <Switch>
       <Route path={"/"} component={Home} />
       <Route path={"/docs/:slug"} component={DocumentDetail} />
+      <Route path={"/category/:category"} component={CategoryPage} />
+      <Route path={"/compare"} component={CompareDocuments} />
+      <Route path={"/admin/editor"} component={AdminEditor} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />

@@ -55,3 +55,24 @@
 - [x] Search result snippets showing matched content excerpt
 - [x] Pagination controls (page numbers instead of just Load More)
 - [x] Smooth animated transitions between pages (hash-based scroll)
+- [x] Responsive: Fix hero section text sizing and spacing on mobile/tablet
+- [x] Responsive: Fix persona tabs and process timeline for small screens
+- [x] Responsive: Fix document stats grid for mobile (2-col on phone, 4-col on tablet)
+- [x] Responsive: Fix category filter pills overflow/scrolling on mobile
+- [x] Responsive: Fix document grid cards for phone screens (single column)
+- [x] Responsive: Fix Document Detail TOC and content layout on tablet/phone
+- [x] Responsive: Fix Header navigation and theme toggle for mobile
+- [x] Responsive: Fix pagination controls touch targets and spacing on mobile
+- [x] Responsive: Fix Recently Viewed and Favorites sections for small screens
+- [x] Responsive: Add proper viewport meta and touch-friendly tap targets throughout
+- [x] Admin document editor (create/edit/delete documents in browser) at /admin/editor
+- [x] FULLTEXT index on content column (skipped - TiDB doesn't support FULLTEXT, using LIKE with LOWER() instead)
+- [x] Document sharing via URL (Share button with Twitter, LinkedIn, Email, Copy link)
+- [x] Reading progress persistence (auto-saves scroll position per document)
+- [x] Multi-document comparison view (side-by-side) at /compare
+- [x] Document changelog/version history tracking (updatedAt displayed in detail view)
+- [x] Category landing pages with overview and stats at /category/:name
+- [x] Search suggestions/autocomplete dropdown component
+- [x] Admin document editor (create/edit/delete) at /admin/editor
+- [x] Compare button + Admin link in header navigation
+- [x] View All link in expanded categories to navigate to category page
