@@ -10,26 +10,49 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription
 } from '@/components/ui/dialog';
 import {
-  Plus, Pencil, Trash2, Search, FileText, ArrowLeft, Save, X, AlertTriangle, Loader2
+  Plus, Pencil, Trash2, Search, FileText, ArrowLeft, Save, X, AlertTriangle, Loader2,
+  Pin, PinOff, CheckSquare, Square, Tag, ArrowUpDown, Download
 } from 'lucide-react';
 import { getLoginUrl } from '@/const';
 import { toast } from 'sonner';
+
+type DocStatus = 'draft' | 'review' | 'published';
+
+const statusColors: Record<DocStatus, string> = {
+  draft: 'bg-gray-500/20 text-gray-400',
+  review: 'bg-amber-500/20 text-amber-400',
+  published: 'bg-emerald-500/20 text-emerald-400',
+};
 
 export default function AdminEditor() {
   const [, navigate] = useLocation();
   const { user, loading: authLoading } = useAuth();
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
-  const [editingDoc, setEditingDoc] = useState<{ slug?: string; title: string; category: string; content: string } | null>(null);
+  const [statusFilter, setStatusFilter] = useState<'all' | DocStatus>('all');
+  const [editingDoc, setEditingDoc] = useState<{
+    slug?: string; title: string; category: string; content: string;
+    status: DocStatus; reviewBy?: string;
+  } | null>(null);
   const [deleteSlug, setDeleteSlug] = useState<string | null>(null);
   const [loadingSlug, setLoadingSlug] = useState<string | null>(null);
 
+  // Batch selection
+  const [selectedSlugs, setSelectedSlugs] = useState<Set<string>>(new Set());
+  const [batchAction, setBatchAction] = useState<'none' | 'status' | 'tag' | 'delete'>('none');
+  const [batchStatus, setBatchStatus] = useState<DocStatus>('published');
+  const [batchTag, setBatchTag] = useState('');
+
   const { data: categoriesData } = trpc.documents.categories.useQuery();
+  const { data: customCatsData } = trpc.customCategories.list.useQuery();
   const { data: documentsData, refetch } = trpc.documents.list.useQuery({
     limit: 600,
     category: selectedCategory === 'All' ? undefined : selectedCategory,
     search: search || undefined,
+    status: statusFilter,
   });
+
+  const utils = trpc.useUtils();
 
   const createMutation = trpc.documents.create.useMutation({
     onSuccess: () => { refetch(); setEditingDoc(null); toast.success('Document created successfully'); },
@@ -43,19 +66,45 @@ export default function AdminEditor() {
     onSuccess: () => { refetch(); setDeleteSlug(null); toast.success('Document deleted'); },
     onError: (err) => { toast.error(`Failed to delete: ${err.message}`); setDeleteSlug(null); },
   });
+  const pinMutation = trpc.documents.pin.useMutation({
+    onSuccess: () => { refetch(); toast.success('Document pinned'); },
+  });
+  const unpinMutation = trpc.documents.unpin.useMutation({
+    onSuccess: () => { refetch(); toast.success('Document unpinned'); },
+  });
+  const batchDeleteMutation = trpc.documents.batchDelete.useMutation({
+    onSuccess: (data) => { refetch(); setSelectedSlugs(new Set()); setBatchAction('none'); toast.success(`Deleted ${data.deleted} documents`); },
+  });
+  const batchStatusMutation = trpc.documents.batchUpdateStatus.useMutation({
+    onSuccess: (data) => { refetch(); setSelectedSlugs(new Set()); setBatchAction('none'); toast.success(`Updated ${data.updated} documents`); },
+  });
+  const batchTagMutation = trpc.documents.batchAddTag.useMutation({
+    onSuccess: (data) => { refetch(); setSelectedSlugs(new Set()); setBatchAction('none'); setBatchTag(''); toast.success(`Tagged ${data.added} documents`); },
+  });
 
-  const categories = useMemo(() => categoriesData ?? [], [categoriesData]);
+  const categories = useMemo(() => {
+    const base = categoriesData ?? [];
+    const custom = customCatsData ?? [];
+    const existing = new Set(base.map(c => c.category));
+    const extras = custom.filter((cc: any) => !existing.has(cc.name)).map((cc: any) => ({ category: cc.name, count: 0 }));
+    return [...base, ...extras];
+  }, [categoriesData, customCatsData]);
   const documents = useMemo(() => documentsData?.documents ?? [], [documentsData]);
-
-  // Use tRPC utils to fetch document content for editing
   const trpcUtils = trpc.useUtils();
 
-  const handleEditClick = async (slug: string, title: string, category: string) => {
+  const handleEditClick = async (slug: string) => {
     setLoadingSlug(slug);
     try {
       const doc = await trpcUtils.documents.getBySlug.fetch({ slug });
       if (doc) {
-        setEditingDoc({ slug, title: doc.title, category: doc.category, content: doc.content || '' });
+        setEditingDoc({
+          slug,
+          title: doc.title,
+          category: doc.category,
+          content: doc.content || '',
+          status: (doc.status as DocStatus) || 'published',
+          reviewBy: doc.reviewBy ? new Date(doc.reviewBy).toISOString().split('T')[0] : '',
+        });
       } else {
         toast.error('Document not found');
       }
@@ -66,12 +115,22 @@ export default function AdminEditor() {
     }
   };
 
+  const toggleSelect = (slug: string) => {
+    const next = new Set(selectedSlugs);
+    if (next.has(slug)) next.delete(slug); else next.add(slug);
+    setSelectedSlugs(next);
+  };
+
+  const selectAll = () => {
+    if (selectedSlugs.size === documents.length) {
+      setSelectedSlugs(new Set());
+    } else {
+      setSelectedSlugs(new Set(documents.map(d => d.slug)));
+    }
+  };
+
   if (authLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="animate-pulse text-muted-foreground">Loading...</div>
-      </div>
-    );
+    return <div className="min-h-screen flex items-center justify-center bg-background"><div className="animate-pulse text-muted-foreground">Loading...</div></div>;
   }
 
   if (!user) {
@@ -107,13 +166,26 @@ export default function AdminEditor() {
       return;
     }
     if (editingDoc.slug) {
-      updateMutation.mutate({ slug: editingDoc.slug, title: editingDoc.title, category: editingDoc.category, content: editingDoc.content });
+      updateMutation.mutate({
+        slug: editingDoc.slug,
+        title: editingDoc.title,
+        category: editingDoc.category,
+        content: editingDoc.content,
+        status: editingDoc.status,
+        reviewBy: editingDoc.reviewBy || undefined,
+      });
     } else {
-      createMutation.mutate({ title: editingDoc.title, category: editingDoc.category, content: editingDoc.content });
+      createMutation.mutate({
+        title: editingDoc.title,
+        category: editingDoc.category,
+        content: editingDoc.content,
+        status: editingDoc.status,
+      });
     }
   };
 
   const isSaving = createMutation.isPending || updateMutation.isPending;
+  const selectedArray = Array.from(selectedSlugs);
 
   return (
     <div className="min-h-screen bg-background">
@@ -126,10 +198,10 @@ export default function AdminEditor() {
             </button>
             <div>
               <h1 className="text-lg sm:text-xl font-bold text-foreground">Document Editor</h1>
-              <p className="text-xs text-muted-foreground hidden sm:block">Admin Panel — Create, edit, and manage documents</p>
+              <p className="text-xs text-muted-foreground hidden sm:block">Admin Panel — Create, edit, manage, and batch-operate documents</p>
             </div>
           </div>
-          <Button onClick={() => setEditingDoc({ title: '', category: '', content: '' })} size="sm">
+          <Button onClick={() => setEditingDoc({ title: '', category: '', content: '', status: 'published' })} size="sm">
             <Plus className="w-4 h-4 mr-1" /> New Document
           </Button>
         </div>
@@ -157,30 +229,102 @@ export default function AdminEditor() {
               <option key={c.category} value={c.category}>{c.category} ({c.count})</option>
             ))}
           </select>
+          <select
+            value={statusFilter}
+            onChange={e => setStatusFilter(e.target.value as any)}
+            className="px-3 py-2 rounded-md border border-border bg-card text-foreground text-sm"
+          >
+            <option value="all">All Statuses</option>
+            <option value="published">Published</option>
+            <option value="review">In Review</option>
+            <option value="draft">Draft</option>
+          </select>
         </div>
 
-        <p className="text-xs text-muted-foreground">
-          Showing {documents.length} of {documentsData?.total ?? 0} documents
-        </p>
+        {/* Batch actions bar */}
+        {selectedSlugs.size > 0 && (
+          <div className="flex items-center gap-2 p-3 rounded-lg border border-amber-500/30 bg-amber-500/5">
+            <span className="text-sm font-medium">{selectedSlugs.size} selected</span>
+            <Button size="sm" variant="outline" onClick={() => setBatchAction('status')}>
+              <ArrowUpDown className="w-3 h-3 mr-1" /> Set Status
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => setBatchAction('tag')}>
+              <Tag className="w-3 h-3 mr-1" /> Add Tag
+            </Button>
+            <Button size="sm" variant="outline" onClick={async () => {
+              // Bulk export selected documents as combined markdown
+              try {
+                const docs = await Promise.all(
+                  selectedArray.map(s => trpcUtils.documents.getBySlug.fetch({ slug: s }))
+                );
+                const combined = docs.filter(Boolean).map(d => `# ${d!.title}\n\n${d!.content || ''}`).join('\n\n---\n\n');
+                const blob = new Blob([combined], { type: 'text/markdown' });
+                const url = URL.createObjectURL(blob);
+                const a = window.document.createElement('a');
+                a.href = url;
+                a.download = `export-${selectedSlugs.size}-documents.md`;
+                a.click();
+                URL.revokeObjectURL(url);
+                toast.success(`Exported ${selectedSlugs.size} documents`);
+              } catch { toast.error('Export failed'); }
+            }}>
+              <Download className="w-3 h-3 mr-1" /> Export
+            </Button>
+            <Button size="sm" variant="destructive" onClick={() => setBatchAction('delete')}>
+              <Trash2 className="w-3 h-3 mr-1" /> Delete
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => setSelectedSlugs(new Set())}>
+              <X className="w-3 h-3 mr-1" /> Clear
+            </Button>
+          </div>
+        )}
+
+        <div className="flex items-center justify-between">
+          <p className="text-xs text-muted-foreground">
+            Showing {documents.length} of {documentsData?.total ?? 0} documents
+          </p>
+          <Button variant="ghost" size="sm" onClick={selectAll} className="text-xs">
+            {selectedSlugs.size === documents.length ? <CheckSquare className="w-3 h-3 mr-1" /> : <Square className="w-3 h-3 mr-1" />}
+            {selectedSlugs.size === documents.length ? 'Deselect All' : 'Select All'}
+          </Button>
+        </div>
 
         {/* Document List */}
         <div className="space-y-2">
-          {documents.map(doc => (
+          {documents.map((doc: any) => (
             <div key={doc.slug} className="flex items-center gap-3 p-3 sm:p-4 rounded-lg border border-border/50 bg-card/30 hover:border-accent/30 transition-colors group">
+              <button
+                onClick={() => toggleSelect(doc.slug)}
+                className="flex-shrink-0 text-muted-foreground hover:text-foreground"
+              >
+                {selectedSlugs.has(doc.slug) ? <CheckSquare className="w-4 h-4 text-amber-500" /> : <Square className="w-4 h-4" />}
+              </button>
               <FileText className="w-4 h-4 text-muted-foreground flex-shrink-0" />
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-foreground truncate">{doc.title}</p>
                 <div className="flex items-center gap-2 mt-1">
                   <Badge variant="outline" className="text-[10px]">{doc.category}</Badge>
-                  {doc.wordCount && <span className="text-[10px] text-muted-foreground">{Math.ceil(doc.wordCount / 200)} min read</span>}
+                  <Badge className={`text-[10px] ${statusColors[doc.status as DocStatus] || statusColors.published}`}>
+                    {doc.status || 'published'}
+                  </Badge>
+                  {doc.pinned === 1 && <Badge className="text-[10px] bg-amber-500/20 text-amber-400">📌 Pinned</Badge>}
+                  {doc.wordCount && <span className="text-[10px] text-muted-foreground">{Math.ceil(doc.wordCount / 200)} min</span>}
                 </div>
               </div>
               <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                 <Button
                   variant="ghost"
                   size="sm"
+                  onClick={() => doc.pinned ? unpinMutation.mutate({ slug: doc.slug }) : pinMutation.mutate({ slug: doc.slug })}
+                  title={doc.pinned ? 'Unpin' : 'Pin'}
+                >
+                  {doc.pinned ? <PinOff className="w-3.5 h-3.5" /> : <Pin className="w-3.5 h-3.5" />}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
                   disabled={loadingSlug === doc.slug}
-                  onClick={() => handleEditClick(doc.slug, doc.title, doc.category)}
+                  onClick={() => handleEditClick(doc.slug)}
                 >
                   {loadingSlug === doc.slug ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Pencil className="w-3.5 h-3.5" />}
                 </Button>
@@ -224,6 +368,28 @@ export default function AdminEditor() {
                   <datalist id="category-suggestions">
                     {categories.map(c => <option key={c.category} value={c.category} />)}
                   </datalist>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground mb-1 block">Status</label>
+                  <select
+                    value={editingDoc.status}
+                    onChange={e => setEditingDoc({ ...editingDoc, status: e.target.value as DocStatus })}
+                    className="w-full px-3 py-2 rounded-md border border-border bg-card text-foreground text-sm"
+                  >
+                    <option value="draft">Draft</option>
+                    <option value="review">In Review</option>
+                    <option value="published">Published</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground mb-1 block">Review By (optional)</label>
+                  <Input
+                    type="date"
+                    value={editingDoc.reviewBy || ''}
+                    onChange={e => setEditingDoc({ ...editingDoc, reviewBy: e.target.value })}
+                  />
                 </div>
               </div>
               <div>
@@ -271,6 +437,70 @@ export default function AdminEditor() {
               disabled={deleteMutation.isPending}
             >
               {deleteMutation.isPending ? <><Loader2 className="w-4 h-4 mr-1 animate-spin" /> Deleting...</> : 'Delete'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Batch Status Dialog */}
+      <Dialog open={batchAction === 'status'} onOpenChange={open => !open && setBatchAction('none')}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Set Status for {selectedSlugs.size} Documents</DialogTitle>
+            <DialogDescription>Choose the new workflow status for the selected documents.</DialogDescription>
+          </DialogHeader>
+          <select
+            value={batchStatus}
+            onChange={e => setBatchStatus(e.target.value as DocStatus)}
+            className="w-full px-3 py-2 rounded-md border border-border bg-card text-foreground text-sm"
+          >
+            <option value="draft">Draft</option>
+            <option value="review">In Review</option>
+            <option value="published">Published</option>
+          </select>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setBatchAction('none')}>Cancel</Button>
+            <Button onClick={() => batchStatusMutation.mutate({ slugs: selectedArray, status: batchStatus })} disabled={batchStatusMutation.isPending}>
+              {batchStatusMutation.isPending ? 'Updating...' : 'Apply'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Batch Tag Dialog */}
+      <Dialog open={batchAction === 'tag'} onOpenChange={open => !open && setBatchAction('none')}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add Tag to {selectedSlugs.size} Documents</DialogTitle>
+            <DialogDescription>Enter the tag to add to all selected documents.</DialogDescription>
+          </DialogHeader>
+          <Input
+            value={batchTag}
+            onChange={e => setBatchTag(e.target.value)}
+            placeholder="Tag name..."
+          />
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setBatchAction('none')}>Cancel</Button>
+            <Button onClick={() => batchTagMutation.mutate({ slugs: selectedArray, tag: batchTag })} disabled={!batchTag.trim() || batchTagMutation.isPending}>
+              {batchTagMutation.isPending ? 'Tagging...' : 'Add Tag'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Batch Delete Dialog */}
+      <Dialog open={batchAction === 'delete'} onOpenChange={open => !open && setBatchAction('none')}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete {selectedSlugs.size} Documents</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete {selectedSlugs.size} documents? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setBatchAction('none')}>Cancel</Button>
+            <Button variant="destructive" onClick={() => batchDeleteMutation.mutate({ slugs: selectedArray })} disabled={batchDeleteMutation.isPending}>
+              {batchDeleteMutation.isPending ? 'Deleting...' : `Delete ${selectedSlugs.size} Documents`}
             </Button>
           </DialogFooter>
         </DialogContent>

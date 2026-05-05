@@ -36,6 +36,13 @@
       "when": 1778010112497,
       "tag": "0004_naive_sprite",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "5",
+      "when": 1778014615465,
+      "tag": "0005_sparkling_randall",
+      "breakpoints": true
     }
   ]
 }

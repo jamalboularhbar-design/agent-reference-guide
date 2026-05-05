@@ -52,6 +52,10 @@ export default function SearchAutocomplete({ onSearchChange, placeholder = "Quic
         navigate(`/docs/${suggestions[selectedIndex].slug}`);
         setIsOpen(false);
         setQuery('');
+      } else if (query.trim()) {
+        navigate(`/search?q=${encodeURIComponent(query.trim())}`);
+        setIsOpen(false);
+        setQuery('');
       } else if (onSearchChange) {
         onSearchChange(query);
         setIsOpen(false);

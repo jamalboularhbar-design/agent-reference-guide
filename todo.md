@@ -96,3 +96,13 @@
 - [x] Performance: pagination, debounced search, skeleton loading states
 - [x] Notification to owner when new documents are created via admin (notifyOwner in admin create)
 - [x] Content versioning (version history component on detail page)
+- [x] Dedicated search results page (/search?q=...) with faceted filtering by category, tags, and reading time
+- [x] Document workflow states (draft/review/published) with status column in schema and admin controls
+- [x] Batch multi-select operations in document library (bulk delete, bulk tag, bulk export selected)
+- [x] Document pinning/featured docs (admin can pin documents to top of library and home page)
+- [x] User-defined custom categories (admin can create/rename/delete categories beyond the seeded 14)
+- [x] Document expiry/review reminders (reviewBy date field, admin dashboard showing stale docs)
+- [x] Embeddable document widget (standalone /embed/:slug route with minimal chrome for iframe use)
+- [x] Document download history log (track who downloaded what, admin viewable)
+- [x] Admin user activity page (/admin/activity) showing recent actions (views, ratings, comments, downloads)
+- [x] Site-wide announcement banner (admin-configurable dismissible banner at top of all pages)

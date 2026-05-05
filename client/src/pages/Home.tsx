@@ -17,6 +17,7 @@ import SearchAutocomplete from '@/components/SearchAutocomplete';
 import PopularDocuments from '@/components/PopularDocuments';
 import ReadingStreak from '@/components/ReadingStreak';
 import SmartSuggestions from '@/components/SmartSuggestions';
+import PinnedDocuments from '@/components/PinnedDocuments';
 import { generatePersonaContent, exportToPDF } from '@/lib/exportPdf';
 
 export default function Home() {
@@ -254,6 +255,9 @@ export default function Home() {
             ))}
           </div>
         </section>
+
+        {/* Pinned Documents */}
+        <PinnedDocuments />
 
         {/* Reading Streak */}
         <section className="mt-8">

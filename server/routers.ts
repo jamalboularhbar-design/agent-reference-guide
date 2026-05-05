@@ -13,6 +13,12 @@ import {
   addTag, removeTag, getDocumentTags, getAllTags, getDocumentsByTag,
   addComment, getComments, deleteComment,
   saveDocumentVersion, getDocumentVersions, getDocumentVersionContent,
+  pinDocument, unpinDocument, getPinnedDocuments,
+  batchDeleteDocuments, batchUpdateStatus, batchAddTag,
+  getCustomCategories, createCustomCategory, updateCustomCategory, deleteCustomCategory,
+  getStaleDocuments, logDownload, getDownloadHistory,
+  getActiveAnnouncements, getAllAnnouncements, createAnnouncement, updateAnnouncement, deleteAnnouncement,
+  logActivity, getActivityLog,
 } from "./db";
 import { invokeLLM } from "./_core/llm";
 import { notifyOwner } from "./_core/notification";
@@ -37,6 +43,10 @@ export const appRouter = router({
           sort: z.enum(['alpha', 'reading_time', 'newest']).optional().default('alpha'),
           limit: z.number().min(1).max(600).optional().default(50),
           offset: z.number().min(0).optional().default(0),
+          status: z.enum(['draft', 'review', 'published', 'all']).optional().default('published'),
+          tags: z.array(z.string()).optional(),
+          minReadingTime: z.number().optional(),
+          maxReadingTime: z.number().optional(),
         })
       )
       .query(async ({ input }) => {
@@ -69,11 +79,22 @@ export const appRouter = router({
         return getPopularDocuments(input.limit);
       }),
 
+    pinned: publicProcedure.query(async () => {
+      return getPinnedDocuments();
+    }),
+
+    stale: adminProcedure
+      .input(z.object({ limit: z.number().min(1).max(50).optional().default(20) }))
+      .query(async ({ input }) => {
+        return getStaleDocuments(input.limit);
+      }),
+
     // View count
     recordView: publicProcedure
       .input(z.object({ slug: z.string() }))
       .mutation(async ({ input }) => {
         await incrementViewCount(input.slug);
+        await logActivity('view', input.slug);
         return { success: true };
       }),
 
@@ -81,6 +102,7 @@ export const appRouter = router({
     rate: publicProcedure
       .input(z.object({ slug: z.string(), visitorId: z.string(), rating: z.enum(['up', 'down']) }))
       .mutation(async ({ input }) => {
+        await logActivity('rate', input.slug, input.visitorId, input.rating);
         return rateDocument(input.slug, input.visitorId, input.rating);
       }),
 
@@ -88,6 +110,15 @@ export const appRouter = router({
       .input(z.object({ slug: z.string(), visitorId: z.string() }))
       .query(async ({ input }) => {
         return getUserRating(input.slug, input.visitorId);
+      }),
+
+    // Download tracking
+    logDownload: publicProcedure
+      .input(z.object({ slug: z.string(), format: z.string(), visitorId: z.string().optional() }))
+      .mutation(async ({ input }) => {
+        await logDownload(input.slug, input.format, input.visitorId);
+        await logActivity('download', input.slug, input.visitorId, input.format);
+        return { success: true };
       }),
 
     // AI Summary
@@ -118,19 +149,20 @@ export const appRouter = router({
         title: z.string().min(1).max(500),
         category: z.string().min(1).max(100),
         content: z.string().min(1),
+        status: z.enum(['draft', 'review', 'published']).optional().default('published'),
       }))
       .mutation(async ({ input }) => {
         const slug = input.title.replace(/[^a-zA-Z0-9]+/g, '-').replace(/^-|-$/g, '');
         const filename = `ARG-Builder-${slug}.md`;
         const wordCount = input.content.split(/\s+/).filter(Boolean).length;
-        const result = await createDocument({ slug, title: input.title, category: input.category, filename, content: input.content, wordCount });
+        const result = await createDocument({ slug, title: input.title, category: input.category, filename, content: input.content, wordCount, status: input.status });
 
-        // Notify owner about new document
         await notifyOwner({
           title: `New Document Created: ${input.title}`,
-          content: `A new document "${input.title}" was created in the "${input.category}" category (${wordCount} words).`,
+          content: `A new document "${input.title}" was created in the "${input.category}" category (${wordCount} words, status: ${input.status}).`,
         });
 
+        await logActivity('create', slug, undefined, `Created: ${input.title}`);
         return result;
       }),
 
@@ -140,24 +172,71 @@ export const appRouter = router({
         title: z.string().min(1).max(500).optional(),
         category: z.string().min(1).max(100).optional(),
         content: z.string().optional(),
+        status: z.enum(['draft', 'review', 'published']).optional(),
+        pinned: z.number().min(0).max(1).optional(),
+        reviewBy: z.string().optional(),
         changeNote: z.string().optional(),
       }))
       .mutation(async ({ input, ctx }) => {
-        const { slug, changeNote, ...data } = input;
+        const { slug, changeNote, reviewBy, ...data } = input;
 
         // Save version before updating
         const existing = await getDocumentBySlug(slug);
-        if (existing && existing.content) {
+        if (existing && existing.content && (data.content || data.title)) {
           await saveDocumentVersion(slug, existing.title, existing.content, ctx.user?.name || 'admin', changeNote);
         }
 
-        return updateDocument(slug, data);
+        const updateData: any = { ...data };
+        if (reviewBy !== undefined) {
+          updateData.reviewBy = reviewBy ? new Date(reviewBy) : null;
+        }
+
+        await logActivity('update', slug, undefined, changeNote || `Updated document`);
+        return updateDocument(slug, updateData);
       }),
 
     delete: adminProcedure
       .input(z.object({ slug: z.string() }))
       .mutation(async ({ input }) => {
+        await logActivity('delete', input.slug, undefined, `Deleted document`);
         return deleteDocument(input.slug);
+      }),
+
+    // Pinning
+    pin: adminProcedure
+      .input(z.object({ slug: z.string() }))
+      .mutation(async ({ input }) => {
+        await logActivity('pin', input.slug);
+        return pinDocument(input.slug);
+      }),
+
+    unpin: adminProcedure
+      .input(z.object({ slug: z.string() }))
+      .mutation(async ({ input }) => {
+        await logActivity('unpin', input.slug);
+        return unpinDocument(input.slug);
+      }),
+
+    // Batch operations
+    batchDelete: adminProcedure
+      .input(z.object({ slugs: z.array(z.string()).min(1).max(100) }))
+      .mutation(async ({ input }) => {
+        await logActivity('batch_delete', undefined, undefined, `Deleted ${input.slugs.length} documents`);
+        return batchDeleteDocuments(input.slugs);
+      }),
+
+    batchUpdateStatus: adminProcedure
+      .input(z.object({ slugs: z.array(z.string()).min(1).max(100), status: z.enum(['draft', 'review', 'published']) }))
+      .mutation(async ({ input }) => {
+        await logActivity('batch_status', undefined, undefined, `Set ${input.slugs.length} docs to ${input.status}`);
+        return batchUpdateStatus(input.slugs, input.status);
+      }),
+
+    batchAddTag: adminProcedure
+      .input(z.object({ slugs: z.array(z.string()).min(1).max(100), tag: z.string().min(1).max(100) }))
+      .mutation(async ({ input }) => {
+        await logActivity('batch_tag', undefined, undefined, `Added tag "${input.tag}" to ${input.slugs.length} docs`);
+        return batchAddTag(input.slugs, input.tag.toLowerCase().trim());
       }),
 
     bulkImport: adminProcedure
@@ -304,6 +383,7 @@ export const appRouter = router({
     add: publicProcedure
       .input(z.object({ documentSlug: z.string(), visitorId: z.string(), content: z.string().min(1).max(2000) }))
       .mutation(async ({ input }) => {
+        await logActivity('comment', input.documentSlug, input.visitorId);
         return addComment(input.documentSlug, input.visitorId, input.content);
       }),
 
@@ -311,6 +391,96 @@ export const appRouter = router({
       .input(z.object({ id: z.number(), visitorId: z.string() }))
       .mutation(async ({ input }) => {
         return deleteComment(input.id, input.visitorId);
+      }),
+  }),
+
+  // Custom Categories
+  customCategories: router({
+    list: publicProcedure.query(async () => {
+      return getCustomCategories();
+    }),
+
+    create: adminProcedure
+      .input(z.object({
+        name: z.string().min(1).max(100),
+        description: z.string().optional(),
+        icon: z.string().optional(),
+        color: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        return createCustomCategory(input);
+      }),
+
+    update: adminProcedure
+      .input(z.object({
+        id: z.number(),
+        name: z.string().min(1).max(100).optional(),
+        description: z.string().optional(),
+        icon: z.string().optional(),
+        color: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const { id, ...data } = input;
+        return updateCustomCategory(id, data);
+      }),
+
+    delete: adminProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        return deleteCustomCategory(input.id);
+      }),
+  }),
+
+  // Announcements
+  announcements: router({
+    active: publicProcedure.query(async () => {
+      return getActiveAnnouncements();
+    }),
+
+    all: adminProcedure.query(async () => {
+      return getAllAnnouncements();
+    }),
+
+    create: adminProcedure
+      .input(z.object({
+        message: z.string().min(1).max(500),
+        type: z.enum(['info', 'warning', 'success']).optional().default('info'),
+      }))
+      .mutation(async ({ input }) => {
+        return createAnnouncement(input.message, input.type);
+      }),
+
+    update: adminProcedure
+      .input(z.object({
+        id: z.number(),
+        message: z.string().optional(),
+        type: z.enum(['info', 'warning', 'success']).optional(),
+        active: z.number().min(0).max(1).optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const { id, ...data } = input;
+        return updateAnnouncement(id, data);
+      }),
+
+    delete: adminProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        return deleteAnnouncement(input.id);
+      }),
+  }),
+
+  // Activity Log
+  activity: router({
+    list: adminProcedure
+      .input(z.object({ limit: z.number().min(1).max(200).optional().default(100) }))
+      .query(async ({ input }) => {
+        return getActivityLog(input.limit);
+      }),
+
+    downloads: adminProcedure
+      .input(z.object({ limit: z.number().min(1).max(200).optional().default(50) }))
+      .query(async ({ input }) => {
+        return getDownloadHistory(input.limit);
       }),
   }),
 });

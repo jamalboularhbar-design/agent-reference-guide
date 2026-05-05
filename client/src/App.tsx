@@ -15,7 +15,14 @@ import BulkImportPage from "./pages/BulkImportPage";
 import DocumentTemplates from "./pages/DocumentTemplates";
 import SearchAnalytics from "./pages/SearchAnalytics";
 import TagsExplorer from "./pages/TagsExplorer";
+import SearchResultsPage from "./pages/SearchResultsPage";
+import EmbedDocument from "./pages/EmbedDocument";
+import AdminActivityPage from "./pages/AdminActivityPage";
+import AdminAnnouncementsPage from "./pages/AdminAnnouncementsPage";
+import AdminCategoriesPage from "./pages/AdminCategoriesPage";
+import AdminStaleDocsPage from "./pages/AdminStaleDocsPage";
 import KeyboardShortcutsModal from "./components/KeyboardShortcutsModal";
+import AnnouncementBanner from "./components/AnnouncementBanner";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -29,9 +36,15 @@ function Router() {
       <Route path={"/lists"} component={ReadingListsPage} />
       <Route path={"/templates"} component={DocumentTemplates} />
       <Route path={"/tags"} component={TagsExplorer} />
+      <Route path={"/search"} component={SearchResultsPage} />
+      <Route path={"/embed/:slug"} component={EmbedDocument} />
       <Route path={"/admin/editor"} component={AdminEditor} />
       <Route path={"/admin/import"} component={BulkImportPage} />
       <Route path={"/admin/analytics"} component={SearchAnalytics} />
+      <Route path={"/admin/activity"} component={AdminActivityPage} />
+      <Route path={"/admin/announcements"} component={AdminAnnouncementsPage} />
+      <Route path={"/admin/categories"} component={AdminCategoriesPage} />
+      <Route path={"/admin/stale"} component={AdminStaleDocsPage} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />
@@ -56,6 +69,8 @@ function App() {
           >
             Skip to main content
           </a>
+          {/* Site-wide announcement banner */}
+          <AnnouncementBanner />
           <main id="main-content" role="main">
             <Router />
           </main>

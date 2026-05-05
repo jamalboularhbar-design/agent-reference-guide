@@ -15,6 +15,7 @@ import {
 import DocumentLibrarySkeleton from './DocumentLibrarySkeleton';
 import BulkExport from './BulkExport';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
+import { Pin } from 'lucide-react';
 
 const SCROLL_POSITION_KEY = 'doclib_scroll_position';
 
@@ -123,6 +124,12 @@ export default function DocumentLibrary() {
   // Fetch categories from database
   const { data: categoriesData, isLoading: categoriesLoading } = trpc.documents.categories.useQuery();
 
+  // Fetch custom categories to merge into filter pills
+  const { data: customCategoriesData } = trpc.customCategories.list.useQuery();
+
+  // Fetch pinned documents to show at top
+  const { data: pinnedDocs } = trpc.documents.pinned.useQuery();
+
   // Fetch documents from database - fetch all for category view, paginate for filtered
   const { data: documentsData, isLoading: documentsLoading, error: documentsError } = trpc.documents.list.useQuery({
     category: selectedCategory !== 'All' ? selectedCategory : undefined,
@@ -133,10 +140,17 @@ export default function DocumentLibrary() {
   });
 
   const categories = categoriesData ?? [];
-  const totalDocuments = categories.reduce((sum, c) => sum + c.count, 0);
-  const categoryList = categories.map(c => c.category);
+  // Merge custom categories into the category list
+  const customCats = customCategoriesData ?? [];
+  const mergedCategories = useMemo(() => {
+    const existing = new Set(categories.map(c => c.category));
+    const extras = customCats.filter((cc: any) => !existing.has(cc.name)).map((cc: any) => ({ category: cc.name, count: 0 }));
+    return [...categories, ...extras];
+  }, [categories, customCats]);
+  const totalDocuments = mergedCategories.reduce((sum, c) => sum + c.count, 0);
+  const categoryList = mergedCategories.map(c => c.category);
   const categoryCounts: Record<string, number> = {};
-  categories.forEach(c => { categoryCounts[c.category] = c.count; });
+  mergedCategories.forEach(c => { categoryCounts[c.category] = c.count; });
 
   const documents = documentsData?.documents ?? [];
   const filteredTotal = documentsData?.total ?? 0;
@@ -256,6 +270,31 @@ export default function DocumentLibrary() {
             })}
         </div>
       </div>
+
+      {/* Pinned Documents */}
+      {!isLoading && pinnedDocs && pinnedDocs.length > 0 && selectedCategory === 'All' && !searchQuery && (
+        <div className="mb-6 p-4 rounded-xl border border-amber-500/30 bg-amber-500/5">
+          <div className="flex items-center gap-2 mb-3">
+            <Pin className="w-4 h-4 text-amber-500" />
+            <h3 className="text-sm font-semibold text-foreground">Pinned</h3>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+            {pinnedDocs.map((doc: any) => (
+              <button
+                key={doc.slug}
+                onClick={() => navigateToDoc(doc.slug)}
+                className="p-3 rounded-lg bg-background/50 border border-amber-500/20 hover:border-amber-500/50 transition-colors text-left"
+              >
+                <p className="text-sm font-medium text-foreground truncate">{doc.title}</p>
+                <div className="flex items-center gap-2 mt-1">
+                  <Badge variant="outline" className="text-[10px]">{doc.category}</Badge>
+                  {doc.wordCount && <span className="text-[10px] text-muted-foreground">{Math.ceil(doc.wordCount / 200)} min</span>}
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Loading State */}
       {isLoading && <DocumentLibrarySkeleton />}

@@ -1,6 +1,6 @@
 import { eq, like, or, sql, desc, asc, count, and } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, documents, documentRatings, readingLists, readingListItems, searchAnalytics, documentTags, documentComments, documentVersions } from "../drizzle/schema";
+import { InsertUser, users, documents, documentRatings, readingLists, readingListItems, searchAnalytics, documentTags, documentComments, documentVersions, customCategories, downloadHistory, announcements, activityLog } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -97,13 +97,23 @@ export async function getDocuments(opts: {
   sort?: 'alpha' | 'reading_time' | 'newest';
   limit?: number;
   offset?: number;
+  status?: 'draft' | 'review' | 'published' | 'all';
+  tags?: string[];
+  minReadingTime?: number;
+  maxReadingTime?: number;
 }) {
   const db = await getDb();
   if (!db) return { documents: [], total: 0 };
 
-  const { category, search, sort = 'alpha', limit = 50, offset = 0 } = opts;
+  const { category, search, sort = 'alpha', limit = 50, offset = 0, status = 'published', tags, minReadingTime, maxReadingTime } = opts;
 
   const conditions = [];
+  
+  // Status filter (default: only published docs for public)
+  if (status !== 'all') {
+    conditions.push(eq(documents.status, status));
+  }
+  
   if (category) {
     conditions.push(eq(documents.category, category));
   }
@@ -113,11 +123,17 @@ export async function getDocuments(opts: {
       sql`(LOWER(${documents.title}) LIKE ${pattern} OR LOWER(${documents.category}) LIKE ${pattern} OR LOWER(${documents.content}) LIKE ${pattern})`
     );
   }
+  if (minReadingTime) {
+    const minWords = minReadingTime * 200;
+    conditions.push(sql`${documents.wordCount} >= ${minWords}`);
+  }
+  if (maxReadingTime) {
+    const maxWords = maxReadingTime * 200;
+    conditions.push(sql`${documents.wordCount} <= ${maxWords}`);
+  }
 
   const whereClause = conditions.length > 0
-    ? conditions.length === 1
-      ? conditions[0]
-      : sql`${conditions[0]} AND ${conditions[1]}`
+    ? sql`${sql.join(conditions, sql` AND `)}`
     : undefined;
 
   // Get total count
@@ -134,24 +150,43 @@ export async function getDocuments(opts: {
     category: documents.category,
     filename: documents.filename,
     wordCount: documents.wordCount,
+    status: documents.status,
+    pinned: documents.pinned,
     createdAt: documents.createdAt,
     ...(search ? { snippet: sql<string>`SUBSTRING(${documents.content}, GREATEST(1, LOCATE(LOWER(${search}), LOWER(${documents.content})) - 60), 200)` } : {}),
   };
+
+  // Order: pinned first, then by sort
+  const orderClauses = [
+    desc(documents.pinned),
+    sort === 'reading_time' ? asc(documents.wordCount) : sort === 'newest' ? desc(documents.createdAt) : asc(documents.title),
+  ];
 
   const rows = whereClause
     ? await db
         .select(selectFields)
         .from(documents)
         .where(whereClause)
-        .orderBy(sort === 'reading_time' ? asc(documents.wordCount) : sort === 'newest' ? desc(documents.createdAt) : asc(documents.title))
+        .orderBy(...orderClauses)
         .limit(limit)
         .offset(offset)
     : await db
         .select(selectFields)
         .from(documents)
-        .orderBy(sort === 'reading_time' ? asc(documents.wordCount) : sort === 'newest' ? desc(documents.createdAt) : asc(documents.title))
+        .orderBy(...orderClauses)
         .limit(limit)
         .offset(offset);
+
+  // If tags filter is requested, filter in-app (since we don't have a join-based approach easily)
+  if (tags && tags.length > 0) {
+    const taggedSlugs = await db
+      .select({ slug: documentTags.documentSlug })
+      .from(documentTags)
+      .where(sql`${documentTags.tag} IN (${sql.join(tags.map(t => sql`${t}`), sql`, `)})`);
+    const slugSet = new Set(taggedSlugs.map(r => r.slug));
+    const filtered = rows.filter(r => slugSet.has(r.slug));
+    return { documents: filtered, total: filtered.length };
+  }
 
   return { documents: rows, total };
 }
@@ -198,7 +233,7 @@ export async function getRelatedDocuments(slug: string, category: string, limit 
       wordCount: documents.wordCount,
     })
     .from(documents)
-    .where(sql`${documents.category} = ${category} AND ${documents.slug} != ${slug}`)
+    .where(sql`${documents.category} = ${category} AND ${documents.slug} != ${slug} AND ${documents.status} = 'published'`)
     .orderBy(sql`RAND()`)
     .limit(limit);
 
@@ -214,11 +249,15 @@ export async function createDocument(data: {
   filename: string;
   content: string;
   wordCount: number;
+  status?: 'draft' | 'review' | 'published';
 }) {
   const db = await getDb();
   if (!db) throw new Error('Database not available');
 
-  await db.insert(documents).values(data);
+  await db.insert(documents).values({
+    ...data,
+    status: data.status || 'published',
+  });
   return getDocumentBySlug(data.slug);
 }
 
@@ -226,6 +265,9 @@ export async function updateDocument(slug: string, data: {
   title?: string;
   category?: string;
   content?: string;
+  status?: 'draft' | 'review' | 'published';
+  pinned?: number;
+  reviewBy?: Date | null;
 }) {
   const db = await getDb();
   if (!db) throw new Error('Database not available');
@@ -237,6 +279,9 @@ export async function updateDocument(slug: string, data: {
     updateSet.content = data.content;
     updateSet.wordCount = data.content.split(/\s+/).filter(Boolean).length;
   }
+  if (data.status !== undefined) updateSet.status = data.status;
+  if (data.pinned !== undefined) updateSet.pinned = data.pinned;
+  if (data.reviewBy !== undefined) updateSet.reviewBy = data.reviewBy;
 
   if (Object.keys(updateSet).length === 0) return getDocumentBySlug(slug);
 
@@ -250,6 +295,44 @@ export async function deleteDocument(slug: string) {
 
   await db.delete(documents).where(eq(documents.slug, slug));
   return { success: true };
+}
+
+// Batch operations
+export async function batchDeleteDocuments(slugs: string[]) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+
+  for (const slug of slugs) {
+    await db.delete(documents).where(eq(documents.slug, slug));
+  }
+  return { deleted: slugs.length };
+}
+
+export async function batchUpdateStatus(slugs: string[], status: 'draft' | 'review' | 'published') {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+
+  for (const slug of slugs) {
+    await db.update(documents).set({ status }).where(eq(documents.slug, slug));
+  }
+  return { updated: slugs.length };
+}
+
+export async function batchAddTag(slugs: string[], tag: string) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+
+  let added = 0;
+  for (const slug of slugs) {
+    const existing = await db.select().from(documentTags)
+      .where(and(eq(documentTags.documentSlug, slug), eq(documentTags.tag, tag)))
+      .limit(1);
+    if (existing.length === 0) {
+      await db.insert(documentTags).values({ documentSlug: slug, tag });
+      added++;
+    }
+  }
+  return { added };
 }
 
 export async function getDocumentStats() {
@@ -268,13 +351,58 @@ export async function getDocumentStats() {
   };
 }
 
+// ─── Document Pinning ─────────────────────────────────────────────────────
+
+export async function pinDocument(slug: string) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+  await db.update(documents).set({ pinned: 1 }).where(eq(documents.slug, slug));
+  return { success: true };
+}
+
+export async function unpinDocument(slug: string) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+  await db.update(documents).set({ pinned: 0 }).where(eq(documents.slug, slug));
+  return { success: true };
+}
+
+export async function getPinnedDocuments() {
+  const db = await getDb();
+  if (!db) return [];
+
+  return db.select({
+    slug: documents.slug,
+    title: documents.title,
+    category: documents.category,
+    wordCount: documents.wordCount,
+  }).from(documents).where(eq(documents.pinned, 1)).orderBy(asc(documents.title));
+}
+
+// ─── Stale/Expiry Documents ──────────────────────────────────────────────
+
+export async function getStaleDocuments(limit = 20) {
+  const db = await getDb();
+  if (!db) return [];
+
+  return db.select({
+    slug: documents.slug,
+    title: documents.title,
+    category: documents.category,
+    reviewBy: documents.reviewBy,
+    updatedAt: documents.updatedAt,
+  }).from(documents)
+    .where(sql`${documents.reviewBy} IS NOT NULL AND ${documents.reviewBy} <= NOW()`)
+    .orderBy(asc(documents.reviewBy))
+    .limit(limit);
+}
+
 // ─── Document Ratings ──────────────────────────────────────────────────────
 
 export async function rateDocument(slug: string, visitorId: string, rating: 'up' | 'down') {
   const db = await getDb();
   if (!db) throw new Error('Database not available');
 
-  // Check if user already rated this document
   const existing = await db.select().from(documentRatings)
     .where(and(eq(documentRatings.documentSlug, slug), eq(documentRatings.visitorId, visitorId)))
     .limit(1);
@@ -282,9 +410,7 @@ export async function rateDocument(slug: string, visitorId: string, rating: 'up'
   if (existing.length > 0) {
     const oldRating = existing[0].rating;
     if (oldRating === rating) {
-      // Remove rating (toggle off)
       await db.delete(documentRatings).where(eq(documentRatings.id, existing[0].id));
-      // Decrement count
       if (rating === 'up') {
         await db.update(documents).set({ upvotes: sql`GREATEST(0, ${documents.upvotes} - 1)` }).where(eq(documents.slug, slug));
       } else {
@@ -292,7 +418,6 @@ export async function rateDocument(slug: string, visitorId: string, rating: 'up'
       }
       return { action: 'removed', rating: null };
     } else {
-      // Change rating
       await db.update(documentRatings).set({ rating }).where(eq(documentRatings.id, existing[0].id));
       if (rating === 'up') {
         await db.update(documents).set({ upvotes: sql`${documents.upvotes} + 1`, downvotes: sql`GREATEST(0, ${documents.downvotes} - 1)` }).where(eq(documents.slug, slug));
@@ -302,7 +427,6 @@ export async function rateDocument(slug: string, visitorId: string, rating: 'up'
       return { action: 'changed', rating };
     }
   } else {
-    // New rating
     await db.insert(documentRatings).values({ documentSlug: slug, visitorId, rating });
     if (rating === 'up') {
       await db.update(documents).set({ upvotes: sql`${documents.upvotes} + 1` }).where(eq(documents.slug, slug));
@@ -350,6 +474,7 @@ export async function getPopularDocuments(limit = 10) {
       downvotes: documents.downvotes,
     })
     .from(documents)
+    .where(eq(documents.status, 'published'))
     .orderBy(desc(sql`(${documents.viewCount} + ${documents.upvotes} * 3 - ${documents.downvotes})`))
     .limit(limit);
 
@@ -366,7 +491,6 @@ export async function getReadingLists(visitorId: string) {
     .where(eq(readingLists.visitorId, visitorId))
     .orderBy(desc(readingLists.updatedAt));
 
-  // Get item counts for each list
   const result = [];
   for (const list of lists) {
     const items = await db.select({ count: count() }).from(readingListItems)
@@ -389,7 +513,6 @@ export async function addToReadingList(listId: number, documentSlug: string) {
   const db = await getDb();
   if (!db) throw new Error('Database not available');
 
-  // Check if already in list
   const existing = await db.select().from(readingListItems)
     .where(and(eq(readingListItems.listId, listId), eq(readingListItems.documentSlug, documentSlug)))
     .limit(1);
@@ -548,7 +671,6 @@ export async function addTag(documentSlug: string, tag: string) {
   const db = await getDb();
   if (!db) throw new Error('Database not available');
 
-  // Check if tag already exists for this document
   const existing = await db.select().from(documentTags)
     .where(and(eq(documentTags.documentSlug, documentSlug), eq(documentTags.tag, tag)))
     .limit(1);
@@ -688,4 +810,149 @@ export async function getDocumentVersionContent(id: number) {
     .limit(1);
 
   return result[0] || null;
+}
+
+// ─── Custom Categories ────────────────────────────────────────────────────
+
+export async function getCustomCategories() {
+  const db = await getDb();
+  if (!db) return [];
+
+  return db.select().from(customCategories).orderBy(asc(customCategories.name));
+}
+
+export async function createCustomCategory(data: { name: string; description?: string; icon?: string; color?: string }) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+
+  await db.insert(customCategories).values({
+    name: data.name,
+    description: data.description || null,
+    icon: data.icon || null,
+    color: data.color || null,
+  });
+  return { success: true, name: data.name };
+}
+
+export async function updateCustomCategory(id: number, data: { name?: string; description?: string; icon?: string; color?: string }) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+
+  const updateSet: Record<string, unknown> = {};
+  if (data.name !== undefined) updateSet.name = data.name;
+  if (data.description !== undefined) updateSet.description = data.description;
+  if (data.icon !== undefined) updateSet.icon = data.icon;
+  if (data.color !== undefined) updateSet.color = data.color;
+
+  if (Object.keys(updateSet).length === 0) return { success: true };
+
+  await db.update(customCategories).set(updateSet).where(eq(customCategories.id, id));
+  return { success: true };
+}
+
+export async function deleteCustomCategory(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+
+  await db.delete(customCategories).where(eq(customCategories.id, id));
+  return { success: true };
+}
+
+// ─── Download History ─────────────────────────────────────────────────────
+
+export async function logDownload(documentSlug: string, format: string, visitorId?: string) {
+  const db = await getDb();
+  if (!db) return;
+
+  await db.insert(downloadHistory).values({
+    documentSlug,
+    format,
+    visitorId: visitorId || null,
+  });
+}
+
+export async function getDownloadHistory(limit = 50) {
+  const db = await getDb();
+  if (!db) return [];
+
+  return db.select({
+    id: downloadHistory.id,
+    documentSlug: downloadHistory.documentSlug,
+    format: downloadHistory.format,
+    visitorId: downloadHistory.visitorId,
+    createdAt: downloadHistory.createdAt,
+  })
+    .from(downloadHistory)
+    .orderBy(desc(downloadHistory.createdAt))
+    .limit(limit);
+}
+
+// ─── Announcements ────────────────────────────────────────────────────────
+
+export async function getActiveAnnouncements() {
+  const db = await getDb();
+  if (!db) return [];
+
+  return db.select().from(announcements)
+    .where(eq(announcements.active, 1))
+    .orderBy(desc(announcements.createdAt));
+}
+
+export async function getAllAnnouncements() {
+  const db = await getDb();
+  if (!db) return [];
+
+  return db.select().from(announcements).orderBy(desc(announcements.createdAt));
+}
+
+export async function createAnnouncement(message: string, type: 'info' | 'warning' | 'success' = 'info') {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+
+  const result = await db.insert(announcements).values({ message, type });
+  return { id: result[0].insertId };
+}
+
+export async function updateAnnouncement(id: number, data: { message?: string; type?: 'info' | 'warning' | 'success'; active?: number }) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+
+  const updateSet: Record<string, unknown> = {};
+  if (data.message !== undefined) updateSet.message = data.message;
+  if (data.type !== undefined) updateSet.type = data.type;
+  if (data.active !== undefined) updateSet.active = data.active;
+
+  await db.update(announcements).set(updateSet).where(eq(announcements.id, id));
+  return { success: true };
+}
+
+export async function deleteAnnouncement(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+
+  await db.delete(announcements).where(eq(announcements.id, id));
+  return { success: true };
+}
+
+// ─── Activity Log ─────────────────────────────────────────────────────────
+
+export async function logActivity(action: string, documentSlug?: string, visitorId?: string, details?: string) {
+  const db = await getDb();
+  if (!db) return;
+
+  await db.insert(activityLog).values({
+    action,
+    documentSlug: documentSlug || null,
+    visitorId: visitorId || null,
+    details: details || null,
+  });
+}
+
+export async function getActivityLog(limit = 100) {
+  const db = await getDb();
+  if (!db) return [];
+
+  return db.select().from(activityLog)
+    .orderBy(desc(activityLog.createdAt))
+    .limit(limit);
 }

@@ -31,6 +31,12 @@ export const documents = mysqlTable("documents", {
   upvotes: int("upvotes").default(0),
   downvotes: int("downvotes").default(0),
   summary: text("summary"),
+  // Workflow states: draft, review, published
+  status: mysqlEnum("status", ["draft", "review", "published"]).default("published").notNull(),
+  // Pinning: pinned documents appear at top
+  pinned: int("pinned").default(0).notNull(),
+  // Review/expiry reminder date
+  reviewBy: timestamp("reviewBy"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
@@ -117,3 +123,50 @@ export const documentVersions = mysqlTable("document_versions", {
 });
 
 export type DocumentVersion = typeof documentVersions.$inferSelect;
+
+// Custom categories - admin-defined categories beyond the seeded ones
+export const customCategories = mysqlTable("custom_categories", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 100 }).notNull().unique(),
+  description: text("description"),
+  icon: varchar("icon", { length: 50 }),
+  color: varchar("color", { length: 20 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type CustomCategory = typeof customCategories.$inferSelect;
+
+// Download history - tracks document downloads
+export const downloadHistory = mysqlTable("download_history", {
+  id: int("id").autoincrement().primaryKey(),
+  documentSlug: varchar("documentSlug", { length: 255 }).notNull(),
+  visitorId: varchar("visitorId", { length: 100 }),
+  format: varchar("format", { length: 20 }).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type DownloadHistoryEntry = typeof downloadHistory.$inferSelect;
+
+// Site announcements - admin-configurable banners
+export const announcements = mysqlTable("announcements", {
+  id: int("id").autoincrement().primaryKey(),
+  message: text("message").notNull(),
+  type: mysqlEnum("type", ["info", "warning", "success"]).default("info").notNull(),
+  active: int("active").default(1).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Announcement = typeof announcements.$inferSelect;
+
+// Activity log - tracks admin-visible user actions
+export const activityLog = mysqlTable("activity_log", {
+  id: int("id").autoincrement().primaryKey(),
+  action: varchar("action", { length: 50 }).notNull(),
+  documentSlug: varchar("documentSlug", { length: 255 }),
+  visitorId: varchar("visitorId", { length: 100 }),
+  details: text("details"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type ActivityLogEntry = typeof activityLog.$inferSelect;

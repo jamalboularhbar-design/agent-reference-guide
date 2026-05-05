@@ -175,6 +175,16 @@ export default function DocumentDetail() {
     }
   }, [document]);
 
+  // Download tracking
+  const logDownloadMutation = trpc.documents.logDownload.useMutation();
+
+  // Get visitor ID for download tracking
+  const getVisitorId = useCallback(() => {
+    let id = localStorage.getItem('visitor_id');
+    if (!id) { id = 'v_' + Math.random().toString(36).substring(2, 15); localStorage.setItem('visitor_id', id); }
+    return id;
+  }, []);
+
   // Download as .md file
   const handleDownload = useCallback(() => {
     if (!document) return;
@@ -185,6 +195,7 @@ export default function DocumentDetail() {
     a.download = document.filename;
     a.click();
     URL.revokeObjectURL(url);
+    logDownloadMutation.mutate({ slug: document.slug, format: 'markdown', visitorId: getVisitorId() });
     toast.success('Download started');
   }, [document]);
 
@@ -329,6 +340,17 @@ export default function DocumentDetail() {
               aria-label="Export document as PDF"
             >
               <FileText className="w-5 h-5 sm:w-4 sm:h-4" />
+            </button>
+            <button
+              onClick={() => {
+                const embedUrl = `${window.location.origin}/embed/${slug}`;
+                navigator.clipboard.writeText(`<iframe src="${embedUrl}" width="100%" height="600" frameborder="0"></iframe>`);
+                toast.success('Embed code copied to clipboard');
+              }}
+              className="hidden sm:block p-2.5 sm:p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-card/80 transition-colors"
+              title="Copy embed code"
+            >
+              <ExternalLink className="w-5 h-5 sm:w-4 sm:h-4" />
             </button>
             {document && <ShareDocument title={document.title} slug={document.slug} category={document.category} />}
           </div>
