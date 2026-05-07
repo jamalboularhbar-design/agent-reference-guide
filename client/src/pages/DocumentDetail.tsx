@@ -31,6 +31,8 @@ import DocumentComparisonView from '@/components/DocumentComparisonView';
 import InlineComments from '@/components/InlineComments';
 import ExportDocx from '@/components/ExportDocx';
 import { useTrackRecentView } from '@/components/RecentlyViewed';
+import CodeCopyButton from '@/components/CodeCopyButton';
+import DocumentFeedback from '@/components/DocumentFeedback';
 
 // Reading time calculation - uses configurable WPM from branding settings
 function getReadingTime(wordCount: number, wpm = 200): string {
@@ -542,6 +544,22 @@ export default function DocumentDetail() {
                   li: ({ children }) => {
                     return <li><GlossaryAutoLink>{children}</GlossaryAutoLink></li>;
                   },
+                  pre: ({ children }) => {
+                    return <pre className="relative group">{children}</pre>;
+                  },
+                  code: ({ className, children, ...props }) => {
+                    const isBlock = className?.includes('language-');
+                    if (isBlock) {
+                      const codeStr = String(children).replace(/\n$/, '');
+                      return (
+                        <>
+                          <code className={className} {...props}>{children}</code>
+                          <CodeCopyButton code={codeStr} />
+                        </>
+                      );
+                    }
+                    return <code className={className} {...props}>{children}</code>;
+                  },
                 }}
               >
                 {interpolateTemplateVars(document.content || '')}
@@ -572,6 +590,9 @@ export default function DocumentDetail() {
 
             {/* Version Comparison */}
             <DocumentComparisonView slug={document.slug} />
+
+            {/* Document Feedback */}
+            <DocumentFeedback slug={document.slug} />
 
             {/* Bottom Navigation */}
             <div className="mt-8 sm:mt-12 pt-4 sm:pt-6 border-t border-border/50 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">

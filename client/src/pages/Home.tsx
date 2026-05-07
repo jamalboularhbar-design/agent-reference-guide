@@ -18,6 +18,7 @@ import PopularDocuments from '@/components/PopularDocuments';
 import ReadingStreak from '@/components/ReadingStreak';
 import SmartSuggestions from '@/components/SmartSuggestions';
 import PinnedDocuments from '@/components/PinnedDocuments';
+import StickyHeader from '@/components/StickyHeader';
 import { generatePersonaContent, exportToPDF } from '@/lib/exportPdf';
 
 export default function Home() {
@@ -121,7 +122,9 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-background text-foreground font-body">
-      <Header />
+      <StickyHeader>
+        <Header />
+      </StickyHeader>
       
       <main className="container py-12">
         {/* Top toolbar */}

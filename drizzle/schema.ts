@@ -334,3 +334,25 @@ export const recentlyViewed = mysqlTable("recently_viewed", {
 });
 
 export type RecentlyViewedEntry = typeof recentlyViewed.$inferSelect;
+
+// Document feedback - simple thumbs up/down with optional text
+export const documentFeedback = mysqlTable("document_feedback", {
+  id: int("id").autoincrement().primaryKey(),
+  documentSlug: varchar("documentSlug", { length: 255 }).notNull(),
+  visitorId: varchar("visitorId", { length: 100 }).notNull(),
+  sentiment: mysqlEnum("sentiment", ["positive", "negative"]).notNull(),
+  comment: text("comment"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type DocumentFeedbackEntry = typeof documentFeedback.$inferSelect;
+
+// Category ordering - admin-defined display order for categories
+export const categoryOrdering = mysqlTable("category_ordering", {
+  id: int("id").autoincrement().primaryKey(),
+  categoryName: varchar("categoryName", { length: 100 }).notNull().unique(),
+  sortOrder: int("sortOrder").default(0).notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type CategoryOrder = typeof categoryOrdering.$inferSelect;

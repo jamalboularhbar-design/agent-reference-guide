@@ -42,6 +42,11 @@ import AdminWebhooksPage from "./pages/AdminWebhooksPage";
 import AdminUsersPage from "./pages/AdminUsersPage";
 import AdminVisitorAnalyticsPage from "./pages/AdminVisitorAnalyticsPage";
 import AdminArchivePage from "./pages/AdminArchivePage";
+import AdminCategoryOrderPage from "./pages/AdminCategoryOrderPage";
+import ReadingHistoryPage from "./pages/ReadingHistoryPage";
+import AdminFeedbackPage from "./pages/AdminFeedbackPage";
+import AdminDuplicatePage from "./pages/AdminDuplicatePage";
+import AdminBulkExportPage from "./pages/AdminBulkExportPage";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -82,6 +87,12 @@ function Router() {
       <Route path={"/admin/users"} component={AdminUsersPage} />
       <Route path={"/admin/visitors"} component={AdminVisitorAnalyticsPage} />
       <Route path={"/admin/archive"} component={AdminArchivePage} />
+      <Route path={"/admin/category-order"} component={AdminCategoryOrderPage} />
+      <Route path={"/admin/feedback"} component={AdminFeedbackPage} />
+      <Route path={"/admin/duplicate"} component={AdminDuplicatePage} />
+      <Route path={"/admin/bulk-export"} component={AdminBulkExportPage} />
+      <Route path={"/reading-history"} component={ReadingHistoryPage} />
+      <Route path={"/history"} component={ReadingHistoryPage} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />

@@ -71,6 +71,13 @@
       "when": 1778022299450,
       "tag": "0009_steep_sage",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "5",
+      "when": 1778168967222,
+      "tag": "0010_goofy_vermin",
+      "breakpoints": true
     }
   ]
 }

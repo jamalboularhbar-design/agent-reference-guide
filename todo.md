@@ -147,3 +147,13 @@
 - [x] Admin user management page (/admin/users) showing all visitors, their activity stats, and role management
 - [x] Document content templates with variables (placeholders like {{client_name}} auto-filled on view)
 - [x] Webhook integration for document events (fire HTTP POST on create/update/delete/publish to configurable URL)
+- [x] Document quick-copy code blocks (one-click copy button on all code fences in rendered markdown)
+- [x] Collapsible admin navigation menu (group admin links into a dropdown/accordion to reduce header clutter)
+- [x] Document word cloud visualization (show most frequent terms per category on category landing pages)
+- [x] Bulk document status filter on library page (filter by draft/review/published status for admin users)
+- [x] Document reading history page (/history) showing chronological list of all documents the visitor has read
+- [x] Admin document duplication (one-click clone existing document with "Copy of..." prefix)
+- [x] Sticky header with scroll-aware show/hide behavior (header hides on scroll down, reappears on scroll up)
+- [x] Document feedback form (simple thumbs up/down + optional text feedback at bottom of each document)
+- [x] Category reordering (admin can drag-sort categories to control display order on home page)
+- [x] Global search keyboard shortcut enhancement (/ key focuses search input from anywhere on the site)

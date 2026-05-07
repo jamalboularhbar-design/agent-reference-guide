@@ -54,6 +54,38 @@ export default function CategoryPage() {
           </div>
         </div>
 
+        {/* Word Cloud */}
+        {!search && documents.length > 0 && (
+          <div className="mb-8">
+            <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">Frequent Terms</h2>
+            <div className="flex flex-wrap gap-2 p-4 rounded-xl bg-card/30 border border-border/50">
+              {(() => {
+                const stopWords = new Set(['the','a','an','is','are','was','were','be','been','being','have','has','had','do','does','did','will','would','could','should','may','might','shall','can','need','dare','to','of','in','for','on','with','at','by','from','as','into','through','during','before','after','above','below','between','out','off','over','under','again','further','then','once','here','there','when','where','why','how','all','each','every','both','few','more','most','other','some','such','no','nor','not','only','own','same','so','than','too','very','just','because','and','but','or','if','while','that','this','it','its','they','them','their','we','our','you','your','he','she','his','her','i','me','my','what','which','who','whom']);
+                const wordCounts: Record<string, number> = {};
+                documents.forEach(doc => {
+                  const words = (doc.title + ' ' + (doc.snippet || '')).toLowerCase().replace(/[^a-z\s]/g, '').split(/\s+/);
+                  words.forEach(w => {
+                    if (w.length > 3 && !stopWords.has(w)) {
+                      wordCounts[w] = (wordCounts[w] || 0) + 1;
+                    }
+                  });
+                });
+                const sorted = Object.entries(wordCounts).sort((a, b) => b[1] - a[1]).slice(0, 30);
+                const maxCount = sorted[0]?.[1] || 1;
+                return sorted.map(([word, count]) => {
+                  const size = 12 + Math.round((count / maxCount) * 16);
+                  const opacity = 0.5 + (count / maxCount) * 0.5;
+                  return (
+                    <span key={word} style={{ fontSize: `${size}px`, opacity }} className="text-accent font-medium">
+                      {word}
+                    </span>
+                  );
+                });
+              })()}
+            </div>
+          </div>
+        )}
+
         {/* Featured Documents */}
         {!search && documents.length > 3 && (
           <div className="mb-8">

@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useLocation } from 'wouter';
 import { Badge } from '@/components/ui/badge';
 import { trpc } from '@/lib/trpc';
+import { useAuth } from '@/_core/hooks/useAuth';
 import {
   FileText, Search, Filter, ChevronDown, ChevronUp,
   Server, Users, DollarSign, ShieldCheck, BarChart3,
@@ -92,9 +93,12 @@ function HighlightText({ text, query }: { text: string; query: string }) {
 
 export default function DocumentLibrary() {
   const [, navigate] = useLocation();
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'draft' | 'review' | 'published'>('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [sortBy, setSortBy] = useState<'alpha' | 'reading_time' | 'newest'>('alpha');
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
@@ -130,6 +134,9 @@ export default function DocumentLibrary() {
   // Fetch pinned documents to show at top
   const { data: pinnedDocs } = trpc.documents.pinned.useQuery();
 
+  // Fetch category ordering for display order
+  const { data: categoryOrderData } = trpc.categoryOrder.get.useQuery();
+
   // Fetch documents from database - fetch all for category view, paginate for filtered
   const { data: documentsData, isLoading: documentsLoading, error: documentsError } = trpc.documents.list.useQuery({
     category: selectedCategory !== 'All' ? selectedCategory : undefined,
@@ -137,6 +144,7 @@ export default function DocumentLibrary() {
     sort: sortBy,
     limit: 600,
     offset: 0,
+    status: isAdmin && statusFilter !== 'all' ? statusFilter : undefined,
   });
 
   const categories = categoriesData ?? [];
@@ -145,8 +153,18 @@ export default function DocumentLibrary() {
   const mergedCategories = useMemo(() => {
     const existing = new Set(categories.map(c => c.category));
     const extras = customCats.filter((cc: any) => !existing.has(cc.name)).map((cc: any) => ({ category: cc.name, count: 0 }));
-    return [...categories, ...extras];
-  }, [categories, customCats]);
+    const merged = [...categories, ...extras];
+    // Apply saved category ordering if available
+    if (categoryOrderData && categoryOrderData.length > 0) {
+      const orderMap = new Map(categoryOrderData.map((o: any) => [o.categoryName, o.sortOrder]));
+      merged.sort((a, b) => {
+        const orderA = orderMap.get(a.category) ?? 999;
+        const orderB = orderMap.get(b.category) ?? 999;
+        return orderA - orderB;
+      });
+    }
+    return merged;
+  }, [categories, customCats, categoryOrderData]);
   const totalDocuments = mergedCategories.reduce((sum, c) => sum + c.count, 0);
   const categoryList = mergedCategories.map(c => c.category);
   const categoryCounts: Record<string, number> = {};
@@ -270,6 +288,26 @@ export default function DocumentLibrary() {
             })}
         </div>
       </div>
+
+      {/* Status Filter (Admin only) */}
+      {isAdmin && (
+        <div className="flex items-center gap-2 mb-4">
+          <span className="text-xs text-muted-foreground font-medium">Status:</span>
+          {(['all', 'draft', 'review', 'published'] as const).map(s => (
+            <button
+              key={s}
+              onClick={() => { setStatusFilter(s); setCurrentPage(1); }}
+              className={`px-2.5 py-1 rounded-md text-xs font-medium transition-all border ${
+                statusFilter === s
+                  ? 'bg-accent/20 text-accent border-accent/40'
+                  : 'bg-card/50 text-muted-foreground border-border/50 hover:border-accent/30'
+              }`}
+            >
+              {s === 'all' ? 'All Statuses' : s.charAt(0).toUpperCase() + s.slice(1)}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Pinned Documents */}
       {!isLoading && pinnedDocs && pinnedDocs.length > 0 && selectedCategory === 'All' && !searchQuery && (

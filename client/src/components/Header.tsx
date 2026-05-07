@@ -1,7 +1,8 @@
-import { Sparkles, Moon, Sun, Columns, Settings, BookOpen, List, FileText, Tag, BarChart3, Activity, Megaphone, FolderPlus, AlertTriangle, Book, Target, Code, PieChart, Columns3, Clock, CheckCircle, CalendarClock, Bookmark, Paintbrush, Webhook, Users, Archive } from 'lucide-react';
+import { Sparkles, List, BookOpen, FileText, Tag, Columns, Book, Target, Code, Bookmark, Sun, Moon, Clock } from 'lucide-react';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useLocation } from 'wouter';
 import { useAuth } from '@/_core/hooks/useAuth';
+import AdminNavDropdown from './AdminNavDropdown';
 
 export default function Header() {
   const { theme, toggleTheme, switchable } = useTheme();
@@ -73,6 +74,13 @@ export default function Header() {
             <Target className="w-4 h-4" />
           </button>
           <button
+            onClick={() => navigate('/reading-history')}
+            className="hidden lg:block p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-card/80 border border-border/50 transition-colors active:bg-card/60"
+            title="Reading History"
+          >
+            <Clock className="w-4 h-4" />
+          </button>
+          <button
             onClick={() => navigate('/api/docs')}
             className="hidden lg:block p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-card/80 border border-border/50 transition-colors active:bg-card/60"
             title="API Documentation"
@@ -86,122 +94,7 @@ export default function Header() {
           >
             <Bookmark className="w-4 h-4" />
           </button>
-          {user?.role === 'admin' && (
-            <>
-              <button
-                onClick={() => navigate('/admin/editor')}
-                className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-card/80 border border-border/50 transition-colors active:bg-card/60"
-                title="Admin editor"
-              >
-                <Settings className="w-4 h-4" />
-              </button>
-              <button
-                onClick={() => navigate('/admin/analytics')}
-                className="hidden sm:block p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-card/80 border border-border/50 transition-colors active:bg-card/60"
-                title="Search Analytics"
-              >
-                <BarChart3 className="w-4 h-4" />
-              </button>
-              <button
-                onClick={() => navigate('/admin/dashboard')}
-                className="hidden sm:block p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-card/80 border border-border/50 transition-colors active:bg-card/60"
-                title="Analytics Dashboard"
-              >
-                <PieChart className="w-4 h-4" />
-              </button>
-              <button
-                onClick={() => navigate('/admin/activity')}
-                className="hidden sm:block p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-card/80 border border-border/50 transition-colors active:bg-card/60"
-                title="Activity Log"
-              >
-                <Activity className="w-4 h-4" />
-              </button>
-              <button
-                onClick={() => navigate('/admin/announcements')}
-                className="hidden lg:block p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-card/80 border border-border/50 transition-colors active:bg-card/60"
-                title="Announcements"
-              >
-                <Megaphone className="w-4 h-4" />
-              </button>
-              <button
-                onClick={() => navigate('/admin/categories')}
-                className="hidden lg:block p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-card/80 border border-border/50 transition-colors active:bg-card/60"
-                title="Manage Categories"
-              >
-                <FolderPlus className="w-4 h-4" />
-              </button>
-              <button
-                onClick={() => navigate('/admin/stale')}
-                className="hidden lg:block p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-card/80 border border-border/50 transition-colors active:bg-card/60"
-                title="Stale Documents"
-              >
-                <AlertTriangle className="w-4 h-4" />
-              </button>
-              <button
-                onClick={() => navigate('/admin/kanban')}
-                className="hidden lg:block p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-card/80 border border-border/50 transition-colors active:bg-card/60"
-                title="Workflow Board"
-              >
-                <Columns3 className="w-4 h-4" />
-              </button>
-              <button
-                onClick={() => navigate('/admin/audit')}
-                className="hidden lg:block p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-card/80 border border-border/50 transition-colors active:bg-card/60"
-                title="Audit Trail"
-              >
-                <Clock className="w-4 h-4" />
-              </button>
-              <button
-                onClick={() => navigate('/admin/approvals')}
-                className="hidden lg:block p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-card/80 border border-border/50 transition-colors active:bg-card/60"
-                title="Approval Queue"
-              >
-                <CheckCircle className="w-4 h-4" />
-              </button>
-              <button
-                onClick={() => navigate('/admin/tags')}
-                className="hidden lg:block p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-card/80 border border-border/50 transition-colors active:bg-card/60"
-                title="Tag Management"
-              >
-                <Tag className="w-4 h-4" />
-              </button>
-              <button
-                onClick={() => navigate('/admin/scheduled')}
-                className="hidden lg:block p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-card/80 border border-border/50 transition-colors active:bg-card/60"
-                title="Scheduled Publishing"
-              >
-                <CalendarClock className="w-4 h-4" />
-              </button>
-              <button
-                onClick={() => navigate('/admin/branding')}
-                className="hidden lg:block p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-card/80 border border-border/50 transition-colors active:bg-card/60"
-                title="Branding Settings"
-              >
-                <Paintbrush className="w-4 h-4" />
-              </button>
-              <button
-                onClick={() => navigate('/admin/webhooks')}
-                className="hidden lg:block p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-card/80 border border-border/50 transition-colors active:bg-card/60"
-                title="Webhooks"
-              >
-                <Webhook className="w-4 h-4" />
-              </button>
-              <button
-                onClick={() => navigate('/admin/users')}
-                className="hidden lg:block p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-card/80 border border-border/50 transition-colors active:bg-card/60"
-                title="User Management"
-              >
-                <Users className="w-4 h-4" />
-              </button>
-              <button
-                onClick={() => navigate('/admin/archive')}
-                className="hidden lg:block p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-card/80 border border-border/50 transition-colors active:bg-card/60"
-                title="Archived Documents"
-              >
-                <Archive className="w-4 h-4" />
-              </button>
-            </>
-          )}
+          {user?.role === 'admin' && <AdminNavDropdown />}
           {switchable && toggleTheme && (
             <button
               onClick={toggleTheme}

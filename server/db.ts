@@ -1,6 +1,6 @@
 import { eq, like, or, sql, desc, asc, count, and } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, documents, documentRatings, readingLists, readingListItems, searchAnalytics, documentTags, documentComments, documentVersions, customCategories, downloadHistory, announcements, activityLog, documentAuditTrail, bookmarkNotes, shareLinks, scheduledPublish, inlineComments, brandingSettings, webhooks, recentlyViewed } from "../drizzle/schema";
+import { InsertUser, users, documents, documentRatings, readingLists, readingListItems, searchAnalytics, documentTags, documentComments, documentVersions, customCategories, downloadHistory, announcements, activityLog, documentAuditTrail, bookmarkNotes, shareLinks, scheduledPublish, inlineComments, brandingSettings, webhooks, recentlyViewed, documentFeedback, categoryOrdering } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -1830,4 +1830,137 @@ export async function fireWebhooks(event: string, payload: Record<string, unknow
       await markWebhookTriggered(hook.id, false);
     }
   }
+}
+
+// ─── Document Feedback ──────────────────────────────────────────────────────
+
+export async function submitFeedback(data: { documentSlug: string; visitorId: string; sentiment: 'positive' | 'negative'; comment?: string }) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+
+  // Upsert - one feedback per visitor per doc
+  const existing = await db.select().from(documentFeedback)
+    .where(and(eq(documentFeedback.documentSlug, data.documentSlug), eq(documentFeedback.visitorId, data.visitorId)))
+    .limit(1);
+
+  if (existing.length > 0) {
+    await db.update(documentFeedback)
+      .set({ sentiment: data.sentiment, comment: data.comment || null })
+      .where(eq(documentFeedback.id, existing[0].id));
+  } else {
+    await db.insert(documentFeedback).values({
+      documentSlug: data.documentSlug,
+      visitorId: data.visitorId,
+      sentiment: data.sentiment,
+      comment: data.comment || null,
+    });
+  }
+  return { success: true };
+}
+
+export async function getFeedbackForDocument(slug: string) {
+  const db = await getDb();
+  if (!db) return { positive: 0, negative: 0, comments: [] };
+
+  const rows = await db.select().from(documentFeedback)
+    .where(eq(documentFeedback.documentSlug, slug))
+    .orderBy(desc(documentFeedback.createdAt));
+
+  const positive = rows.filter(r => r.sentiment === 'positive').length;
+  const negative = rows.filter(r => r.sentiment === 'negative').length;
+  const comments = rows.filter(r => r.comment).map(r => ({ visitorId: r.visitorId, comment: r.comment!, sentiment: r.sentiment, createdAt: r.createdAt }));
+
+  return { positive, negative, comments };
+}
+
+export async function getMyFeedback(slug: string, visitorId: string) {
+  const db = await getDb();
+  if (!db) return null;
+
+  const rows = await db.select().from(documentFeedback)
+    .where(and(eq(documentFeedback.documentSlug, slug), eq(documentFeedback.visitorId, visitorId)))
+    .limit(1);
+
+  return rows.length > 0 ? rows[0] : null;
+}
+
+// ─── Category Ordering ──────────────────────────────────────────────────────
+
+export async function getCategoryOrdering() {
+  const db = await getDb();
+  if (!db) return [];
+
+  return db.select().from(categoryOrdering).orderBy(asc(categoryOrdering.sortOrder));
+}
+
+export async function saveCategoryOrdering(categories: { name: string; sortOrder: number }[]) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+
+  // Delete all existing and re-insert
+  await db.delete(categoryOrdering).where(sql`1=1`);
+  if (categories.length > 0) {
+    for (const cat of categories) {
+      await db.insert(categoryOrdering).values({ categoryName: cat.name, sortOrder: cat.sortOrder });
+    }
+  }
+  return { success: true };
+}
+
+// ─── Document Duplication ───────────────────────────────────────────────────
+
+export async function duplicateDocument(slug: string) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+
+  const original = await getDocumentBySlug(slug);
+  if (!original) throw new Error('Document not found');
+
+  const newSlug = `Copy-of-${original.slug}-${Date.now()}`;
+  const newTitle = `Copy of ${original.title}`;
+
+  await db.insert(documents).values({
+    slug: newSlug,
+    title: newTitle,
+    category: original.category,
+    filename: `copy-${original.filename}`,
+    content: original.content,
+    wordCount: original.wordCount,
+    status: 'draft',
+    locale: original.locale,
+  });
+
+  return getDocumentBySlug(newSlug);
+}
+
+// ─── Reading History ────────────────────────────────────────────────────────
+
+export async function getReadingHistory(visitorId: string, limit = 50) {
+  const db = await getDb();
+  if (!db) return [];
+
+  const rows = await db.select({
+    documentSlug: recentlyViewed.documentSlug,
+    viewedAt: recentlyViewed.viewedAt,
+  }).from(recentlyViewed)
+    .where(eq(recentlyViewed.visitorId, visitorId))
+    .orderBy(desc(recentlyViewed.viewedAt))
+    .limit(limit);
+
+  // Enrich with document titles
+  if (rows.length === 0) return [];
+
+  const slugs = rows.map(r => r.documentSlug);
+  const docs = await db.select({ slug: documents.slug, title: documents.title, category: documents.category, wordCount: documents.wordCount })
+    .from(documents)
+    .where(sql`${documents.slug} IN (${sql.join(slugs.map(s => sql`${s}`), sql`, `)})`);
+
+  const docMap = new Map(docs.map(d => [d.slug, d]));
+
+  return rows.map(r => ({
+    ...r,
+    title: docMap.get(r.documentSlug)?.title || r.documentSlug,
+    category: docMap.get(r.documentSlug)?.category || '',
+    wordCount: docMap.get(r.documentSlug)?.wordCount || 0,
+  }));
 }

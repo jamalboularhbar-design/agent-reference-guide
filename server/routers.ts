@@ -36,6 +36,9 @@ import {
   trackRecentlyViewed, getRecentlyViewed,
   getDocumentForExport, getAllUsers, updateUserRole, getVisitorAnalytics, getVisitorDocumentAccess,
   archiveDocuments,
+  submitFeedback, getFeedbackForDocument, getMyFeedback,
+  getCategoryOrdering, saveCategoryOrdering,
+  duplicateDocument, getReadingHistory,
 } from "./db";
 import { invokeLLM } from "./_core/llm";
 import { notifyOwner } from "./_core/notification";
@@ -1064,6 +1067,48 @@ export const appRouter = router({
         }
         return { restored: input.slugs.length };
       }),
+  }),
+
+  // ─── Document Feedback ──────────────────────────────────────────────────
+  feedback: router({
+    submit: publicProcedure
+      .input(z.object({ documentSlug: z.string(), visitorId: z.string(), sentiment: z.enum(['positive', 'negative']), comment: z.string().optional() }))
+      .mutation(async ({ input }) => submitFeedback(input)),
+
+    get: publicProcedure
+      .input(z.object({ slug: z.string() }))
+      .query(async ({ input }) => getFeedbackForDocument(input.slug)),
+
+    mine: publicProcedure
+      .input(z.object({ slug: z.string(), visitorId: z.string() }))
+      .query(async ({ input }) => getMyFeedback(input.slug, input.visitorId)),
+  }),
+
+  // ─── Category Ordering ─────────────────────────────────────────────────
+  categoryOrder: router({
+    get: publicProcedure.query(async () => getCategoryOrdering()),
+
+    save: adminProcedure
+      .input(z.object({ categories: z.array(z.object({ name: z.string(), sortOrder: z.number() })) }))
+      .mutation(async ({ input }) => saveCategoryOrdering(input.categories)),
+  }),
+
+  // ─── Document Duplication ──────────────────────────────────────────────
+  duplicate: router({
+    create: adminProcedure
+      .input(z.object({ slug: z.string() }))
+      .mutation(async ({ input }) => {
+        const doc = await duplicateDocument(input.slug);
+        await logAuditEntry({ documentSlug: doc?.slug || input.slug, action: 'duplicated', field: 'source', newValue: input.slug });
+        return doc;
+      }),
+  }),
+
+  // ─── Reading History ───────────────────────────────────────────────────
+  readingHistory: router({
+    list: publicProcedure
+      .input(z.object({ visitorId: z.string(), limit: z.number().optional() }))
+      .query(async ({ input }) => getReadingHistory(input.visitorId, input.limit)),
   }),
 });
 export type AppRouter = typeof appRouter;
