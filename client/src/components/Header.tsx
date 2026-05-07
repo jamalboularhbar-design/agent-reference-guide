@@ -1,8 +1,28 @@
-import { Sparkles, List, BookOpen, FileText, Tag, Columns, Book, Target, Code, Bookmark, Sun, Moon, Clock, Library } from 'lucide-react';
+import { Sparkles, List, BookOpen, FileText, Tag, Columns, Book, Target, Code, Bookmark, Sun, Moon, Clock, Library, Bell, Network } from 'lucide-react';
+import { trpc } from '@/lib/trpc';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useLocation } from 'wouter';
 import { useAuth } from '@/_core/hooks/useAuth';
 import AdminNavDropdown from './AdminNavDropdown';
+
+function NotificationBell({ navigate }: { navigate: (path: string) => void }) {
+  const { isAuthenticated } = useAuth();
+  const { data: unreadCount } = trpc.subscriptions.unreadCount.useQuery(undefined, { enabled: isAuthenticated, refetchInterval: 30000 });
+  return (
+    <button
+      onClick={() => navigate('/notifications')}
+      className="relative p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-card/80 border border-border/50 transition-colors active:bg-card/60"
+      title="Notifications"
+    >
+      <Bell className="w-4 h-4" />
+      {typeof unreadCount === 'number' && unreadCount > 0 && (
+        <span className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-red-500 text-[9px] text-white flex items-center justify-center font-bold">
+          {unreadCount > 9 ? '9+' : unreadCount}
+        </span>
+      )}
+    </button>
+  );
+}
 
 export default function Header() {
   const { theme, toggleTheme, switchable } = useTheme();
@@ -95,12 +115,20 @@ export default function Header() {
             <Library className="w-4 h-4" />
           </button>
           <button
+            onClick={() => navigate('/graph')}
+            className="hidden lg:block p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-card/80 border border-border/50 transition-colors active:bg-card/60"
+            title="Document Graph"
+          >
+            <Network className="w-4 h-4" />
+          </button>
+          <button
             onClick={() => navigate('/bookmarks')}
             className="hidden lg:block p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-card/80 border border-border/50 transition-colors active:bg-card/60"
             title="My Bookmarks"
           >
             <Bookmark className="w-4 h-4" />
           </button>
+          <NotificationBell navigate={navigate} />
           {user?.role === 'admin' && <AdminNavDropdown />}
           {switchable && toggleTheme && (
             <button

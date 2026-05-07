@@ -3,6 +3,7 @@ import { useParams, useLocation } from 'wouter';
 import { trpc } from '@/lib/trpc';
 import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, FileText, Clock, Search, ArrowUpDown } from 'lucide-react';
+import SubscribeButton from '@/components/SubscribeButton';
 
 export default function CategoryPage() {
   const params = useParams<{ category: string }>();
@@ -38,6 +39,14 @@ export default function CategoryPage() {
       </header>
 
       <div className="container py-6 sm:py-8">
+        {/* Category Cover Image & Subscribe */}
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-3">
+            <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Category Overview</h2>
+          </div>
+          <SubscribeButton targetType="category" targetValue={category} />
+        </div>
+
         {/* Category Stats */}
         <div className="grid grid-cols-3 gap-4 mb-8">
           <div className="p-4 rounded-lg bg-card/30 border border-border/50 text-center">

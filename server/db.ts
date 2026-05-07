@@ -1,6 +1,6 @@
 import { eq, like, or, sql, desc, asc, count, and } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, documents, documentRatings, readingLists, readingListItems, searchAnalytics, documentTags, documentComments, documentVersions, customCategories, downloadHistory, announcements, activityLog, documentAuditTrail, bookmarkNotes, shareLinks, scheduledPublish, inlineComments, brandingSettings, webhooks, recentlyViewed, documentFeedback, categoryOrdering } from "../drizzle/schema";
+import { InsertUser, users, documents, documentRatings, readingLists, readingListItems, searchAnalytics, documentTags, documentComments, documentVersions, customCategories, downloadHistory, announcements, activityLog, documentAuditTrail, bookmarkNotes, shareLinks, scheduledPublish, inlineComments, brandingSettings, webhooks, recentlyViewed, documentFeedback, categoryOrdering, documentSubscriptions, subscriptionNotifications, userReadingPosition, searchHistory } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -2157,4 +2157,240 @@ export async function getReadingHeatmap(days = 30) {
     .where(sql`${activityLog.action} = 'view' AND ${activityLog.createdAt} >= DATE_SUB(NOW(), INTERVAL ${days} DAY)`)
     .groupBy(sql`HOUR(${activityLog.createdAt})`, sql`DAYOFWEEK(${activityLog.createdAt})`)
     .orderBy(sql`DAYOFWEEK(${activityLog.createdAt})`, sql`HOUR(${activityLog.createdAt})`);
+}
+
+// ─── Batch 15: Document Subscriptions ────────────────────────────────────────
+export async function subscribeToTarget(userOpenId: string, targetType: 'document' | 'category', targetValue: string) {
+  const db = await getDb();
+  if (!db) return null;
+  const existing = await db.select().from(documentSubscriptions)
+    .where(and(eq(documentSubscriptions.userOpenId, userOpenId), eq(documentSubscriptions.targetType, targetType), eq(documentSubscriptions.targetValue, targetValue)))
+    .limit(1);
+  if (existing.length > 0) return existing[0];
+  await db.insert(documentSubscriptions).values({ userOpenId, targetType, targetValue });
+  return { userOpenId, targetType, targetValue };
+}
+
+export async function unsubscribeFromTarget(userOpenId: string, targetType: 'document' | 'category', targetValue: string) {
+  const db = await getDb();
+  if (!db) return;
+  await db.delete(documentSubscriptions)
+    .where(and(eq(documentSubscriptions.userOpenId, userOpenId), eq(documentSubscriptions.targetType, targetType), eq(documentSubscriptions.targetValue, targetValue)));
+}
+
+export async function getUserSubscriptions(userOpenId: string) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(documentSubscriptions).where(eq(documentSubscriptions.userOpenId, userOpenId)).orderBy(desc(documentSubscriptions.createdAt));
+}
+
+export async function notifySubscribers(documentSlug: string, category: string, changeType: 'created' | 'updated' | 'published') {
+  const db = await getDb();
+  if (!db) return;
+  const subs = await db.select().from(documentSubscriptions)
+    .where(or(
+      and(eq(documentSubscriptions.targetType, 'document'), eq(documentSubscriptions.targetValue, documentSlug)),
+      and(eq(documentSubscriptions.targetType, 'category'), eq(documentSubscriptions.targetValue, category))
+    ));
+  if (subs.length === 0) return;
+  const notifications = subs.map(s => ({ userOpenId: s.userOpenId, documentSlug, changeType, isRead: 0 }));
+  await db.insert(subscriptionNotifications).values(notifications);
+}
+
+export async function getUserNotifications(userOpenId: string, limit = 20) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select({
+    id: subscriptionNotifications.id,
+    documentSlug: subscriptionNotifications.documentSlug,
+    changeType: subscriptionNotifications.changeType,
+    isRead: subscriptionNotifications.isRead,
+    createdAt: subscriptionNotifications.createdAt,
+  }).from(subscriptionNotifications)
+    .where(eq(subscriptionNotifications.userOpenId, userOpenId))
+    .orderBy(desc(subscriptionNotifications.createdAt))
+    .limit(limit);
+}
+
+export async function markNotificationRead(id: number, userOpenId: string) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(subscriptionNotifications).set({ isRead: 1 }).where(and(eq(subscriptionNotifications.id, id), eq(subscriptionNotifications.userOpenId, userOpenId)));
+}
+
+export async function markAllNotificationsRead(userOpenId: string) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(subscriptionNotifications).set({ isRead: 1 }).where(eq(subscriptionNotifications.userOpenId, userOpenId));
+}
+
+export async function getUnreadNotificationCount(userOpenId: string) {
+  const db = await getDb();
+  if (!db) return 0;
+  const result = await db.select({ total: count() }).from(subscriptionNotifications)
+    .where(and(eq(subscriptionNotifications.userOpenId, userOpenId), eq(subscriptionNotifications.isRead, 0)));
+  return result[0]?.total ?? 0;
+}
+
+// ─── Batch 15: Reading Progress (server-side) ────────────────────────────────
+export async function saveReadingPosition(userOpenId: string, documentSlug: string, scrollPercent: number) {
+  const db = await getDb();
+  if (!db) return;
+  const existing = await db.select().from(userReadingPosition)
+    .where(and(eq(userReadingPosition.userOpenId, userOpenId), eq(userReadingPosition.documentSlug, documentSlug)))
+    .limit(1);
+  if (existing.length > 0) {
+    await db.update(userReadingPosition).set({ scrollPercent, lastReadAt: new Date() })
+      .where(eq(userReadingPosition.id, existing[0].id));
+  } else {
+    await db.insert(userReadingPosition).values({ userOpenId, documentSlug, scrollPercent });
+  }
+}
+
+export async function getReadingPosition(userOpenId: string, documentSlug: string) {
+  const db = await getDb();
+  if (!db) return null;
+  const result = await db.select().from(userReadingPosition)
+    .where(and(eq(userReadingPosition.userOpenId, userOpenId), eq(userReadingPosition.documentSlug, documentSlug)))
+    .limit(1);
+  return result.length > 0 ? result[0] : null;
+}
+
+export async function getAllReadingPositions(userOpenId: string) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(userReadingPosition)
+    .where(eq(userReadingPosition.userOpenId, userOpenId))
+    .orderBy(desc(userReadingPosition.lastReadAt))
+    .limit(50);
+}
+
+// ─── Batch 15: Bulk Move Documents Between Categories ────────────────────────
+export async function bulkMoveDocuments(slugs: string[], newCategory: string) {
+  const db = await getDb();
+  if (!db) return { moved: 0 };
+  let moved = 0;
+  for (const slug of slugs) {
+    await db.update(documents).set({ category: newCategory }).where(eq(documents.slug, slug));
+    moved++;
+  }
+  return { moved };
+}
+
+// ─── Batch 15: Document Merge ────────────────────────────────────────────────
+export async function mergeDocuments(sourceSlug: string, targetSlug: string) {
+  const db = await getDb();
+  if (!db) return null;
+  const [source] = await db.select().from(documents).where(eq(documents.slug, sourceSlug)).limit(1);
+  const [target] = await db.select().from(documents).where(eq(documents.slug, targetSlug)).limit(1);
+  if (!source || !target) return null;
+  const mergedContent = `${target.content || ''}\n\n---\n\n## Merged from: ${source.title}\n\n${source.content || ''}`;
+  const mergedWordCount = (target.wordCount || 0) + (source.wordCount || 0);
+  await db.update(documents).set({ content: mergedContent, wordCount: mergedWordCount }).where(eq(documents.slug, targetSlug));
+  return { targetSlug, mergedWordCount };
+}
+
+// ─── Batch 15: Category Cover Images ────────────────────────────────────────
+export async function setCategoryCoverImage(categoryName: string, imageUrl: string) {
+  const db = await getDb();
+  if (!db) return;
+  const key = `category_cover_${categoryName}`;
+  const existing = await db.select().from(brandingSettings).where(eq(brandingSettings.settingKey, key)).limit(1);
+  if (existing.length > 0) {
+    await db.update(brandingSettings).set({ settingValue: imageUrl }).where(eq(brandingSettings.settingKey, key));
+  } else {
+    await db.insert(brandingSettings).values({ settingKey: key, settingValue: imageUrl });
+  }
+}
+
+export async function getCategoryCoverImage(categoryName: string) {
+  const db = await getDb();
+  if (!db) return null;
+  const key = `category_cover_${categoryName}`;
+  const result = await db.select().from(brandingSettings).where(eq(brandingSettings.settingKey, key)).limit(1);
+  return result.length > 0 ? result[0].settingValue : null;
+}
+
+export async function getAllCategoryCoverImages() {
+  const db = await getDb();
+  if (!db) return [];
+  const result = await db.select().from(brandingSettings).where(like(brandingSettings.settingKey, 'category_cover_%'));
+  return result.map(r => ({ category: r.settingKey.replace('category_cover_', ''), imageUrl: r.settingValue }));
+}
+
+// ─── Batch 15: Search History ────────────────────────────────────────────────
+export async function saveSearchHistory(userOpenId: string, query: string, resultCount: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.insert(searchHistory).values({ userOpenId, query, resultCount });
+}
+
+export async function getRecentSearches(userOpenId: string, limit = 10) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(searchHistory)
+    .where(eq(searchHistory.userOpenId, userOpenId))
+    .orderBy(desc(searchHistory.searchedAt))
+    .limit(limit);
+}
+
+export async function clearUserSearchHistory(userOpenId: string) {
+  const db = await getDb();
+  if (!db) return;
+  await db.delete(searchHistory).where(eq(searchHistory.userOpenId, userOpenId));
+}
+
+// ─── Batch 15: Document Relationships Graph Data ─────────────────────────────
+export async function getDocumentGraph() {
+  const db = await getDb();
+  if (!db) return { nodes: [], edges: [] };
+  const docs = await db.select({
+    slug: documents.slug,
+    title: documents.title,
+    category: documents.category,
+    wordCount: documents.wordCount,
+  }).from(documents).where(eq(documents.status, 'published'));
+  
+  const deps = await db.select({
+    source: sql<string>`documentSlug`,
+    target: sql<string>`dependsOnSlug`,
+  }).from(sql`document_dependencies`);
+  
+  const nodes = docs.map(d => ({ id: d.slug, label: d.title, category: d.category, size: d.wordCount || 100 }));
+  const edges = deps.map(d => ({ source: d.source, target: d.target }));
+  return { nodes, edges };
+}
+
+// ─── Batch 15: Admin Content Calendar ────────────────────────────────────────
+export async function getContentCalendarEvents(startDate: string, endDate: string) {
+  const db = await getDb();
+  if (!db) return [];
+  const created = await db.select({
+    id: documents.id,
+    title: documents.title,
+    slug: documents.slug,
+    date: documents.createdAt,
+    type: sql<string>`'created'`,
+  }).from(documents)
+    .where(sql`${documents.createdAt} >= ${startDate} AND ${documents.createdAt} <= ${endDate}`);
+  
+  const scheduled = await db.select({
+    id: scheduledPublish.id,
+    title: sql<string>`(SELECT title FROM documents WHERE slug = ${scheduledPublish.documentSlug} LIMIT 1)`,
+    slug: scheduledPublish.documentSlug,
+    date: scheduledPublish.publishAt,
+    type: sql<string>`'scheduled'`,
+  }).from(scheduledPublish)
+    .where(sql`${scheduledPublish.publishAt} >= ${startDate} AND ${scheduledPublish.publishAt} <= ${endDate}`);
+  
+  const reviews = await db.select({
+    id: documents.id,
+    title: documents.title,
+    slug: documents.slug,
+    date: documents.reviewBy,
+    type: sql<string>`'review_due'`,
+  }).from(documents)
+    .where(sql`${documents.reviewBy} IS NOT NULL AND ${documents.reviewBy} >= ${startDate} AND ${documents.reviewBy} <= ${endDate}`);
+  
+  return [...created, ...scheduled, ...reviews];
 }

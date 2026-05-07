@@ -54,6 +54,12 @@ import AdminHeatmapPage from "./pages/AdminHeatmapPage";
 import BreadcrumbTrail from "./components/BreadcrumbTrail";
 import ScrollToTop from "./components/ScrollToTop";
 import MobileBottomNav from "./components/MobileBottomNav";
+import NotificationsPage from "./pages/NotificationsPage";
+import DocumentGraphPage from "./pages/DocumentGraphPage";
+import AdminContentCalendarPage from "./pages/AdminContentCalendarPage";
+import AdminBulkMovePage from "./pages/AdminBulkMovePage";
+import AdminMergePage from "./pages/AdminMergePage";
+import AdminCategoryCoversPage from "./pages/AdminCategoryCoversPage";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -104,6 +110,12 @@ function Router() {
       <Route path={"/admin/import-json"} component={AdminImportJsonPage} />
       <Route path={"/admin/visibility"} component={AdminVisibilityPage} />
       <Route path={"/admin/heatmap"} component={AdminHeatmapPage} />
+      <Route path={"/notifications"} component={NotificationsPage} />
+      <Route path={"/graph"} component={DocumentGraphPage} />
+      <Route path={"/admin/calendar"} component={AdminContentCalendarPage} />
+      <Route path={"/admin/bulk-move"} component={AdminBulkMovePage} />
+      <Route path={"/admin/merge"} component={AdminMergePage} />
+      <Route path={"/admin/category-covers"} component={AdminCategoryCoversPage} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />

@@ -4,7 +4,7 @@ import {
   Settings, ChevronDown, FileText, BarChart3, CheckCircle, Tags, 
   Globe, CalendarClock, Paintbrush, Webhook, Users, Archive, 
   Columns3, Clock, MessageSquare, GripVertical, Copy, Download,
-  Shield, FileJson, Activity
+  Shield, FileJson, Activity, FolderInput, Merge, Image, Calendar
 } from 'lucide-react';
 
 const adminLinks = [
@@ -32,6 +32,10 @@ const adminLinks = [
   { label: 'Visibility', href: '/admin/visibility', icon: Shield },
   { label: 'Import JSON', href: '/admin/import-json', icon: FileJson },
   { label: 'Reading Heatmap', href: '/admin/heatmap', icon: Activity },
+  { label: 'Content Calendar', href: '/admin/calendar', icon: Calendar },
+  { label: 'Bulk Move', href: '/admin/bulk-move', icon: FolderInput },
+  { label: 'Merge Docs', href: '/admin/merge', icon: Merge },
+  { label: 'Category Covers', href: '/admin/category-covers', icon: Image },
 ];
 
 export default function AdminNavDropdown() {

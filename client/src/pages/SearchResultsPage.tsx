@@ -62,10 +62,12 @@ export default function SearchResultsPage() {
   const { data: allTags } = trpc.tags.all.useQuery();
 
   const logMutation = trpc.searchAnalytics.log.useMutation();
+  const saveHistoryMut = trpc.searchHistory.save.useMutation();
 
   useEffect(() => {
     if (debouncedQuery && results) {
       logMutation.mutate({ query: debouncedQuery, resultCount: results.total });
+      saveHistoryMut.mutate({ query: debouncedQuery, resultCount: results.total });
     }
   }, [debouncedQuery, results?.total]);
 

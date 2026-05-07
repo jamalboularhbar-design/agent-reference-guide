@@ -2,7 +2,7 @@ import { z } from "zod";
 import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
-import { publicProcedure, router, adminProcedure } from "./_core/trpc";
+import { publicProcedure, protectedProcedure, router, adminProcedure } from "./_core/trpc";
 import {
   getDocuments, getDocumentBySlug, getDocumentCategories, getRelatedDocuments,
   getDocumentStats, createDocument, updateDocument, deleteDocument,
@@ -43,6 +43,13 @@ import {
   getCollections, getCollectionById, createCollection, updateCollection, deleteCollection,
   getCollectionItems, addCollectionItem, removeCollectionItem,
   bulkImportFromJSON, restoreDocumentVersion, getReadingHeatmap,
+  subscribeToTarget, unsubscribeFromTarget, getUserSubscriptions, notifySubscribers,
+  getUserNotifications, markNotificationRead, markAllNotificationsRead, getUnreadNotificationCount,
+  saveReadingPosition, getReadingPosition, getAllReadingPositions,
+  bulkMoveDocuments, mergeDocuments,
+  setCategoryCoverImage, getCategoryCoverImage, getAllCategoryCoverImages,
+  saveSearchHistory, getRecentSearches, clearUserSearchHistory,
+  getDocumentGraph, getContentCalendarEvents,
 } from "./db";
 import { invokeLLM } from "./_core/llm";
 import { notifyOwner } from "./_core/notification";
@@ -190,6 +197,10 @@ export const appRouter = router({
         await logActivity('create', slug, undefined, `Created: ${input.title}`);
         await logAuditEntry({ documentSlug: slug, action: 'created', field: undefined, oldValue: undefined, newValue: input.title, changedBy: 'admin' });
         await fireWebhooks('document.created', { slug, title: input.title, category: input.category, status: input.status });
+        // Notify subscribers of new document in this category
+        if (input.status === 'published') {
+          await notifySubscribers(slug, input.category, 'created');
+        }
         return result;
       }),
 
@@ -246,8 +257,10 @@ export const appRouter = router({
         const result = await updateDocument(slug, updateData);
         if (data.status === 'published') {
           await fireWebhooks('document.published', { slug, title: data.title || existing?.title });
+          await notifySubscribers(slug, existing?.category || '', 'published');
         } else {
           await fireWebhooks('document.updated', { slug, title: data.title || existing?.title, changes: Object.keys(data) });
+          await notifySubscribers(slug, existing?.category || '', 'updated');
         }
         return result;
       }),
@@ -1178,6 +1191,82 @@ export const appRouter = router({
     get: adminProcedure
       .input(z.object({ days: z.number().optional().default(30) }))
       .query(async ({ input }) => getReadingHeatmap(input.days)),
+  }),
+
+  // ─── Batch 15: Subscriptions & Notifications ──────────────────────────
+  subscriptions: router({
+    subscribe: protectedProcedure
+      .input(z.object({ targetType: z.enum(['document', 'category']), targetValue: z.string() }))
+      .mutation(async ({ input, ctx }) => subscribeToTarget(ctx.user.openId, input.targetType, input.targetValue)),
+    unsubscribe: protectedProcedure
+      .input(z.object({ targetType: z.enum(['document', 'category']), targetValue: z.string() }))
+      .mutation(async ({ input, ctx }) => unsubscribeFromTarget(ctx.user.openId, input.targetType, input.targetValue)),
+    list: protectedProcedure.query(async ({ ctx }) => getUserSubscriptions(ctx.user.openId)),
+    notifications: protectedProcedure
+      .input(z.object({ limit: z.number().optional().default(20) }))
+      .query(async ({ input, ctx }) => getUserNotifications(ctx.user.openId, input.limit)),
+    unreadCount: protectedProcedure.query(async ({ ctx }) => getUnreadNotificationCount(ctx.user.openId)),
+    markRead: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input, ctx }) => markNotificationRead(input.id, ctx.user.openId)),
+    markAllRead: protectedProcedure.mutation(async ({ ctx }) => markAllNotificationsRead(ctx.user.openId)),
+  }),
+
+  // ─── Batch 15: Reading Position (server-side) ─────────────────────────
+  readingPosition: router({
+    save: protectedProcedure
+      .input(z.object({ documentSlug: z.string(), scrollPercent: z.number().min(0).max(100) }))
+      .mutation(async ({ input, ctx }) => saveReadingPosition(ctx.user.openId, input.documentSlug, input.scrollPercent)),
+    get: protectedProcedure
+      .input(z.object({ documentSlug: z.string() }))
+      .query(async ({ input, ctx }) => getReadingPosition(ctx.user.openId, input.documentSlug)),
+    all: protectedProcedure.query(async ({ ctx }) => getAllReadingPositions(ctx.user.openId)),
+  }),
+
+  // ─── Batch 15: Bulk Move Documents ─────────────────────────────────────
+  bulkMove: router({
+    move: adminProcedure
+      .input(z.object({ slugs: z.array(z.string()), newCategory: z.string() }))
+      .mutation(async ({ input }) => bulkMoveDocuments(input.slugs, input.newCategory)),
+  }),
+
+  // ─── Batch 15: Document Merge ──────────────────────────────────────────
+  merge: router({
+    merge: adminProcedure
+      .input(z.object({ sourceSlug: z.string(), targetSlug: z.string() }))
+      .mutation(async ({ input }) => mergeDocuments(input.sourceSlug, input.targetSlug)),
+  }),
+
+  // ─── Batch 15: Category Cover Images ───────────────────────────────────
+  categoryCover: router({
+    set: adminProcedure
+      .input(z.object({ categoryName: z.string(), imageUrl: z.string() }))
+      .mutation(async ({ input }) => setCategoryCoverImage(input.categoryName, input.imageUrl)),
+    get: publicProcedure
+      .input(z.object({ categoryName: z.string() }))
+      .query(async ({ input }) => getCategoryCoverImage(input.categoryName)),
+    all: publicProcedure.query(async () => getAllCategoryCoverImages()),
+  }),
+
+  // ─── Batch 15: Search History ──────────────────────────────────────────
+  searchHistory: router({
+    save: protectedProcedure
+      .input(z.object({ query: z.string(), resultCount: z.number() }))
+      .mutation(async ({ input, ctx }) => saveSearchHistory(ctx.user.openId, input.query, input.resultCount)),
+    recent: protectedProcedure.query(async ({ ctx }) => getRecentSearches(ctx.user.openId)),
+    clear: protectedProcedure.mutation(async ({ ctx }) => clearUserSearchHistory(ctx.user.openId)),
+  }),
+
+  // ─── Batch 15: Document Graph ──────────────────────────────────────────
+  documentGraph: router({
+    get: publicProcedure.query(async () => getDocumentGraph()),
+  }),
+
+  // ─── Batch 15: Content Calendar ────────────────────────────────────────
+  contentCalendar: router({
+    events: adminProcedure
+      .input(z.object({ startDate: z.string(), endDate: z.string() }))
+      .query(async ({ input }) => getContentCalendarEvents(input.startDate, input.endDate)),
   }),
 });
 export type AppRouter = typeof appRouter;

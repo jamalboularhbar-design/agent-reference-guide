@@ -383,3 +383,45 @@ export const categoryOrdering = mysqlTable("category_ordering", {
 });
 
 export type CategoryOrder = typeof categoryOrdering.$inferSelect;
+
+// Document subscriptions - users subscribe to docs/categories for change notifications
+export const documentSubscriptions = mysqlTable("document_subscriptions", {
+  id: int("id").autoincrement().primaryKey(),
+  userOpenId: varchar("userOpenId", { length: 64 }).notNull(),
+  // Either a document slug or a category name
+  targetType: mysqlEnum("targetType", ["document", "category"]).notNull(),
+  targetValue: varchar("targetValue", { length: 255 }).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+export type DocumentSubscription = typeof documentSubscriptions.$inferSelect;
+
+// Subscription notifications - unread change notifications for subscribers
+export const subscriptionNotifications = mysqlTable("subscription_notifications", {
+  id: int("id").autoincrement().primaryKey(),
+  userOpenId: varchar("userOpenId", { length: 64 }).notNull(),
+  documentSlug: varchar("documentSlug", { length: 255 }).notNull(),
+  changeType: mysqlEnum("changeType", ["created", "updated", "published"]).notNull(),
+  isRead: int("isRead").default(0).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+export type SubscriptionNotification = typeof subscriptionNotifications.$inferSelect;
+
+// User reading position per-user (server-side) - resume where you left off
+export const userReadingPosition = mysqlTable("user_reading_position", {
+  id: int("id").autoincrement().primaryKey(),
+  userOpenId: varchar("userOpenId", { length: 64 }).notNull(),
+  documentSlug: varchar("documentSlug", { length: 255 }).notNull(),
+  scrollPercent: int("scrollPercent").default(0).notNull(),
+  lastReadAt: timestamp("lastReadAt").defaultNow().notNull(),
+});
+export type UserReadingPosition = typeof userReadingPosition.$inferSelect;
+
+// Search history - recent searches per user
+export const searchHistory = mysqlTable("search_history", {
+  id: int("id").autoincrement().primaryKey(),
+  userOpenId: varchar("userOpenId", { length: 64 }).notNull(),
+  query: varchar("query", { length: 255 }).notNull(),
+  resultCount: int("resultCount").default(0),
+  searchedAt: timestamp("searchedAt").defaultNow().notNull(),
+});
+export type SearchHistoryEntry = typeof searchHistory.$inferSelect;

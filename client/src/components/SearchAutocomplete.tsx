@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
 import { useLocation } from 'wouter';
-import { Search, FileText, X } from 'lucide-react';
+import { Search, FileText, X, Clock } from 'lucide-react';
 import { trpc } from '@/lib/trpc';
+import { useAuth } from '@/_core/hooks/useAuth';
 
 interface SearchAutocompleteProps {
   onSearchChange?: (query: string) => void;
@@ -14,8 +15,11 @@ export default function SearchAutocomplete({ onSearchChange, placeholder = "Quic
   const [query, setQuery] = useState('');
   const [isOpen, setIsOpen] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(-1);
+  const [showHistory, setShowHistory] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const { isAuthenticated } = useAuth();
+  const { data: searchHistory } = trpc.searchHistory.recent.useQuery(undefined, { enabled: isAuthenticated });
 
   const { data } = trpc.documents.list.useQuery(
     { search: query, limit: 8 },
@@ -75,7 +79,7 @@ export default function SearchAutocomplete({ onSearchChange, placeholder = "Quic
           type="text"
           value={query}
           onChange={e => { setQuery(e.target.value); setIsOpen(true); onSearchChange?.(e.target.value); }}
-          onFocus={() => query.length >= 2 && setIsOpen(true)}
+          onFocus={() => { if (query.length >= 2) setIsOpen(true); else if (!query && isAuthenticated) setShowHistory(true); }}
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
           className="w-full pl-9 pr-8 py-2.5 rounded-lg bg-card/50 border border-border/50 text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-accent/50 focus:ring-1 focus:ring-accent/20 transition-all text-sm"
@@ -89,6 +93,24 @@ export default function SearchAutocomplete({ onSearchChange, placeholder = "Quic
           </button>
         )}
       </div>
+
+      {/* Search History Dropdown */}
+      {showHistory && !isOpen && !query && searchHistory && searchHistory.length > 0 && (
+        <div className="absolute top-full left-0 right-0 mt-1 py-1 bg-card border border-border/50 rounded-lg shadow-xl z-50 max-h-[200px] overflow-y-auto">
+          <div className="px-3 py-1.5 text-xs text-muted-foreground font-medium border-b border-border/30">Recent Searches</div>
+          {searchHistory.map((item, i) => (
+            <button
+              key={i}
+              onClick={() => { setQuery(item.query); setIsOpen(true); setShowHistory(false); navigate(`/search?q=${encodeURIComponent(item.query)}`); }}
+              className="w-full flex items-center gap-2.5 px-3 py-2 text-left hover:bg-muted/50 text-foreground transition-colors"
+            >
+              <Clock className="w-3.5 h-3.5 flex-shrink-0 text-muted-foreground" />
+              <span className="text-sm truncate">{item.query}</span>
+              <span className="text-[10px] text-muted-foreground ml-auto">{item.resultCount} results</span>
+            </button>
+          ))}
+        </div>
+      )}
 
       {isOpen && suggestions.length > 0 && (
         <div

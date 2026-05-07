@@ -35,6 +35,8 @@ import CodeCopyButton from '@/components/CodeCopyButton';
 import DocumentFeedback from '@/components/DocumentFeedback';
 import DocumentNavigation from '@/components/DocumentNavigation';
 import QRCodeShare from '@/components/QRCodeShare';
+import SubscribeButton from '@/components/SubscribeButton';
+import ReadingPositionTracker from '@/components/ReadingPositionTracker';
 
 // Reading time calculation - uses configurable WPM from branding settings
 function getReadingTime(wordCount: number, wpm = 200): string {
@@ -409,6 +411,8 @@ export default function DocumentDetail() {
               <ExternalLink className="w-5 h-5 sm:w-4 sm:h-4" />
             </button>
             {document && <QRCodeShare slug={document.slug} title={document.title} />}
+            {document && <SubscribeButton targetType="document" targetValue={document.slug} />}
+            {document && <ReadingPositionTracker documentSlug={document.slug} />}
             {document && <ShareDocument title={document.title} slug={document.slug} category={document.category} />}
             {document && <DistractionFreeMode><ReactMarkdown remarkPlugins={[remarkGfm]}>{document.content || ''}</ReactMarkdown></DistractionFreeMode>}
           </div>
@@ -522,6 +526,10 @@ export default function DocumentDetail() {
               print:prose-p:text-black print:prose-headings:text-black
               [&_table]:block [&_table]:overflow-x-auto [&_table]:w-full
               [&_pre]:max-w-[calc(100vw-3rem)] [&_pre]:sm:max-w-none
+              [&_.footnotes]:border-t [&_.footnotes]:border-border/30 [&_.footnotes]:mt-8 [&_.footnotes]:pt-4
+              [&_.footnotes]:text-sm [&_.footnotes]:text-muted-foreground
+              [&_sup_a]:text-accent [&_sup_a]:no-underline [&_sup_a]:font-medium
+              [&_.data-footnote-backref]:text-accent
             ">
               <ReactMarkdown
                 remarkPlugins={[remarkGfm]}
