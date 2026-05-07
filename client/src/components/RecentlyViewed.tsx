@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useLocation } from 'wouter';
+import { trpc } from '@/lib/trpc';
 import { Clock, FileText, X } from 'lucide-react';
 
 interface RecentItem {
@@ -8,13 +9,22 @@ interface RecentItem {
   viewedAt: number;
 }
 
-function getRecentlyViewed(): RecentItem[] {
+function getVisitorId(): string {
+  let id = localStorage.getItem('arg-visitor-id');
+  if (!id) {
+    id = 'v_' + Math.random().toString(36).slice(2) + Date.now().toString(36);
+    localStorage.setItem('arg-visitor-id', id);
+  }
+  return id;
+}
+
+function getLocalRecentlyViewed(): RecentItem[] {
   try {
     return JSON.parse(localStorage.getItem('arg-recently-viewed') || '[]');
   } catch { return []; }
 }
 
-function clearRecentlyViewed() {
+function clearLocalRecentlyViewed() {
   localStorage.removeItem('arg-recently-viewed');
 }
 
@@ -29,13 +39,44 @@ function formatTimeAgo(timestamp: number): string {
   return `${days}d ago`;
 }
 
+// Helper to track a view server-side
+export function useTrackRecentView(documentSlug: string | undefined, visitorId: string | undefined) {
+  const trackMutation = trpc.recentlyViewed.track.useMutation();
+  
+  useEffect(() => {
+    if (documentSlug && visitorId) {
+      trackMutation.mutate({ visitorId, documentSlug });
+    }
+  }, [documentSlug, visitorId]);
+}
+
 export default function RecentlyViewed() {
   const [, navigate] = useLocation();
-  const [items, setItems] = useState<RecentItem[]>([]);
+  const visitorId = useMemo(() => getVisitorId(), []);
+  
+  // Fetch server-side recently viewed
+  const { data: serverRecent } = trpc.recentlyViewed.list.useQuery(
+    { visitorId, limit: 5 },
+    { staleTime: 30000 }
+  );
+  
+  const [localItems, setLocalItems] = useState<RecentItem[]>([]);
 
   useEffect(() => {
-    setItems(getRecentlyViewed());
+    setLocalItems(getLocalRecentlyViewed());
   }, []);
+
+  // Merge server data with local fallback, preferring server
+  const items: RecentItem[] = useMemo(() => {
+    if (serverRecent && serverRecent.length > 0) {
+      return serverRecent.map((item: any) => ({
+        slug: item.documentSlug,
+        title: item.document?.title || item.documentSlug,
+        viewedAt: new Date(item.viewedAt).getTime(),
+      }));
+    }
+    return localItems;
+  }, [serverRecent, localItems]);
 
   if (items.length === 0) return null;
 
@@ -47,7 +88,7 @@ export default function RecentlyViewed() {
           <h3 className="text-sm font-semibold text-foreground">Recently Viewed</h3>
         </div>
         <button
-          onClick={() => { clearRecentlyViewed(); setItems([]); }}
+          onClick={() => { clearLocalRecentlyViewed(); setLocalItems([]); }}
           className="text-xs text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
         >
           <X className="w-3 h-3" />
@@ -55,7 +96,7 @@ export default function RecentlyViewed() {
         </button>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
-        {items.slice(0, 6).map(item => (
+        {items.slice(0, 5).map(item => (
           <button
             key={item.slug}
             onClick={() => navigate(`/docs/${item.slug}`)}

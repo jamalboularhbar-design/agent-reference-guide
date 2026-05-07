@@ -284,3 +284,53 @@ export const scheduledPublish = mysqlTable("scheduled_publish", {
 });
 
 export type ScheduledPublishEntry = typeof scheduledPublish.$inferSelect;
+
+// Inline comments - contextual comments on highlighted text
+export const inlineComments = mysqlTable("inline_comments", {
+  id: int("id").autoincrement().primaryKey(),
+  documentSlug: varchar("documentSlug", { length: 255 }).notNull(),
+  visitorId: varchar("visitorId", { length: 100 }).notNull(),
+  highlightText: text("highlightText").notNull(), // the highlighted text
+  comment: text("comment").notNull(),
+  parentId: int("parentId"), // for threaded replies
+  resolved: int("resolved").default(0).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type InlineComment = typeof inlineComments.$inferSelect;
+
+// Branding settings - admin-configurable site branding
+export const brandingSettings = mysqlTable("branding_settings", {
+  id: int("id").autoincrement().primaryKey(),
+  settingKey: varchar("settingKey", { length: 100 }).notNull().unique(),
+  settingValue: text("settingValue").notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type BrandingSetting = typeof brandingSettings.$inferSelect;
+
+// Webhooks - configurable HTTP POST endpoints for document events
+export const webhooks = mysqlTable("webhooks", {
+  id: int("id").autoincrement().primaryKey(),
+  url: text("url").notNull(),
+  events: text("events").notNull(), // JSON array of event types
+  secret: varchar("secret", { length: 100 }),
+  active: int("active").default(1).notNull(),
+  lastTriggeredAt: timestamp("lastTriggeredAt"),
+  failCount: int("failCount").default(0).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Webhook = typeof webhooks.$inferSelect;
+
+// Recently viewed - tracks last viewed documents per visitor
+export const recentlyViewed = mysqlTable("recently_viewed", {
+  id: int("id").autoincrement().primaryKey(),
+  visitorId: varchar("visitorId", { length: 100 }).notNull(),
+  documentSlug: varchar("documentSlug", { length: 255 }).notNull(),
+  viewedAt: timestamp("viewedAt").defaultNow().notNull(),
+});
+
+export type RecentlyViewedEntry = typeof recentlyViewed.$inferSelect;

@@ -137,3 +137,13 @@
 - [x] Document sharing with expiring links (generate time-limited share URLs for private/draft documents)
 - [x] Onboarding tour for first-time visitors (step-by-step tooltip walkthrough of key features)
 - [x] Admin document import from URL (paste a URL, auto-fetch content and create document from it)
+- [x] Custom branding settings page (/admin/branding) to configure site title, accent color, and tagline from UI
+- [x] Document access analytics per visitor (track who reads what, surface "most engaged readers" leaderboard)
+- [x] Inline document commenting (highlight text and add contextual comments, threaded replies)
+- [x] Document export to DOCX format (server-side conversion from markdown to .docx download)
+- [x] Bulk document archive/restore (soft-delete with archive status, admin can restore archived docs)
+- [x] Document reading time estimator settings (admin configurable words-per-minute rate)
+- [x] Recently viewed documents sidebar widget (show last 5 docs visited by current visitor)
+- [x] Admin user management page (/admin/users) showing all visitors, their activity stats, and role management
+- [x] Document content templates with variables (placeholders like {{client_name}} auto-filled on view)
+- [x] Webhook integration for document events (fire HTTP POST on create/update/delete/publish to configurable URL)

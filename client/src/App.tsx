@@ -37,6 +37,11 @@ import AdminScheduledPage from "./pages/AdminScheduledPage";
 import BookmarksPage from "./pages/BookmarksPage";
 import ShareLinkPage from "./pages/ShareLinkPage";
 import OnboardingTour from "./components/OnboardingTour";
+import AdminBrandingPage from "./pages/AdminBrandingPage";
+import AdminWebhooksPage from "./pages/AdminWebhooksPage";
+import AdminUsersPage from "./pages/AdminUsersPage";
+import AdminVisitorAnalyticsPage from "./pages/AdminVisitorAnalyticsPage";
+import AdminArchivePage from "./pages/AdminArchivePage";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -72,6 +77,11 @@ function Router() {
       <Route path={"/admin/scheduled"} component={AdminScheduledPage} />
       <Route path={"/bookmarks"} component={BookmarksPage} />
       <Route path={"/share/:token"} component={ShareLinkPage} />
+      <Route path={"/admin/branding"} component={AdminBrandingPage} />
+      <Route path={"/admin/webhooks"} component={AdminWebhooksPage} />
+      <Route path={"/admin/users"} component={AdminUsersPage} />
+      <Route path={"/admin/visitors"} component={AdminVisitorAnalyticsPage} />
+      <Route path={"/admin/archive"} component={AdminArchivePage} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />

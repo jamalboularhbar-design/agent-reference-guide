@@ -28,11 +28,27 @@ import ShareLinkManager from '@/components/ShareLinkManager';
 import '@/styles/print.css';
 import GlossaryAutoLink from '@/components/GlossaryAutoLink';
 import DocumentComparisonView from '@/components/DocumentComparisonView';
+import InlineComments from '@/components/InlineComments';
+import ExportDocx from '@/components/ExportDocx';
+import { useTrackRecentView } from '@/components/RecentlyViewed';
 
-// Reading time calculation
-function getReadingTime(wordCount: number): string {
-  const minutes = Math.ceil(wordCount / 200);
+// Reading time calculation - uses configurable WPM from branding settings
+function getReadingTime(wordCount: number, wpm = 200): string {
+  const minutes = Math.ceil(wordCount / wpm);
   return `${minutes} min read`;
+}
+
+// Template variable interpolation: replaces {{variable_name}} with values
+function interpolateTemplateVars(content: string): string {
+  const vars: Record<string, string> = {
+    company_name: 'Riad & Routes',
+    website: 'riadandroutes.com',
+    current_date: new Date().toLocaleDateString(),
+    current_year: new Date().getFullYear().toString(),
+  };
+  return content.replace(/\{\{\s*([a-zA-Z_][a-zA-Z0-9_]*)\s*\}\}/g, (match, key) => {
+    return vars[key] || match;
+  });
 }
 
 // Extract headings for table of contents
@@ -118,8 +134,23 @@ export default function DocumentDetail() {
   const [isFavorited, setIsFavorited] = useState(false);
   const [activeHeading, setActiveHeading] = useState('');
 
+  // Get configurable WPM from branding settings
+  const { data: brandingSettings } = trpc.branding.get.useQuery();
+  const wpm = useMemo(() => {
+    const setting = brandingSettings?.find((s: any) => s.settingKey === 'words_per_minute');
+    return setting ? parseInt(setting.settingValue) || 200 : 200;
+  }, [brandingSettings]);
+
   // Persist reading progress (auto-saves scroll position)
   useReadingProgress(slug);
+
+  // Track recently viewed for server-side history
+  const visitorIdForTracking = useMemo(() => {
+    let id = localStorage.getItem('visitor_id');
+    if (!id) { id = 'v_' + Math.random().toString(36).substring(2, 15); localStorage.setItem('visitor_id', id); }
+    return id;
+  }, []);
+  useTrackRecentView(slug, visitorIdForTracking);
 
   // Record view count
   const recordViewMutation = trpc.documents.recordView.useMutation();
@@ -436,7 +467,7 @@ export default function DocumentDetail() {
                 </Badge>
                 <div className="flex items-center gap-1.5">
                   <Clock className="w-3.5 h-3.5" />
-                  <span>{getReadingTime(document.wordCount || 0)}</span>
+                  <span>{getReadingTime(document.wordCount || 0, wpm)}</span>
                 </div>
                 <div className="flex items-center gap-1.5">
                   <BookOpen className="w-3.5 h-3.5" />
@@ -467,7 +498,7 @@ export default function DocumentDetail() {
             </div>
 
             {/* Markdown Content */}
-            <article className="prose prose-invert prose-sm max-w-none
+            <article data-document-content className="prose prose-invert prose-sm max-w-none
               prose-headings:font-display prose-headings:text-foreground
               prose-h1:text-xl prose-h1:sm:text-2xl prose-h1:mt-6 prose-h1:sm:mt-8 prose-h1:mb-3 prose-h1:sm:mb-4
               prose-h2:text-lg prose-h2:sm:text-xl prose-h2:mt-5 prose-h2:sm:mt-6 prose-h2:mb-2 prose-h2:sm:mb-3 prose-h2:border-b prose-h2:border-border/30 prose-h2:pb-2
@@ -513,7 +544,7 @@ export default function DocumentDetail() {
                   },
                 }}
               >
-                {document.content}
+                {interpolateTemplateVars(document.content || '')}
               </ReactMarkdown>
             </article>
 
@@ -530,6 +561,9 @@ export default function DocumentDetail() {
             <Suspense fallback={<div className="animate-pulse h-32 bg-card/50 rounded-xl" />}>
               <DocumentComments slug={document.slug} />
             </Suspense>
+
+            {/* Inline Comments (threaded) */}
+            <InlineComments documentSlug={document.slug} visitorId={visitorIdForTracking} />
 
             {/* Version History */}
             <Suspense fallback={<div className="animate-pulse h-24 bg-card/50 rounded-xl" />}>
@@ -561,8 +595,9 @@ export default function DocumentDetail() {
                   className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs text-muted-foreground hover:text-foreground bg-card/50 border border-border/50 hover:border-accent/30 transition-colors"
                 >
                   <Download className="w-3.5 h-3.5" />
-                  Download
+                  Download .md
                 </button>
+                <ExportDocx slug={document.slug} title={document.title} />
               </div>
             </div>
           </main>

@@ -30,6 +30,12 @@ import {
   schedulePublish, getScheduledPublishes, getScheduledPublishForDoc, cancelScheduledPublish, processScheduledPublishes,
   renameTag, mergeTags, deleteTagGlobally, getAllTagsWithCounts,
   importDocumentFromContent, getDocumentsInReview, approveDocument, rejectDocument,
+  getInlineComments, addInlineComment, resolveInlineComment, deleteInlineComment,
+  getBrandingSettings, upsertBrandingSetting,
+  getWebhooks, createWebhook, updateWebhook, deleteWebhook, fireWebhooks,
+  trackRecentlyViewed, getRecentlyViewed,
+  getDocumentForExport, getAllUsers, updateUserRole, getVisitorAnalytics, getVisitorDocumentAccess,
+  archiveDocuments,
 } from "./db";
 import { invokeLLM } from "./_core/llm";
 import { notifyOwner } from "./_core/notification";
@@ -176,6 +182,7 @@ export const appRouter = router({
 
         await logActivity('create', slug, undefined, `Created: ${input.title}`);
         await logAuditEntry({ documentSlug: slug, action: 'created', field: undefined, oldValue: undefined, newValue: input.title, changedBy: 'admin' });
+        await fireWebhooks('document.created', { slug, title: input.title, category: input.category, status: input.status });
         return result;
       }),
 
@@ -229,7 +236,13 @@ export const appRouter = router({
           });
         }
 
-        return updateDocument(slug, updateData);
+        const result = await updateDocument(slug, updateData);
+        if (data.status === 'published') {
+          await fireWebhooks('document.published', { slug, title: data.title || existing?.title });
+        } else {
+          await fireWebhooks('document.updated', { slug, title: data.title || existing?.title, changes: Object.keys(data) });
+        }
+        return result;
       }),
 
     delete: adminProcedure
@@ -237,6 +250,7 @@ export const appRouter = router({
       .mutation(async ({ input }) => {
         await logActivity('delete', input.slug, undefined, `Deleted document`);
         await logAuditEntry({ documentSlug: input.slug, action: 'deleted', field: undefined, oldValue: input.slug, newValue: undefined, changedBy: 'admin' });
+        await fireWebhooks('document.deleted', { slug: input.slug });
         return deleteDocument(input.slug);
       }),
 
@@ -910,6 +924,145 @@ export const appRouter = router({
         const result = await importDocumentFromContent(slug, input.title, input.category, content, input.locale);
         await logActivity('import_url', slug, undefined, `Imported from: ${input.url}`);
         return result;
+      }),
+  }),
+
+  // ==================== Batch 12: Inline Comments ====================
+  inlineComments: router({
+    list: publicProcedure
+      .input(z.object({ documentSlug: z.string() }))
+      .query(async ({ input }) => getInlineComments(input.documentSlug)),
+
+    add: publicProcedure
+      .input(z.object({
+        documentSlug: z.string(),
+        visitorId: z.string(),
+        highlightText: z.string(),
+        comment: z.string(),
+        parentId: z.number().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const result = await addInlineComment(input);
+        await fireWebhooks('comment.created', { documentSlug: input.documentSlug, comment: input.comment });
+        return result;
+      }),
+
+    resolve: publicProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => resolveInlineComment(input.id)),
+
+    delete: publicProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => deleteInlineComment(input.id)),
+  }),
+
+  // ==================== Batch 12: Branding Settings ====================
+  branding: router({
+    get: publicProcedure.query(async () => getBrandingSettings()),
+
+    update: adminProcedure
+      .input(z.object({ key: z.string(), value: z.string() }))
+      .mutation(async ({ input }) => upsertBrandingSetting(input.key, input.value)),
+  }),
+
+  // ==================== Batch 12: Webhooks ====================
+  webhooks: router({
+    list: adminProcedure.query(async () => getWebhooks()),
+
+    create: adminProcedure
+      .input(z.object({
+        url: z.string().url(),
+        events: z.array(z.string()),
+        secret: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => createWebhook({ url: input.url, events: JSON.stringify(input.events), secret: input.secret })),
+
+    update: adminProcedure
+      .input(z.object({
+        id: z.number(),
+        url: z.string().url().optional(),
+        events: z.array(z.string()).optional(),
+        active: z.boolean().optional(),
+        secret: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => updateWebhook(input.id, {
+        url: input.url,
+        events: input.events ? JSON.stringify(input.events) : undefined,
+        active: input.active !== undefined ? (input.active ? 1 : 0) : undefined,
+        secret: input.secret,
+      })),
+
+    delete: adminProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => deleteWebhook(input.id)),
+  }),
+
+  // ==================== Batch 12: Recently Viewed ====================
+  recentlyViewed: router({
+    track: publicProcedure
+      .input(z.object({ visitorId: z.string(), documentSlug: z.string() }))
+      .mutation(async ({ input }) => {
+        await trackRecentlyViewed(input.visitorId, input.documentSlug);
+        return { success: true };
+      }),
+
+    list: publicProcedure
+      .input(z.object({ visitorId: z.string(), limit: z.number().optional() }))
+      .query(async ({ input }) => getRecentlyViewed(input.visitorId, input.limit)),
+  }),
+
+  // ==================== Batch 12: Document Export DOCX ====================
+  documentExport: router({
+    docx: publicProcedure
+      .input(z.object({ slug: z.string() }))
+      .query(async ({ input }) => {
+        const doc = await getDocumentForExport(input.slug);
+        if (!doc) return { error: 'Document not found' };
+        // Return the document data for client-side DOCX generation
+        return { title: doc.title, content: doc.content, category: doc.category };
+      }),
+  }),
+
+  // ==================== Batch 12: Admin User Management ====================
+  userManagement: router({
+    list: adminProcedure
+      .input(z.object({ limit: z.number().optional(), offset: z.number().optional(), search: z.string().optional() }))
+      .query(async ({ input }) => getAllUsers(input)),
+
+    updateRole: adminProcedure
+      .input(z.object({ openId: z.string(), role: z.enum(['user', 'admin']) }))
+      .mutation(async ({ input }) => updateUserRole(input.openId, input.role)),
+
+    analytics: adminProcedure
+      .query(async () => getVisitorAnalytics()),
+
+    visitorAccess: adminProcedure
+      .input(z.object({ visitorId: z.string() }))
+      .query(async ({ input }) => getVisitorDocumentAccess(input.visitorId)),
+  }),
+
+  // ==================== Batch 12: Bulk Archive/Restore ====================
+  archive: router({
+    archive: adminProcedure
+      .input(z.object({ slugs: z.array(z.string()) }))
+      .mutation(async ({ input }) => {
+        await archiveDocuments(input.slugs);
+        for (const slug of input.slugs) {
+          await logAuditEntry({ documentSlug: slug, action: 'archived' });
+          await fireWebhooks('document.archived', { slug });
+        }
+        return { archived: input.slugs.length };
+      }),
+
+    restore: adminProcedure
+      .input(z.object({ slugs: z.array(z.string()), status: z.enum(['draft', 'review', 'published']).optional() }))
+      .mutation(async ({ input }) => {
+        const targetStatus = input.status || 'draft';
+        await batchUpdateStatus(input.slugs, targetStatus);
+        for (const slug of input.slugs) {
+          await logAuditEntry({ documentSlug: slug, action: 'restored', field: 'status', newValue: targetStatus });
+        }
+        return { restored: input.slugs.length };
       }),
   }),
 });

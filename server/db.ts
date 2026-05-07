@@ -1,6 +1,6 @@
 import { eq, like, or, sql, desc, asc, count, and } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, documents, documentRatings, readingLists, readingListItems, searchAnalytics, documentTags, documentComments, documentVersions, customCategories, downloadHistory, announcements, activityLog, documentAuditTrail, bookmarkNotes, shareLinks, scheduledPublish } from "../drizzle/schema";
+import { InsertUser, users, documents, documentRatings, readingLists, readingListItems, searchAnalytics, documentTags, documentComments, documentVersions, customCategories, downloadHistory, announcements, activityLog, documentAuditTrail, bookmarkNotes, shareLinks, scheduledPublish, inlineComments, brandingSettings, webhooks, recentlyViewed } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -1585,4 +1585,249 @@ export async function rejectDocument(slug: string) {
   const db = await getDb();
   if (!db) return;
   await db.update(documents).set({ status: 'draft' }).where(eq(documents.slug, slug));
+}
+
+// ─── Batch 12: Inline Comments ─────────────────────────────────────────────
+
+export async function getInlineComments(documentSlug: string) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(inlineComments).where(eq(inlineComments.documentSlug, documentSlug)).orderBy(asc(inlineComments.createdAt));
+}
+
+export async function addInlineComment(data: { documentSlug: string; visitorId: string; highlightText: string; comment: string; parentId?: number }) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+  const result = await db.insert(inlineComments).values({
+    documentSlug: data.documentSlug,
+    visitorId: data.visitorId,
+    highlightText: data.highlightText,
+    comment: data.comment,
+    parentId: data.parentId || null,
+  });
+  return { id: result[0].insertId };
+}
+
+export async function resolveInlineComment(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+  await db.update(inlineComments).set({ resolved: 1 }).where(eq(inlineComments.id, id));
+  return { success: true };
+}
+
+export async function deleteInlineComment(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+  await db.delete(inlineComments).where(eq(inlineComments.id, id));
+  return { success: true };
+}
+
+// ─── Batch 12: Branding Settings ───────────────────────────────────────────
+
+export async function getBrandingSettings() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(brandingSettings).orderBy(asc(brandingSettings.settingKey));
+}
+
+export async function upsertBrandingSetting(key: string, value: string) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+  await db.insert(brandingSettings).values({ settingKey: key, settingValue: value }).onDuplicateKeyUpdate({ set: { settingValue: value } });
+  return { success: true };
+}
+
+// ─── Batch 12: Webhooks ────────────────────────────────────────────────────
+
+export async function getWebhooks() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(webhooks).orderBy(desc(webhooks.createdAt));
+}
+
+export async function createWebhook(data: { url: string; events: string; secret?: string }) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+  const result = await db.insert(webhooks).values({ url: data.url, events: data.events, secret: data.secret || null });
+  return { id: result[0].insertId };
+}
+
+export async function updateWebhook(id: number, data: { url?: string; events?: string; active?: number; secret?: string }) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+  const updateSet: Record<string, unknown> = {};
+  if (data.url !== undefined) updateSet.url = data.url;
+  if (data.events !== undefined) updateSet.events = data.events;
+  if (data.active !== undefined) updateSet.active = data.active;
+  if (data.secret !== undefined) updateSet.secret = data.secret;
+  await db.update(webhooks).set(updateSet).where(eq(webhooks.id, id));
+  return { success: true };
+}
+
+export async function deleteWebhook(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+  await db.delete(webhooks).where(eq(webhooks.id, id));
+  return { success: true };
+}
+
+export async function getActiveWebhooksForEvent(event: string) {
+  const db = await getDb();
+  if (!db) return [];
+  const all = await db.select().from(webhooks).where(eq(webhooks.active, 1));
+  return all.filter(w => {
+    try {
+      const events = JSON.parse(w.events) as string[];
+      return events.includes(event) || events.includes('*');
+    } catch { return false; }
+  });
+}
+
+export async function markWebhookTriggered(id: number, success: boolean) {
+  const db = await getDb();
+  if (!db) return;
+  if (success) {
+    await db.update(webhooks).set({ lastTriggeredAt: new Date(), failCount: 0 }).where(eq(webhooks.id, id));
+  } else {
+    await db.update(webhooks).set({ failCount: sql`${webhooks.failCount} + 1` }).where(eq(webhooks.id, id));
+  }
+}
+
+// ─── Batch 12: Recently Viewed ─────────────────────────────────────────────
+
+export async function trackRecentlyViewed(visitorId: string, documentSlug: string) {
+  const db = await getDb();
+  if (!db) return;
+  // Delete existing entry for this visitor+doc combo
+  await db.delete(recentlyViewed).where(and(eq(recentlyViewed.visitorId, visitorId), eq(recentlyViewed.documentSlug, documentSlug)));
+  // Insert new entry
+  await db.insert(recentlyViewed).values({ visitorId, documentSlug });
+  // Keep only last 20 entries per visitor
+  const all = await db.select({ id: recentlyViewed.id }).from(recentlyViewed).where(eq(recentlyViewed.visitorId, visitorId)).orderBy(desc(recentlyViewed.viewedAt));
+  if (all.length > 20) {
+    const idsToDelete = all.slice(20).map(r => r.id);
+    for (const id of idsToDelete) {
+      await db.delete(recentlyViewed).where(eq(recentlyViewed.id, id));
+    }
+  }
+}
+
+export async function getRecentlyViewed(visitorId: string, limit = 5) {
+  const db = await getDb();
+  if (!db) return [];
+  const rows = await db.select().from(recentlyViewed).where(eq(recentlyViewed.visitorId, visitorId)).orderBy(desc(recentlyViewed.viewedAt)).limit(limit);
+  // Join with documents to get titles
+  if (rows.length === 0) return [];
+  const slugs = rows.map(r => r.documentSlug);
+  const docs = await db.select({ slug: documents.slug, title: documents.title, category: documents.category }).from(documents).where(sql`${documents.slug} IN (${sql.join(slugs.map(s => sql`${s}`), sql`, `)})`);
+  const docMap = new Map(docs.map(d => [d.slug, d]));
+  return rows.map(r => ({ ...r, document: docMap.get(r.documentSlug) || null }));
+}
+
+// ─── Batch 12: Document Export to DOCX ─────────────────────────────────────
+
+export async function getDocumentForExport(slug: string) {
+  const db = await getDb();
+  if (!db) return null;
+  const result = await db.select({ title: documents.title, content: documents.content, category: documents.category, slug: documents.slug }).from(documents).where(eq(documents.slug, slug)).limit(1);
+  return result.length > 0 ? result[0] : null;
+}
+
+// ─── Batch 12: Admin User Management ───────────────────────────────────────
+
+export async function getAllUsers(opts: { limit?: number; offset?: number; search?: string } = {}) {
+  const db = await getDb();
+  if (!db) return { users: [], total: 0 };
+  const { limit = 50, offset = 0, search } = opts;
+  
+  const conditions = [];
+  if (search) {
+    const pattern = `%${search}%`;
+    conditions.push(sql`(${users.name} LIKE ${pattern} OR ${users.email} LIKE ${pattern} OR ${users.openId} LIKE ${pattern})`);
+  }
+  
+  const whereClause = conditions.length > 0 ? sql`${sql.join(conditions, sql` AND `)}` : undefined;
+  
+  const countResult = whereClause
+    ? await db.select({ total: count() }).from(users).where(whereClause)
+    : await db.select({ total: count() }).from(users);
+  const total = countResult[0]?.total ?? 0;
+  
+  const rows = whereClause
+    ? await db.select().from(users).where(whereClause).orderBy(desc(users.lastSignedIn)).limit(limit).offset(offset)
+    : await db.select().from(users).orderBy(desc(users.lastSignedIn)).limit(limit).offset(offset);
+  
+  return { users: rows, total };
+}
+
+export async function updateUserRole(openId: string, role: 'user' | 'admin') {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+  await db.update(users).set({ role }).where(eq(users.openId, openId));
+  return { success: true };
+}
+
+// ─── Batch 12: Visitor Analytics (per-user access tracking) ────────────────
+
+export async function getVisitorAnalytics(limit = 20) {
+  const db = await getDb();
+  if (!db) return [];
+  // Get most active visitors by view count from activity log
+  const result = await db.select({
+    visitorId: activityLog.visitorId,
+    actionCount: count(),
+  }).from(activityLog).groupBy(activityLog.visitorId).orderBy(desc(count())).limit(limit);
+  return result;
+}
+
+// ─── Batch 12: Document Archive/Restore ────────────────────────────────────
+
+export async function archiveDocuments(slugs: string[]) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+  for (const slug of slugs) {
+    await db.update(documents).set({ status: 'draft' }).where(eq(documents.slug, slug));
+  }
+  return { archived: slugs.length };
+}
+
+export async function restoreDocuments(slugs: string[]) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+  for (const slug of slugs) {
+    await db.update(documents).set({ status: 'published' }).where(eq(documents.slug, slug));
+  }
+  return { restored: slugs.length };
+}
+
+export async function getVisitorDocumentAccess(visitorId: string) {
+  const db = await getDb();
+  if (!db) return [];
+  const rows = await db.select({
+    documentSlug: activityLog.documentSlug,
+    action: activityLog.action,
+    createdAt: activityLog.createdAt,
+  }).from(activityLog).where(eq(activityLog.visitorId, visitorId)).orderBy(desc(activityLog.createdAt)).limit(50);
+  return rows;
+}
+
+// ─── Batch 12: Fire Webhooks ───────────────────────────────────────────────
+
+export async function fireWebhooks(event: string, payload: Record<string, unknown>) {
+  const hooks = await getActiveWebhooksForEvent(event);
+  for (const hook of hooks) {
+    try {
+      const response = await fetch(hook.url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(hook.secret ? { 'X-Webhook-Secret': hook.secret } : {}),
+        },
+        body: JSON.stringify({ event, payload, timestamp: new Date().toISOString() }),
+      });
+      await markWebhookTriggered(hook.id, response.ok);
+    } catch {
+      await markWebhookTriggered(hook.id, false);
+    }
+  }
 }
