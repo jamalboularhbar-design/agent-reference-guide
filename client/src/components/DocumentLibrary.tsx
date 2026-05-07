@@ -15,6 +15,8 @@ import {
 } from '@/components/ui/pagination';
 import DocumentLibrarySkeleton from './DocumentLibrarySkeleton';
 import BulkExport from './BulkExport';
+import KeyboardNavigation from './KeyboardNavigation';
+import { usePreferences } from '@/hooks/usePreferences';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import { Pin } from 'lucide-react';
 
@@ -100,7 +102,8 @@ export default function DocumentLibrary() {
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [statusFilter, setStatusFilter] = useState<'all' | 'draft' | 'review' | 'published'>('all');
   const [currentPage, setCurrentPage] = useState(1);
-  const [sortBy, setSortBy] = useState<'alpha' | 'reading_time' | 'newest'>('alpha');
+  const { defaultSort } = usePreferences();
+  const [sortBy, setSortBy] = useState<'alpha' | 'reading_time' | 'newest'>((defaultSort === 'reading_time' || defaultSort === 'newest') ? defaultSort : 'alpha');
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
 
   // Restore scroll position when returning from detail page
@@ -445,11 +448,12 @@ export default function DocumentLibrary() {
         /* List View (when searching or category selected) */
         <>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3">
-            {visibleDocs.map(doc => {
+            {visibleDocs.map((doc, docIdx) => {
               const colorClass = CATEGORY_COLORS[doc.category] || 'bg-muted/30 text-muted-foreground border-border/50';
               return (
                 <button
                   key={doc.slug}
+                  data-nav-index={docIdx}
                   onClick={() => navigateToDoc(doc.slug)}
                   className="p-3 sm:p-4 rounded-xl bg-card/30 border border-border/50 hover:border-accent/30 active:bg-card/50 transition-all group text-left"
                 >
@@ -546,6 +550,7 @@ export default function DocumentLibrary() {
           )}
         </>
       ) : null}
+      <KeyboardNavigation items={visibleDocs || []} enabled={!isLoading && visibleDocs.length > 0} />
     </section>
   );
 }

@@ -50,6 +50,12 @@ import {
   setCategoryCoverImage, getCategoryCoverImage, getAllCategoryCoverImages,
   saveSearchHistory, getRecentSearches, clearUserSearchHistory,
   getDocumentGraph, getContentCalendarEvents,
+  saveAISummary, getAISummary,
+  saveTranslation, getTranslation, getTranslationsForDocument,
+  getUserPreferences, saveUserPreferences,
+  getWordCountAnalytics, getAllDocumentLinks,
+  getReadingStreakLeaderboard, updateStreakLeaderboard,
+  getDocumentVersionsForDiff,
 } from "./db";
 import { invokeLLM } from "./_core/llm";
 import { notifyOwner } from "./_core/notification";
@@ -1267,6 +1273,121 @@ export const appRouter = router({
     events: adminProcedure
       .input(z.object({ startDate: z.string(), endDate: z.string() }))
       .query(async ({ input }) => getContentCalendarEvents(input.startDate, input.endDate)),
+  }),
+
+  // ─── Batch 16: AI Summarization ──────────────────────────────────────────
+  aiSummary: router({
+    generate: protectedProcedure
+      .input(z.object({ slug: z.string(), language: z.string().default('en') }))
+      .mutation(async ({ input }) => {
+        const doc = await getDocumentBySlug(input.slug);
+        if (!doc || !doc.content) return null;
+        const response = await invokeLLM({
+          messages: [
+            { role: 'system', content: 'You are a technical writer. Generate a concise executive summary (3-5 sentences) of the following document. Focus on key points, actionable insights, and main takeaways.' },
+            { role: 'user', content: `Title: ${doc.title}\n\nContent:\n${doc.content.slice(0, 8000)}` },
+          ],
+        });
+        const summary = (response.choices?.[0]?.message?.content as string) || 'Unable to generate summary.';
+        await saveAISummary(input.slug, summary, input.language);
+        return { summary };
+      }),
+    get: publicProcedure
+      .input(z.object({ slug: z.string(), language: z.string().default('en') }))
+      .query(async ({ input }) => getAISummary(input.slug, input.language)),
+  }),
+
+  // ─── Batch 16: Document Translation ──────────────────────────────────────
+  translation: router({
+    generate: protectedProcedure
+      .input(z.object({ slug: z.string(), language: z.string() }))
+      .mutation(async ({ input }) => {
+        const doc = await getDocumentBySlug(input.slug);
+        if (!doc || !doc.content) return null;
+        const langNames: Record<string, string> = { es: 'Spanish', fr: 'French', de: 'German', it: 'Italian', pt: 'Portuguese', ja: 'Japanese', ko: 'Korean', zh: 'Chinese', ar: 'Arabic', ru: 'Russian', nl: 'Dutch', hi: 'Hindi' };
+        const targetLang = langNames[input.language] || input.language;
+        const response = await invokeLLM({
+          messages: [
+            { role: 'system', content: `You are a professional translator. Translate the following document title and content to ${targetLang}. Maintain all markdown formatting. Return JSON with keys "title" and "content".` },
+            { role: 'user', content: `Title: ${doc.title}\n\nContent:\n${doc.content.slice(0, 10000)}` },
+          ],
+          response_format: { type: 'json_schema', json_schema: { name: 'translation', strict: true, schema: { type: 'object', properties: { title: { type: 'string' }, content: { type: 'string' } }, required: ['title', 'content'], additionalProperties: false } } },
+        });
+        const parsed = JSON.parse((response.choices?.[0]?.message?.content as string) || '{}');
+        if (parsed.title && parsed.content) {
+          await saveTranslation(input.slug, input.language, parsed.title, parsed.content);
+          return { title: parsed.title, content: parsed.content };
+        }
+        return null;
+      }),
+    get: publicProcedure
+      .input(z.object({ slug: z.string(), language: z.string() }))
+      .query(async ({ input }) => getTranslation(input.slug, input.language)),
+    list: publicProcedure
+      .input(z.object({ slug: z.string() }))
+      .query(async ({ input }) => getTranslationsForDocument(input.slug)),
+  }),
+
+  // ─── Batch 16: User Preferences ──────────────────────────────────────────
+  preferences: router({
+    get: protectedProcedure.query(async ({ ctx }) => getUserPreferences(ctx.user.openId)),
+    save: protectedProcedure
+      .input(z.object({
+        notificationFrequency: z.enum(['realtime', 'daily', 'weekly', 'off']).optional(),
+        defaultSort: z.string().optional(),
+        readingSpeedWpm: z.number().min(50).max(1000).optional(),
+        preferredTheme: z.string().optional(),
+      }))
+      .mutation(async ({ input, ctx }) => saveUserPreferences(ctx.user.openId, input)),
+  }),
+
+  // ─── Batch 16: Word Count Analytics ──────────────────────────────────────
+  wordCountAnalytics: router({
+    get: adminProcedure.query(async () => getWordCountAnalytics()),
+  }),
+
+  // ─── Batch 16: Broken Links Checker ──────────────────────────────────────
+  brokenLinks: router({
+    check: adminProcedure.query(async () => {
+      const allDocs = await getAllDocumentLinks();
+      const slugSet = new Set(allDocs.map(d => d.slug));
+      const broken: { sourceSlug: string; sourceTitle: string; brokenLink: string; linkText: string }[] = [];
+      for (const doc of allDocs) {
+        if (!doc.content) continue;
+        const linkRegex = /\[([^\]]+)\]\(\/docs\/([^)]+)\)/g;
+        let match;
+        while ((match = linkRegex.exec(doc.content)) !== null) {
+          const targetSlug = match[2];
+          if (!slugSet.has(targetSlug)) {
+            broken.push({ sourceSlug: doc.slug, sourceTitle: doc.title || doc.slug, brokenLink: `/docs/${targetSlug}`, linkText: match[1] });
+          }
+        }
+      }
+      return broken;
+    }),
+  }),
+
+  // ─── Batch 16: Reading Streak Leaderboard ────────────────────────────────
+  streakLeaderboard: router({
+    get: publicProcedure.query(async () => getReadingStreakLeaderboard()),
+    recordRead: protectedProcedure
+      .input(z.object({ documentSlug: z.string() }))
+      .mutation(async ({ input, ctx }) => {
+        // Simple streak logic: increment streak if reading today
+        const existing = (await getReadingStreakLeaderboard(100)).find(e => e.userOpenId === ctx.user.openId);
+        const current = (existing?.currentStreak || 0) + 1;
+        const longest = Math.max(current, existing?.longestStreak || 0);
+        const total = (existing?.totalDocsRead || 0) + 1;
+        await updateStreakLeaderboard(ctx.user.openId, ctx.user.name || 'Anonymous', current, longest, total);
+        return { currentStreak: current, longestStreak: longest, totalDocsRead: total };
+      }),
+  }),
+
+  // ─── Batch 16: Document Changelog Diff ───────────────────────────────────
+  changelogDiff: router({
+    get: publicProcedure
+      .input(z.object({ slug: z.string() }))
+      .query(async ({ input }) => getDocumentVersionsForDiff(input.slug)),
   }),
 });
 export type AppRouter = typeof appRouter;

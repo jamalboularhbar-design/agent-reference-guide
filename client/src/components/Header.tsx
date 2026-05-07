@@ -1,4 +1,4 @@
-import { Sparkles, List, BookOpen, FileText, Tag, Columns, Book, Target, Code, Bookmark, Sun, Moon, Clock, Library, Bell, Network } from 'lucide-react';
+import { Sparkles, List, BookOpen, FileText, Tag, Columns, Book, Target, Code, Bookmark, Sun, Moon, Clock, Library, Bell, Network, Trophy, Settings } from 'lucide-react';
 import { trpc } from '@/lib/trpc';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useLocation } from 'wouter';
@@ -120,6 +120,20 @@ export default function Header() {
             title="Document Graph"
           >
             <Network className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => navigate('/leaderboard')}
+            className="hidden lg:block p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-card/80 border border-border/50 transition-colors active:bg-card/60"
+            title="Reading Leaderboard"
+          >
+            <Trophy className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => navigate('/preferences')}
+            className="hidden lg:block p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-card/80 border border-border/50 transition-colors active:bg-card/60"
+            title="Preferences"
+          >
+            <Settings className="w-4 h-4" />
           </button>
           <button
             onClick={() => navigate('/bookmarks')}

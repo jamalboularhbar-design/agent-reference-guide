@@ -4,7 +4,8 @@ import {
   Settings, ChevronDown, FileText, BarChart3, CheckCircle, Tags, 
   Globe, CalendarClock, Paintbrush, Webhook, Users, Archive, 
   Columns3, Clock, MessageSquare, GripVertical, Copy, Download,
-  Shield, FileJson, Activity, FolderInput, Merge, Image, Calendar
+  Shield, FileJson, Activity, FolderInput, Merge, Image, Calendar,
+  BarChart2, LinkIcon
 } from 'lucide-react';
 
 const adminLinks = [
@@ -36,6 +37,8 @@ const adminLinks = [
   { label: 'Bulk Move', href: '/admin/bulk-move', icon: FolderInput },
   { label: 'Merge Docs', href: '/admin/merge', icon: Merge },
   { label: 'Category Covers', href: '/admin/category-covers', icon: Image },
+  { label: 'Word Count Stats', href: '/admin/word-count', icon: BarChart2 },
+  { label: 'Broken Links', href: '/admin/broken-links', icon: LinkIcon },
 ];
 
 export default function AdminNavDropdown() {

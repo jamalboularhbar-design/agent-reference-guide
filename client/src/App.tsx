@@ -60,6 +60,11 @@ import AdminContentCalendarPage from "./pages/AdminContentCalendarPage";
 import AdminBulkMovePage from "./pages/AdminBulkMovePage";
 import AdminMergePage from "./pages/AdminMergePage";
 import AdminCategoryCoversPage from "./pages/AdminCategoryCoversPage";
+import PreferencesPage from "./pages/PreferencesPage";
+import AdminWordCountPage from "./pages/AdminWordCountPage";
+import AdminBrokenLinksPage from "./pages/AdminBrokenLinksPage";
+import LeaderboardPage from "./pages/LeaderboardPage";
+import DiffViewerPage from "./pages/DiffViewerPage";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -116,6 +121,11 @@ function Router() {
       <Route path={"/admin/bulk-move"} component={AdminBulkMovePage} />
       <Route path={"/admin/merge"} component={AdminMergePage} />
       <Route path={"/admin/category-covers"} component={AdminCategoryCoversPage} />
+      <Route path={"/preferences"} component={PreferencesPage} />
+      <Route path={"/admin/word-count"} component={AdminWordCountPage} />
+      <Route path={"/admin/broken-links"} component={AdminBrokenLinksPage} />
+      <Route path={"/leaderboard"} component={LeaderboardPage} />
+      <Route path={"/diff/:slug"} component={DiffViewerPage} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />

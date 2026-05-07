@@ -37,6 +37,10 @@ import DocumentNavigation from '@/components/DocumentNavigation';
 import QRCodeShare from '@/components/QRCodeShare';
 import SubscribeButton from '@/components/SubscribeButton';
 import ReadingPositionTracker from '@/components/ReadingPositionTracker';
+import AISummaryPanel from '@/components/AISummaryPanel';
+import TranslationPanel from '@/components/TranslationPanel';
+import ContextualHelp from '@/components/ContextualHelp';
+import { usePreferences } from '@/hooks/usePreferences';
 
 // Reading time calculation - uses configurable WPM from branding settings
 function getReadingTime(wordCount: number, wpm = 200): string {
@@ -140,12 +144,15 @@ export default function DocumentDetail() {
   const [isFavorited, setIsFavorited] = useState(false);
   const [activeHeading, setActiveHeading] = useState('');
 
-  // Get configurable WPM from branding settings
+  // Get configurable WPM from branding settings + user preferences
   const { data: brandingSettings } = trpc.branding.get.useQuery();
+  const { readingSpeedWpm: userWpm } = usePreferences();
   const wpm = useMemo(() => {
+    // User preference takes priority over global branding setting
+    if (userWpm && userWpm !== 200) return userWpm;
     const setting = brandingSettings?.find((s: any) => s.settingKey === 'words_per_minute');
     return setting ? parseInt(setting.settingValue) || 200 : 200;
-  }, [brandingSettings]);
+  }, [brandingSettings, userWpm]);
 
   // Persist reading progress (auto-saves scroll position)
   useReadingProgress(slug);
@@ -161,6 +168,7 @@ export default function DocumentDetail() {
   // Record view count
   const recordViewMutation = trpc.documents.recordView.useMutation();
   const recordCompletionMutation = trpc.readingGoals.recordCompletion.useMutation();
+  const recordStreakMutation = trpc.streakLeaderboard.recordRead.useMutation();
 
   // Track recently viewed
   useEffect(() => {
@@ -171,6 +179,8 @@ export default function DocumentDetail() {
       recordViewMutation.mutate({ slug: document.slug });
       // Track reading streak
       recordReadingDay();
+      // Record streak for leaderboard
+      recordStreakMutation.mutate({ documentSlug: document.slug });
       // Track reading goal progress
       const visitorId = localStorage.getItem('arg-visitor-id');
       if (visitorId) {
@@ -580,6 +590,10 @@ export default function DocumentDetail() {
             {/* Document Dependencies */}
             <DocumentDependencies slug={document.slug} />
 
+            {/* AI Summary & Translation */}
+            <AISummaryPanel slug={document.slug} />
+            <TranslationPanel slug={document.slug} />
+
             {/* AI-Suggested Related Documents */}
             <AISuggestions slug={document.slug} />
 
@@ -598,6 +612,12 @@ export default function DocumentDetail() {
             <Suspense fallback={<div className="animate-pulse h-24 bg-card/50 rounded-xl" />}>
               <DocumentVersionHistory slug={document.slug} />
             </Suspense>
+            <button
+              onClick={() => navigate(`/diff/${document.slug}`)}
+              className="text-xs text-accent hover:underline mt-1 mb-2 inline-block"
+            >
+              View full changelog diff →
+            </button>
 
             {/* Version Comparison */}
             <DocumentComparisonView slug={document.slug} />

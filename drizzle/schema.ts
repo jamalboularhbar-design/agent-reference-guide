@@ -425,3 +425,48 @@ export const searchHistory = mysqlTable("search_history", {
   searchedAt: timestamp("searchedAt").defaultNow().notNull(),
 });
 export type SearchHistoryEntry = typeof searchHistory.$inferSelect;
+
+// AI Summaries - generated document summaries
+export const aiSummaries = mysqlTable("ai_summaries", {
+  id: int("id").autoincrement().primaryKey(),
+  documentSlug: varchar("documentSlug", { length: 255 }).notNull(),
+  summary: mediumtext("summary").notNull(),
+  language: varchar("language", { length: 10 }).default("en").notNull(),
+  generatedAt: timestamp("generatedAt").defaultNow().notNull(),
+});
+export type AISummary = typeof aiSummaries.$inferSelect;
+
+// Document translations - LLM-generated translations
+export const documentTranslations = mysqlTable("document_translations", {
+  id: int("id").autoincrement().primaryKey(),
+  documentSlug: varchar("documentSlug", { length: 255 }).notNull(),
+  language: varchar("language", { length: 10 }).notNull(),
+  translatedTitle: varchar("translatedTitle", { length: 500 }).notNull(),
+  translatedContent: mediumtext("translatedContent").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+export type DocumentTranslation = typeof documentTranslations.$inferSelect;
+
+// User preferences - per-user settings
+export const userPreferences = mysqlTable("user_preferences", {
+  id: int("id").autoincrement().primaryKey(),
+  userOpenId: varchar("userOpenId", { length: 64 }).notNull().unique(),
+  notificationFrequency: mysqlEnum("notificationFrequency", ["realtime", "daily", "weekly", "off"]).default("realtime").notNull(),
+  defaultSort: varchar("defaultSort", { length: 20 }).default("newest"),
+  readingSpeedWpm: int("readingSpeedWpm").default(200),
+  preferredTheme: varchar("preferredTheme", { length: 10 }).default("dark"),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type UserPreference = typeof userPreferences.$inferSelect;
+
+// Reading streak leaderboard entries (cached)
+export const readingStreakLeaderboard = mysqlTable("reading_streak_leaderboard", {
+  id: int("id").autoincrement().primaryKey(),
+  userOpenId: varchar("userOpenId", { length: 64 }).notNull(),
+  userName: varchar("userName", { length: 255 }),
+  currentStreak: int("currentStreak").default(0).notNull(),
+  longestStreak: int("longestStreak").default(0).notNull(),
+  totalDocsRead: int("totalDocsRead").default(0).notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type ReadingStreakEntry = typeof readingStreakLeaderboard.$inferSelect;

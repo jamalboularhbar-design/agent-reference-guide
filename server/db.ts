@@ -1,6 +1,6 @@
 import { eq, like, or, sql, desc, asc, count, and } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, documents, documentRatings, readingLists, readingListItems, searchAnalytics, documentTags, documentComments, documentVersions, customCategories, downloadHistory, announcements, activityLog, documentAuditTrail, bookmarkNotes, shareLinks, scheduledPublish, inlineComments, brandingSettings, webhooks, recentlyViewed, documentFeedback, categoryOrdering, documentSubscriptions, subscriptionNotifications, userReadingPosition, searchHistory } from "../drizzle/schema";
+import { InsertUser, users, documents, documentRatings, readingLists, readingListItems, searchAnalytics, documentTags, documentComments, documentVersions, customCategories, downloadHistory, announcements, activityLog, documentAuditTrail, bookmarkNotes, shareLinks, scheduledPublish, inlineComments, brandingSettings, webhooks, recentlyViewed, documentFeedback, categoryOrdering, documentSubscriptions, subscriptionNotifications, userReadingPosition, searchHistory, aiSummaries, documentTranslations, userPreferences, readingStreakLeaderboard } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -2393,4 +2393,131 @@ export async function getContentCalendarEvents(startDate: string, endDate: strin
     .where(sql`${documents.reviewBy} IS NOT NULL AND ${documents.reviewBy} >= ${startDate} AND ${documents.reviewBy} <= ${endDate}`);
   
   return [...created, ...scheduled, ...reviews];
+}
+
+// ===== BATCH 16: AI Summaries =====
+export async function saveAISummary(documentSlug: string, summary: string, language: string = 'en') {
+  const db = await getDb();
+  if (!db) return null;
+  // Upsert: delete existing then insert
+  await db.delete(aiSummaries).where(and(eq(aiSummaries.documentSlug, documentSlug), eq(aiSummaries.language, language)));
+  const [result] = await db.insert(aiSummaries).values({ documentSlug, summary, language }).$returningId();
+  return result;
+}
+
+export async function getAISummary(documentSlug: string, language: string = 'en') {
+  const db = await getDb();
+  if (!db) return null;
+  const rows = await db.select().from(aiSummaries)
+    .where(and(eq(aiSummaries.documentSlug, documentSlug), eq(aiSummaries.language, language)))
+    .limit(1);
+  return rows[0] || null;
+}
+
+// ===== BATCH 16: Document Translations =====
+export async function saveTranslation(documentSlug: string, language: string, translatedTitle: string, translatedContent: string) {
+  const db = await getDb();
+  if (!db) return null;
+  await db.delete(documentTranslations).where(and(eq(documentTranslations.documentSlug, documentSlug), eq(documentTranslations.language, language)));
+  const [result] = await db.insert(documentTranslations).values({ documentSlug, language, translatedTitle, translatedContent }).$returningId();
+  return result;
+}
+
+export async function getTranslation(documentSlug: string, language: string) {
+  const db = await getDb();
+  if (!db) return null;
+  const rows = await db.select().from(documentTranslations)
+    .where(and(eq(documentTranslations.documentSlug, documentSlug), eq(documentTranslations.language, language)))
+    .limit(1);
+  return rows[0] || null;
+}
+
+export async function getTranslationsForDocument(documentSlug: string) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select({ language: documentTranslations.language, translatedTitle: documentTranslations.translatedTitle, createdAt: documentTranslations.createdAt })
+    .from(documentTranslations)
+    .where(eq(documentTranslations.documentSlug, documentSlug));
+}
+
+// ===== BATCH 16: User Preferences =====
+export async function getUserPreferences(userOpenId: string) {
+  const db = await getDb();
+  if (!db) return null;
+  const rows = await db.select().from(userPreferences).where(eq(userPreferences.userOpenId, userOpenId)).limit(1);
+  return rows[0] || null;
+}
+
+export async function saveUserPreferences(userOpenId: string, prefs: { notificationFrequency?: string; defaultSort?: string; readingSpeedWpm?: number; preferredTheme?: string }) {
+  const db = await getDb();
+  if (!db) return null;
+  const existing = await getUserPreferences(userOpenId);
+  if (existing) {
+    await db.update(userPreferences).set(prefs as any).where(eq(userPreferences.userOpenId, userOpenId));
+  } else {
+    await db.insert(userPreferences).values({ userOpenId, ...prefs } as any);
+  }
+  return getUserPreferences(userOpenId);
+}
+
+// ===== BATCH 16: Pinned Documents (uses existing getPinnedDocuments) =====
+
+// ===== BATCH 16: Word Count Analytics =====
+export async function getWordCountAnalytics() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select({
+    category: documents.category,
+    totalWords: sql<number>`SUM(${documents.wordCount})`.as('totalWords'),
+    docCount: sql<number>`COUNT(*)`.as('docCount'),
+    avgWords: sql<number>`ROUND(AVG(${documents.wordCount}))`.as('avgWords'),
+    maxWords: sql<number>`MAX(${documents.wordCount})`.as('maxWords'),
+    minWords: sql<number>`MIN(${documents.wordCount})`.as('minWords'),
+  }).from(documents).groupBy(documents.category).orderBy(desc(sql`totalWords`));
+}
+
+// ===== BATCH 16: Broken Links Checker =====
+export async function getAllDocumentLinks() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select({ slug: documents.slug, title: documents.title, content: documents.content })
+    .from(documents)
+    .where(eq(documents.status, 'published'));
+}
+
+// ===== BATCH 16: Reading Streak Leaderboard =====
+export async function getReadingStreakLeaderboard(limit = 20) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(readingStreakLeaderboard)
+    .orderBy(desc(readingStreakLeaderboard.currentStreak))
+    .limit(limit);
+}
+
+export async function updateStreakLeaderboard(userOpenId: string, userName: string, currentStreak: number, longestStreak: number, totalDocsRead: number) {
+  const db = await getDb();
+  if (!db) return;
+  const existing = await db.select().from(readingStreakLeaderboard).where(eq(readingStreakLeaderboard.userOpenId, userOpenId)).limit(1);
+  if (existing.length > 0) {
+    await db.update(readingStreakLeaderboard).set({ userName, currentStreak, longestStreak, totalDocsRead }).where(eq(readingStreakLeaderboard.userOpenId, userOpenId));
+  } else {
+    await db.insert(readingStreakLeaderboard).values({ userOpenId, userName, currentStreak, longestStreak, totalDocsRead });
+  }
+}
+
+// ===== BATCH 16: Document Changelog Diff =====
+export async function getDocumentVersionsForDiff(documentSlug: string) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select({
+    id: documentAuditTrail.id,
+    field: documentAuditTrail.field,
+    oldValue: documentAuditTrail.oldValue,
+    newValue: documentAuditTrail.newValue,
+    changedBy: documentAuditTrail.changedBy,
+    createdAt: documentAuditTrail.createdAt,
+  }).from(documentAuditTrail)
+    .where(and(eq(documentAuditTrail.documentSlug, documentSlug), eq(documentAuditTrail.field, 'content')))
+    .orderBy(desc(documentAuditTrail.createdAt))
+    .limit(20);
 }
