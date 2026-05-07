@@ -33,6 +33,8 @@ import ExportDocx from '@/components/ExportDocx';
 import { useTrackRecentView } from '@/components/RecentlyViewed';
 import CodeCopyButton from '@/components/CodeCopyButton';
 import DocumentFeedback from '@/components/DocumentFeedback';
+import DocumentNavigation from '@/components/DocumentNavigation';
+import QRCodeShare from '@/components/QRCodeShare';
 
 // Reading time calculation - uses configurable WPM from branding settings
 function getReadingTime(wordCount: number, wpm = 200): string {
@@ -406,6 +408,7 @@ export default function DocumentDetail() {
             >
               <ExternalLink className="w-5 h-5 sm:w-4 sm:h-4" />
             </button>
+            {document && <QRCodeShare slug={document.slug} title={document.title} />}
             {document && <ShareDocument title={document.title} slug={document.slug} category={document.category} />}
             {document && <DistractionFreeMode><ReactMarkdown remarkPlugins={[remarkGfm]}>{document.content || ''}</ReactMarkdown></DistractionFreeMode>}
           </div>
@@ -593,6 +596,9 @@ export default function DocumentDetail() {
 
             {/* Document Feedback */}
             <DocumentFeedback slug={document.slug} />
+
+            {/* Prev/Next Document Navigation */}
+            <DocumentNavigation slug={document.slug} category={document.category} />
 
             {/* Bottom Navigation */}
             <div className="mt-8 sm:mt-12 pt-4 sm:pt-6 border-t border-border/50 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">

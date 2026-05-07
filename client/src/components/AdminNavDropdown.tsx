@@ -3,7 +3,8 @@ import { Link } from 'wouter';
 import { 
   Settings, ChevronDown, FileText, BarChart3, CheckCircle, Tags, 
   Globe, CalendarClock, Paintbrush, Webhook, Users, Archive, 
-  Columns3, Clock, MessageSquare, GripVertical, Copy, Download
+  Columns3, Clock, MessageSquare, GripVertical, Copy, Download,
+  Shield, FileJson, Activity
 } from 'lucide-react';
 
 const adminLinks = [
@@ -28,6 +29,9 @@ const adminLinks = [
   { label: 'Bulk Export', href: '/admin/bulk-export', icon: Download },
   { label: 'Stale Docs', href: '/admin/stale', icon: Clock },
   { label: 'Import URL', href: '/admin/import-url', icon: Globe },
+  { label: 'Visibility', href: '/admin/visibility', icon: Shield },
+  { label: 'Import JSON', href: '/admin/import-json', icon: FileJson },
+  { label: 'Reading Heatmap', href: '/admin/heatmap', icon: Activity },
 ];
 
 export default function AdminNavDropdown() {

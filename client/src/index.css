@@ -248,9 +248,14 @@ html {
   body {
     background: white !important;
     color: black !important;
+    font-size: 12pt;
   }
   
-  header, nav, aside, .no-print {
+  header, nav, aside, footer, .no-print, [role="banner"], [aria-label="Breadcrumb"] {
+    display: none !important;
+  }
+  
+  button, .print-hide {
     display: none !important;
   }
   

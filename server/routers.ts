@@ -39,6 +39,10 @@ import {
   submitFeedback, getFeedbackForDocument, getMyFeedback,
   getCategoryOrdering, saveCategoryOrdering,
   duplicateDocument, getReadingHistory,
+  setDocumentVisibility, getPrivateDocuments,
+  getCollections, getCollectionById, createCollection, updateCollection, deleteCollection,
+  getCollectionItems, addCollectionItem, removeCollectionItem,
+  bulkImportFromJSON, restoreDocumentVersion, getReadingHeatmap,
 } from "./db";
 import { invokeLLM } from "./_core/llm";
 import { notifyOwner } from "./_core/notification";
@@ -1109,6 +1113,71 @@ export const appRouter = router({
     list: publicProcedure
       .input(z.object({ visitorId: z.string(), limit: z.number().optional() }))
       .query(async ({ input }) => getReadingHistory(input.visitorId, input.limit)),
+  }),
+
+  // ─── Document Visibility / Access Control ──────────────────────────────
+  visibility: router({
+    set: adminProcedure
+      .input(z.object({ slug: z.string(), visibility: z.enum(['public', 'private']) }))
+      .mutation(async ({ input }) => {
+        await logAuditEntry({ documentSlug: input.slug, action: 'visibility_changed', field: 'visibility', newValue: input.visibility });
+        return setDocumentVisibility(input.slug, input.visibility);
+      }),
+    private: adminProcedure.query(async () => getPrivateDocuments()),
+  }),
+
+  // ─── Document Collections / Playlists ──────────────────────────────────
+  collections: router({
+    list: publicProcedure
+      .input(z.object({ publishedOnly: z.boolean().optional() }).optional())
+      .query(async ({ input }) => getCollections({ publishedOnly: input?.publishedOnly })),
+    get: publicProcedure
+      .input(z.object({ id: z.number() }))
+      .query(async ({ input }) => {
+        const collection = await getCollectionById(input.id);
+        if (!collection) return null;
+        const items = await getCollectionItems(input.id);
+        return { ...collection, items };
+      }),
+    create: adminProcedure
+      .input(z.object({ name: z.string(), description: z.string().optional(), coverColor: z.string().optional() }))
+      .mutation(async ({ input, ctx }) => createCollection({ ...input, createdBy: ctx.user.openId })),
+    update: adminProcedure
+      .input(z.object({ id: z.number(), name: z.string().optional(), description: z.string().optional(), coverColor: z.string().optional(), isPublished: z.number().optional() }))
+      .mutation(async ({ input }) => updateCollection(input.id, input)),
+    delete: adminProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => deleteCollection(input.id)),
+    addItem: adminProcedure
+      .input(z.object({ collectionId: z.number(), documentSlug: z.string() }))
+      .mutation(async ({ input }) => addCollectionItem(input.collectionId, input.documentSlug)),
+    removeItem: adminProcedure
+      .input(z.object({ collectionId: z.number(), documentSlug: z.string() }))
+      .mutation(async ({ input }) => removeCollectionItem(input.collectionId, input.documentSlug)),
+  }),
+
+  // ─── Bulk Import from JSON ─────────────────────────────────────────────
+  importJSON: router({
+    import: adminProcedure
+      .input(z.object({ documents: z.array(z.object({ title: z.string(), category: z.string(), content: z.string(), status: z.string().optional(), locale: z.string().optional() })) }))
+      .mutation(async ({ input }) => bulkImportFromJSON(input.documents)),
+  }),
+
+  // ─── Document Version Restore ──────────────────────────────────────────
+  versionRestore: router({
+    restore: adminProcedure
+      .input(z.object({ slug: z.string(), versionId: z.number() }))
+      .mutation(async ({ input, ctx }) => {
+        await logAuditEntry({ documentSlug: input.slug, action: 'version_restored', field: 'versionId', newValue: String(input.versionId), changedBy: ctx.user.openId });
+        return restoreDocumentVersion(input.slug, input.versionId, ctx.user.name || ctx.user.openId);
+      }),
+  }),
+
+  // ─── Reading Heatmap ───────────────────────────────────────────────────
+  heatmap: router({
+    get: adminProcedure
+      .input(z.object({ days: z.number().optional().default(30) }))
+      .query(async ({ input }) => getReadingHeatmap(input.days)),
   }),
 });
 export type AppRouter = typeof appRouter;

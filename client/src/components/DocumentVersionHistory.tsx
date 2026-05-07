@@ -1,6 +1,8 @@
 import { useState, useMemo } from 'react';
 import { trpc } from '@/lib/trpc';
-import { History, ChevronDown, ChevronUp, Eye, GitCompare } from 'lucide-react';
+import { useAuth } from '@/_core/hooks/useAuth';
+import { History, ChevronDown, ChevronUp, Eye, GitCompare, RotateCcw } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface DocumentVersionHistoryProps {
   slug: string;
@@ -32,6 +34,18 @@ export default function DocumentVersionHistory({ slug }: DocumentVersionHistoryP
   const [showVersions, setShowVersions] = useState(false);
   const [viewingId, setViewingId] = useState<number | null>(null);
   const [diffMode, setDiffMode] = useState(false);
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
+  const utils = trpc.useUtils();
+
+  const restoreMut = trpc.versionRestore.restore.useMutation({
+    onSuccess: () => {
+      toast.success('Version restored successfully');
+      utils.documents.getBySlug.invalidate({ slug });
+      utils.documents.versions.invalidate({ slug });
+    },
+    onError: (err) => toast.error(err.message),
+  });
 
   const { data: versions } = trpc.documents.versions.useQuery(
     { slug },
@@ -100,6 +114,17 @@ export default function DocumentVersionHistory({ slug }: DocumentVersionHistoryP
                     >
                       <GitCompare className="w-4 h-4" />
                     </button>
+                    {isAdmin && (
+                      <button
+                        onClick={() => { if (confirm('Restore this version? Current content will be saved as a new version first.')) restoreMut.mutate({ slug, versionId: version.id }); }}
+                        className="text-muted-foreground hover:text-orange-400 transition-colors p-1.5 rounded"
+                        aria-label="Restore this version"
+                        title="Restore this version"
+                        disabled={restoreMut.isPending}
+                      >
+                        <RotateCcw className="w-4 h-4" />
+                      </button>
+                    )}
                   </div>
                 </div>
 

@@ -1,4 +1,4 @@
-import { Sparkles, List, BookOpen, FileText, Tag, Columns, Book, Target, Code, Bookmark, Sun, Moon, Clock } from 'lucide-react';
+import { Sparkles, List, BookOpen, FileText, Tag, Columns, Book, Target, Code, Bookmark, Sun, Moon, Clock, Library } from 'lucide-react';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useLocation } from 'wouter';
 import { useAuth } from '@/_core/hooks/useAuth';
@@ -86,6 +86,13 @@ export default function Header() {
             title="API Documentation"
           >
             <Code className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => navigate('/collections')}
+            className="hidden lg:block p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-card/80 border border-border/50 transition-colors active:bg-card/60"
+            title="Collections"
+          >
+            <Library className="w-4 h-4" />
           </button>
           <button
             onClick={() => navigate('/bookmarks')}

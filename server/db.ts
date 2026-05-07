@@ -109,6 +109,12 @@ export async function getDocuments(opts: {
 
   const conditions = [];
   
+  // Visibility filter: exclude private documents from public queries
+  // Private docs only visible when status='all' (admin context)
+  if (status !== 'all') {
+    conditions.push(sql`(${documents.visibility} IS NULL OR ${documents.visibility} = 'public')`);
+  }
+  
   // Status filter (default: only published docs for public)
   if (status !== 'all') {
     conditions.push(eq(documents.status, status));
@@ -1963,4 +1969,192 @@ export async function getReadingHistory(visitorId: string, limit = 50) {
     category: docMap.get(r.documentSlug)?.category || '',
     wordCount: docMap.get(r.documentSlug)?.wordCount || 0,
   }));
+}
+
+// ==================== Batch 14 ====================
+
+import { documentCollections, collectionItems } from "../drizzle/schema";
+
+// ─── Document Visibility / Access Control ─────────────────────────────────
+
+export async function setDocumentVisibility(slug: string, visibility: 'public' | 'private') {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+  await db.update(documents).set({ visibility }).where(eq(documents.slug, slug));
+  return { success: true };
+}
+
+export async function getPrivateDocuments(limit = 50) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select({ slug: documents.slug, title: documents.title, category: documents.category, wordCount: documents.wordCount })
+    .from(documents)
+    .where(eq(documents.visibility, 'private'))
+    .orderBy(asc(documents.title))
+    .limit(limit);
+}
+
+// ─── Document Collections / Playlists ─────────────────────────────────────
+
+export async function getCollections(opts: { publishedOnly?: boolean } = {}) {
+  const db = await getDb();
+  if (!db) return [];
+  if (opts.publishedOnly) {
+    return db.select().from(documentCollections).where(eq(documentCollections.isPublished, 1)).orderBy(desc(documentCollections.updatedAt));
+  }
+  return db.select().from(documentCollections).orderBy(desc(documentCollections.updatedAt));
+}
+
+export async function getCollectionById(id: number) {
+  const db = await getDb();
+  if (!db) return null;
+  const rows = await db.select().from(documentCollections).where(eq(documentCollections.id, id)).limit(1);
+  return rows[0] || null;
+}
+
+export async function createCollection(data: { name: string; description?: string; coverColor?: string; createdBy?: string }) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+  const result = await db.insert(documentCollections).values({
+    name: data.name,
+    description: data.description || null,
+    coverColor: data.coverColor || '#c9a96e',
+    createdBy: data.createdBy || null,
+  });
+  return { id: Number(result[0].insertId) };
+}
+
+export async function updateCollection(id: number, data: { name?: string; description?: string; coverColor?: string; isPublished?: number }) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+  const updateSet: Record<string, unknown> = {};
+  if (data.name !== undefined) updateSet.name = data.name;
+  if (data.description !== undefined) updateSet.description = data.description;
+  if (data.coverColor !== undefined) updateSet.coverColor = data.coverColor;
+  if (data.isPublished !== undefined) updateSet.isPublished = data.isPublished;
+  if (Object.keys(updateSet).length === 0) return { success: true };
+  await db.update(documentCollections).set(updateSet).where(eq(documentCollections.id, id));
+  return { success: true };
+}
+
+export async function deleteCollection(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+  await db.delete(collectionItems).where(eq(collectionItems.collectionId, id));
+  await db.delete(documentCollections).where(eq(documentCollections.id, id));
+  return { success: true };
+}
+
+export async function getCollectionItems(collectionId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select({
+    id: collectionItems.id,
+    documentSlug: collectionItems.documentSlug,
+    sortOrder: collectionItems.sortOrder,
+    title: documents.title,
+    category: documents.category,
+    wordCount: documents.wordCount,
+  })
+    .from(collectionItems)
+    .innerJoin(documents, eq(collectionItems.documentSlug, documents.slug))
+    .where(eq(collectionItems.collectionId, collectionId))
+    .orderBy(asc(collectionItems.sortOrder));
+}
+
+export async function addCollectionItem(collectionId: number, documentSlug: string) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+  // Get max sort order
+  const maxOrder = await db.select({ max: sql<number>`COALESCE(MAX(${collectionItems.sortOrder}), 0)` })
+    .from(collectionItems).where(eq(collectionItems.collectionId, collectionId));
+  const nextOrder = (maxOrder[0]?.max ?? 0) + 1;
+  await db.insert(collectionItems).values({ collectionId, documentSlug, sortOrder: nextOrder });
+  return { success: true };
+}
+
+export async function removeCollectionItem(collectionId: number, documentSlug: string) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+  await db.delete(collectionItems).where(and(eq(collectionItems.collectionId, collectionId), eq(collectionItems.documentSlug, documentSlug)));
+  return { success: true };
+}
+
+// ─── Bulk Import from JSON ────────────────────────────────────────────────
+
+export async function bulkImportFromJSON(docs: Array<{ title: string; category: string; content: string; status?: string; locale?: string }>) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+
+  const results: Array<{ title: string; status: string; error?: string; slug?: string }> = [];
+  for (const doc of docs) {
+    const slug = doc.title.replace(/[^a-zA-Z0-9\s-]/g, '').replace(/\s+/g, '-').substring(0, 250);
+    const wordCount = doc.content.split(/\s+/).filter(Boolean).length;
+    try {
+      await db.insert(documents).values({
+        slug,
+        title: doc.title,
+        category: doc.category,
+        filename: `${slug}.md`,
+        content: doc.content,
+        wordCount,
+        status: (doc.status as 'draft' | 'review' | 'published') || 'draft',
+        locale: doc.locale || 'en',
+      });
+      results.push({ title: doc.title, status: 'created', slug });
+    } catch (err: any) {
+      results.push({ title: doc.title, status: 'error', error: err.message });
+    }
+  }
+  return results;
+}
+
+// ─── Document Version Restore ─────────────────────────────────────────────
+
+export async function restoreDocumentVersion(slug: string, versionId: number, restoredBy?: string) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+
+  // Get the version to restore
+  const version = await db.select().from(documentVersions).where(eq(documentVersions.id, versionId)).limit(1);
+  if (version.length === 0) throw new Error('Version not found');
+
+  const versionData = version[0];
+
+  // Save current state as a new version before restoring
+  const current = await getDocumentBySlug(slug);
+  if (current) {
+    await saveDocumentVersion(slug, current.title, current.content || '', restoredBy, 'Auto-saved before restore');
+  }
+
+  // Restore the document to the selected version
+  const updateSet: Record<string, unknown> = {};
+  if (versionData.title) updateSet.title = versionData.title;
+  if (versionData.content) {
+    updateSet.content = versionData.content;
+    updateSet.wordCount = versionData.content.split(/\s+/).filter(Boolean).length;
+  }
+
+  if (Object.keys(updateSet).length > 0) {
+    await db.update(documents).set(updateSet).where(eq(documents.slug, slug));
+  }
+
+  return { success: true, restoredFrom: versionId };
+}
+
+// ─── Reading Time Heatmap ─────────────────────────────────────────────────
+
+export async function getReadingHeatmap(days = 30) {
+  const db = await getDb();
+  if (!db) return [];
+
+  return db.select({
+    hour: sql<number>`HOUR(${activityLog.createdAt})`,
+    dayOfWeek: sql<number>`DAYOFWEEK(${activityLog.createdAt})`,
+    count: count(),
+  })
+    .from(activityLog)
+    .where(sql`${activityLog.action} = 'view' AND ${activityLog.createdAt} >= DATE_SUB(NOW(), INTERVAL ${days} DAY)`)
+    .groupBy(sql`HOUR(${activityLog.createdAt})`, sql`DAYOFWEEK(${activityLog.createdAt})`)
+    .orderBy(sql`DAYOFWEEK(${activityLog.createdAt})`, sql`HOUR(${activityLog.createdAt})`);
 }

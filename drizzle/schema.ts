@@ -37,6 +37,8 @@ export const documents = mysqlTable("documents", {
   pinned: int("pinned").default(0).notNull(),
   // Review/expiry reminder date
   reviewBy: timestamp("reviewBy"),
+  // Access control: public (everyone), private (admin only)
+  visibility: mysqlEnum("visibility", ["public", "private"]).default("public").notNull(),
   // Language/locale for i18n
   locale: varchar("locale", { length: 10 }).default("en").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
@@ -346,6 +348,31 @@ export const documentFeedback = mysqlTable("document_feedback", {
 });
 
 export type DocumentFeedbackEntry = typeof documentFeedback.$inferSelect;
+
+// Document collections/playlists - curated reading paths
+export const documentCollections = mysqlTable("document_collections", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 200 }).notNull(),
+  description: text("description"),
+  coverColor: varchar("coverColor", { length: 20 }).default("#c9a96e"),
+  isPublished: int("isPublished").default(0).notNull(),
+  createdBy: varchar("createdBy", { length: 100 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type DocumentCollection = typeof documentCollections.$inferSelect;
+
+// Collection items - ordered documents in a collection
+export const collectionItems = mysqlTable("collection_items", {
+  id: int("id").autoincrement().primaryKey(),
+  collectionId: int("collectionId").notNull(),
+  documentSlug: varchar("documentSlug", { length: 255 }).notNull(),
+  sortOrder: int("sortOrder").default(0).notNull(),
+  addedAt: timestamp("addedAt").defaultNow().notNull(),
+});
+
+export type CollectionItem = typeof collectionItems.$inferSelect;
 
 // Category ordering - admin-defined display order for categories
 export const categoryOrdering = mysqlTable("category_ordering", {

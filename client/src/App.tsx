@@ -47,6 +47,13 @@ import ReadingHistoryPage from "./pages/ReadingHistoryPage";
 import AdminFeedbackPage from "./pages/AdminFeedbackPage";
 import AdminDuplicatePage from "./pages/AdminDuplicatePage";
 import AdminBulkExportPage from "./pages/AdminBulkExportPage";
+import CollectionsPage from "./pages/CollectionsPage";
+import AdminImportJsonPage from "./pages/AdminImportJsonPage";
+import AdminVisibilityPage from "./pages/AdminVisibilityPage";
+import AdminHeatmapPage from "./pages/AdminHeatmapPage";
+import BreadcrumbTrail from "./components/BreadcrumbTrail";
+import ScrollToTop from "./components/ScrollToTop";
+import MobileBottomNav from "./components/MobileBottomNav";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -93,6 +100,10 @@ function Router() {
       <Route path={"/admin/bulk-export"} component={AdminBulkExportPage} />
       <Route path={"/reading-history"} component={ReadingHistoryPage} />
       <Route path={"/history"} component={ReadingHistoryPage} />
+      <Route path={"/collections"} component={CollectionsPage} />
+      <Route path={"/admin/import-json"} component={AdminImportJsonPage} />
+      <Route path={"/admin/visibility"} component={AdminVisibilityPage} />
+      <Route path={"/admin/heatmap"} component={AdminHeatmapPage} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />
@@ -120,9 +131,12 @@ function App() {
           {/* Site-wide announcement banner */}
           <AnnouncementBanner />
           <OnboardingTour />
+          <BreadcrumbTrail />
           <main id="main-content" role="main">
             <Router />
           </main>
+          <ScrollToTop />
+          <MobileBottomNav />
         </TooltipProvider>
       </ThemeProvider>
     </ErrorBoundary>
