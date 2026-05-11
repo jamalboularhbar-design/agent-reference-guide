@@ -97,6 +97,15 @@ import {
   getEmailDigestConfig, upsertEmailDigestConfig,
   getDocumentMedia, addDocumentMedia, removeDocumentMedia,
   getPublicSiteStats,
+  listWorkspaces, createWorkspace, getWorkspaceBySlug, listWorkspaceMembers, addWorkspaceMember, removeWorkspaceMember,
+  listReviewSchedules, upsertReviewSchedule, getOverdueScheduledReviews, markReviewComplete,
+  logCoAuthorActivity, getCoAuthorActivity, getDocumentContributors,
+  createMigrationJob, listMigrationJobs, executeMigrationJob,
+  getReadingPathForUser,
+  upsertSentimentScore, getSentimentScores, getSentimentForDocument,
+  listRetentionPolicies, upsertRetentionPolicy, deleteRetentionPolicy,
+  runAccessibilityCheck, getAccessibilityIssues, getAllAccessibilityIssues, resolveAccessibilityIssue,
+  listCustomReports, createCustomReport, updateCustomReport, deleteCustomReport, executeCustomReport,
 } from "./db";
 import { invokeLLM } from "./_core/llm";
 import { notifyOwner } from "./_core/notification";
@@ -2028,6 +2037,170 @@ export const appRouter = router({
       .input(z.object({ days: z.number().min(1).max(90).optional().default(30) }))
       .query(async ({ input }) => {
         return getHourlyActivityHeatmap(input.days);
+      }),
+  }),
+
+  // ===== Batch 22: Multi-tenant workspaces =====
+  workspaces: router({
+    list: adminProcedure.query(async () => listWorkspaces()),
+    create: adminProcedure
+      .input(z.object({ name: z.string().min(1), slug: z.string().min(1), description: z.string().optional() }))
+      .mutation(async ({ ctx, input }) => createWorkspace({ ...input, ownerId: ctx.user.openId })),
+    getBySlug: publicProcedure
+      .input(z.object({ slug: z.string() }))
+      .query(async ({ input }) => getWorkspaceBySlug(input.slug)),
+    members: adminProcedure
+      .input(z.object({ workspaceId: z.number() }))
+      .query(async ({ input }) => listWorkspaceMembers(input.workspaceId)),
+    addMember: adminProcedure
+      .input(z.object({ workspaceId: z.number(), userId: z.string(), role: z.string().optional() }))
+      .mutation(async ({ input }) => addWorkspaceMember(input)),
+    removeMember: adminProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => removeWorkspaceMember(input.id)),
+  }),
+
+  // ===== Batch 22: Automated review scheduling =====
+  reviewScheduling: router({
+    list: adminProcedure.query(async () => listReviewSchedules()),
+    upsert: adminProcedure
+      .input(z.object({ documentSlug: z.string(), intervalDays: z.number().min(1), assigneeId: z.string().optional(), escalationDays: z.number().optional() }))
+      .mutation(async ({ input }) => upsertReviewSchedule(input)),
+    overdue: adminProcedure.query(async () => getOverdueScheduledReviews()),
+    markComplete: adminProcedure
+      .input(z.object({ documentSlug: z.string() }))
+      .mutation(async ({ input }) => markReviewComplete(input.documentSlug)),
+  }),
+
+  // ===== Batch 22: Co-authoring activity =====
+  coAuthoring: router({
+    log: protectedProcedure
+      .input(z.object({ documentSlug: z.string(), actionType: z.string(), fieldChanged: z.string().optional(), summary: z.string().optional() }))
+      .mutation(async ({ ctx, input }) => logCoAuthorActivity({ ...input, userId: ctx.user.openId, userName: ctx.user.name || undefined })),
+    activity: publicProcedure
+      .input(z.object({ documentSlug: z.string() }))
+      .query(async ({ input }) => getCoAuthorActivity(input.documentSlug)),
+    contributors: publicProcedure
+      .input(z.object({ documentSlug: z.string() }))
+      .query(async ({ input }) => getDocumentContributors(input.documentSlug)),
+  }),
+
+  // ===== Batch 22: Content migration =====
+  migration: router({
+    list: adminProcedure.query(async () => listMigrationJobs()),
+    create: adminProcedure
+      .input(z.object({ name: z.string(), operationType: z.string(), filterCriteria: z.string(), targetValue: z.string() }))
+      .mutation(async ({ ctx, input }) => createMigrationJob({ ...input, createdBy: ctx.user.openId })),
+    execute: adminProcedure
+      .input(z.object({ jobId: z.number() }))
+      .mutation(async ({ input }) => executeMigrationJob(input.jobId)),
+  }),
+
+  // ===== Batch 22: Reading path recommendations =====
+  readingPath: router({
+    recommended: protectedProcedure.query(async ({ ctx }) => getReadingPathForUser(ctx.user.openId)),
+  }),
+
+  // ===== Batch 22: Sentiment analysis =====
+  sentiment: router({
+    analyze: adminProcedure
+      .input(z.object({ documentSlug: z.string() }))
+      .mutation(async ({ input }) => {
+        // Get feedback for the document and compute sentiment
+        const feedbackData = await getFeedbackForDocument(input.documentSlug);
+        const commentsData = await getComments(input.documentSlug);
+        let positive = feedbackData.positive || 0;
+        let negative = feedbackData.negative || 0;
+        let neutral = (feedbackData.comments || commentsData || []).length;
+        const total = positive + negative + neutral || 1;
+        const score = (positive - negative) / total;
+        return upsertSentimentScore({ documentSlug: input.documentSlug, overallScore: score, positiveCount: positive, negativeCount: negative, neutralCount: neutral });
+      }),
+    dashboard: adminProcedure.query(async () => getSentimentScores()),
+    forDocument: publicProcedure
+      .input(z.object({ documentSlug: z.string() }))
+      .query(async ({ input }) => getSentimentForDocument(input.documentSlug)),
+  }),
+
+  // ===== Batch 22: Data retention policies =====
+  retention: router({
+    list: adminProcedure.query(async () => listRetentionPolicies()),
+    upsert: adminProcedure
+      .input(z.object({ category: z.string(), retentionDays: z.number().min(1), action: z.string() }))
+      .mutation(async ({ input }) => upsertRetentionPolicy(input)),
+    delete: adminProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => deleteRetentionPolicy(input.id)),
+  }),
+
+  // ===== Batch 22: Accessibility checker =====
+  accessibility: router({
+    check: adminProcedure
+      .input(z.object({ documentSlug: z.string() }))
+      .mutation(async ({ input }) => {
+        const doc = await getDocumentBySlug(input.documentSlug);
+        if (!doc) return { issueCount: 0, issues: [] };
+        return runAccessibilityCheck(input.documentSlug, doc.content || "");
+      }),
+    issues: adminProcedure
+      .input(z.object({ documentSlug: z.string() }))
+      .query(async ({ input }) => getAccessibilityIssues(input.documentSlug)),
+    allIssues: adminProcedure.query(async () => getAllAccessibilityIssues()),
+    resolve: adminProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => resolveAccessibilityIssue(input.id)),
+  }),
+
+  // ===== Batch 22: Custom report builder =====
+  customReports: router({
+    list: adminProcedure.query(async ({ ctx }) => listCustomReports(ctx.user.openId)),
+    create: adminProcedure
+      .input(z.object({ name: z.string(), description: z.string().optional(), config: z.string() }))
+      .mutation(async ({ ctx, input }) => createCustomReport({ ...input, createdBy: ctx.user.openId })),
+    update: adminProcedure
+      .input(z.object({ id: z.number(), name: z.string().optional(), description: z.string().optional(), config: z.string().optional() }))
+      .mutation(async ({ input }) => updateCustomReport(input.id, input)),
+    delete: adminProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => deleteCustomReport(input.id)),
+    execute: adminProcedure
+      .input(z.object({ config: z.string() }))
+      .mutation(async ({ input }) => executeCustomReport(input.config)),
+  }),
+
+  // ===== Batch 22: API Playground (uses existing procedures) =====
+  apiPlayground: router({
+    listEndpoints: adminProcedure.query(async () => {
+      return [
+        { name: "documents.list", method: "GET", description: "List all documents with filters", params: "category, search, status, limit, offset" },
+        { name: "documents.getBySlug", method: "GET", description: "Get document by slug", params: "slug" },
+        { name: "documents.search", method: "GET", description: "Full-text search with relevance", params: "query, category, tags" },
+        { name: "analytics.summary", method: "GET", description: "Analytics summary stats", params: "days" },
+        { name: "tags.all", method: "GET", description: "List all tags with counts", params: "none" },
+        { name: "glossary.list", method: "GET", description: "List glossary terms", params: "none" },
+        { name: "workspaces.list", method: "GET", description: "List workspaces", params: "none" },
+        { name: "sentiment.dashboard", method: "GET", description: "Sentiment scores for all docs", params: "none" },
+      ];
+    }),
+    testEndpoint: adminProcedure
+      .input(z.object({ endpoint: z.string(), params: z.string().optional() }))
+      .mutation(async ({ input }) => {
+        const start = Date.now();
+        let result: any = null;
+        try {
+          switch (input.endpoint) {
+            case "documents.list": result = await getDocuments({ limit: 10, offset: 0 }); break;
+            case "analytics.summary": result = await getAnalyticsSummary(); break;
+            case "tags.all": result = await getAllTagsWithCounts(); break;
+            case "glossary.list": result = await getGlossaryTerms(); break;
+            case "workspaces.list": result = await listWorkspaces(); break;
+            case "sentiment.dashboard": result = await getSentimentScores(); break;
+            default: result = { error: "Unknown endpoint" };
+          }
+        } catch (e: any) {
+          result = { error: e.message };
+        }
+        return { result, responseTime: Date.now() - start };
       }),
   }),
 

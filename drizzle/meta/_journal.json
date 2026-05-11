@@ -134,6 +134,13 @@
       "when": 1778517452063,
       "tag": "0018_hot_natasha_romanoff",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "5",
+      "when": 1778520742603,
+      "tag": "0019_majestic_nekra",
+      "breakpoints": true
     }
   ]
 }

@@ -36,6 +36,7 @@ import DocumentFeedback from '@/components/DocumentFeedback';
 import CitationGenerator from '@/components/CitationGenerator';
 import ReadingSessionTracker from '@/components/ReadingSessionTracker';
 import DocumentMediaGallery from '@/components/DocumentMediaGallery';
+import CoAuthorActivitySection from '@/components/CoAuthorActivitySection';
 import ContentFreshnessBadge from '@/components/ContentFreshnessBadge';
 import DocumentNavigation from '@/components/DocumentNavigation';
 import QRCodeShare from '@/components/QRCodeShare';
@@ -651,6 +652,9 @@ export default function DocumentDetail() {
 
             {/* Citation Generator */}
             <CitationGenerator documentId={document.id} title={document.title} createdAt={document.createdAt ? new Date(document.createdAt).toISOString() : undefined} />
+
+            {/* Co-Author Activity */}
+            <CoAuthorActivitySection documentSlug={document.slug} />
 
             {/* Document Feedback */}
             <DocumentFeedback slug={document.slug} />

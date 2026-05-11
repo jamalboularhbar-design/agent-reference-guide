@@ -93,6 +93,15 @@ import AdminSessionAnalyticsPage from "./pages/AdminSessionAnalyticsPage";
 import AdminFreshnessReportPage from "./pages/AdminFreshnessReportPage";
 import AdminEmailDigestPage from "./pages/AdminEmailDigestPage";
 import PublicStatsPage from "./pages/PublicStatsPage";
+import AdminWorkspacesPage from "./pages/AdminWorkspacesPage";
+import AdminReviewSchedulingPage from "./pages/AdminReviewSchedulingPage";
+import AdminApiPlaygroundPage from "./pages/AdminApiPlaygroundPage";
+import AdminContentMigrationPage from "./pages/AdminContentMigrationPage";
+import AdminSentimentDashboardPage from "./pages/AdminSentimentDashboardPage";
+import AdminRetentionPoliciesPage from "./pages/AdminRetentionPoliciesPage";
+import AdminAccessibilityCheckerPage from "./pages/AdminAccessibilityCheckerPage";
+import AdminCustomReportsPage from "./pages/AdminCustomReportsPage";
+import ReadingPathPage from "./pages/ReadingPathPage";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -182,6 +191,15 @@ function Router() {
       <Route path={"/admin/freshness"} component={AdminFreshnessReportPage} />
       <Route path={"/admin/email-digest"} component={AdminEmailDigestPage} />
       <Route path={"/stats"} component={PublicStatsPage} />
+      <Route path={"/admin/workspaces"} component={AdminWorkspacesPage} />
+      <Route path={"/admin/review-scheduling"} component={AdminReviewSchedulingPage} />
+      <Route path={"/admin/api-playground"} component={AdminApiPlaygroundPage} />
+      <Route path={"/admin/content-migration"} component={AdminContentMigrationPage} />
+      <Route path={"/admin/sentiment"} component={AdminSentimentDashboardPage} />
+      <Route path={"/admin/retention"} component={AdminRetentionPoliciesPage} />
+      <Route path={"/admin/accessibility"} component={AdminAccessibilityCheckerPage} />
+      <Route path={"/admin/custom-reports"} component={AdminCustomReportsPage} />
+      <Route path={"/reading-path"} component={ReadingPathPage} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />

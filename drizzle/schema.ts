@@ -1,4 +1,4 @@
-import { boolean, int, mediumtext, mysqlEnum, mysqlTable, text, timestamp, varchar } from "drizzle-orm/mysql-core";
+import { boolean, float, int, mediumtext, mysqlEnum, mysqlTable, text, tinyint, timestamp, varchar } from "drizzle-orm/mysql-core";
 
 /**
  * Core user table backing auth flow.
@@ -780,3 +780,118 @@ export const documentMedia = mysqlTable("document_media", {
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 export type DocumentMediaEntry = typeof documentMedia.$inferSelect;
+
+
+// ===== Batch 22: Multi-tenant workspaces =====
+export const workspaces = mysqlTable("workspaces", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  slug: varchar("slug", { length: 255 }).notNull(),
+  description: text("description"),
+  ownerId: varchar("ownerId", { length: 255 }).notNull(),
+  isDefault: tinyint("isDefault").default(0).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+export type Workspace = typeof workspaces.$inferSelect;
+
+export const workspaceMembers = mysqlTable("workspace_members", {
+  id: int("id").autoincrement().primaryKey(),
+  workspaceId: int("workspaceId").notNull(),
+  userId: varchar("userId", { length: 255 }).notNull(),
+  role: varchar("role", { length: 50 }).default("member").notNull(), // owner, admin, member
+  joinedAt: timestamp("joinedAt").defaultNow().notNull(),
+});
+export type WorkspaceMember = typeof workspaceMembers.$inferSelect;
+
+// ===== Batch 22: Automated review scheduling =====
+export const reviewSchedules = mysqlTable("review_schedules", {
+  id: int("id").autoincrement().primaryKey(),
+  documentSlug: varchar("documentSlug", { length: 255 }).notNull(),
+  intervalDays: int("intervalDays").default(90).notNull(),
+  assigneeId: varchar("assigneeId", { length: 255 }),
+  lastReviewedAt: timestamp("lastReviewedAt"),
+  nextReviewAt: timestamp("nextReviewAt"),
+  escalationDays: int("escalationDays").default(7).notNull(),
+  isActive: tinyint("isActive").default(1).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+export type ReviewSchedule = typeof reviewSchedules.$inferSelect;
+
+// ===== Batch 22: Co-authoring activity log =====
+export const coAuthorActivity = mysqlTable("co_author_activity", {
+  id: int("id").autoincrement().primaryKey(),
+  documentSlug: varchar("documentSlug", { length: 255 }).notNull(),
+  userId: varchar("userId", { length: 255 }).notNull(),
+  userName: varchar("userName", { length: 255 }),
+  actionType: varchar("actionType", { length: 50 }).notNull(), // edit, comment, review, approve
+  fieldChanged: varchar("fieldChanged", { length: 100 }),
+  summary: text("summary"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+export type CoAuthorActivityEntry = typeof coAuthorActivity.$inferSelect;
+
+// ===== Batch 22: Content migration tool =====
+export const migrationJobs = mysqlTable("migration_jobs", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  status: varchar("status", { length: 50 }).default("pending").notNull(), // pending, preview, running, completed, failed
+  operationType: varchar("operationType", { length: 50 }).notNull(), // re-categorize, re-tag, re-assign
+  filterCriteria: text("filterCriteria"), // JSON: category, tags, status filters
+  targetValue: text("targetValue"), // JSON: new category, new tags, new assignee
+  affectedCount: int("affectedCount").default(0).notNull(),
+  processedCount: int("processedCount").default(0).notNull(),
+  createdBy: varchar("createdBy", { length: 255 }).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  completedAt: timestamp("completedAt"),
+});
+export type MigrationJob = typeof migrationJobs.$inferSelect;
+
+// ===== Batch 22: Sentiment analysis =====
+export const sentimentScores = mysqlTable("sentiment_scores", {
+  id: int("id").autoincrement().primaryKey(),
+  documentSlug: varchar("documentSlug", { length: 255 }).notNull(),
+  overallScore: float("overallScore").default(0).notNull(), // -1 to 1
+  positiveCount: int("positiveCount").default(0).notNull(),
+  negativeCount: int("negativeCount").default(0).notNull(),
+  neutralCount: int("neutralCount").default(0).notNull(),
+  lastAnalyzedAt: timestamp("lastAnalyzedAt").defaultNow().notNull(),
+});
+export type SentimentScore = typeof sentimentScores.$inferSelect;
+
+// ===== Batch 22: Data retention policies =====
+export const retentionPolicies = mysqlTable("retention_policies", {
+  id: int("id").autoincrement().primaryKey(),
+  category: varchar("category", { length: 255 }).notNull(),
+  retentionDays: int("retentionDays").default(365).notNull(),
+  action: varchar("action", { length: 50 }).default("archive").notNull(), // archive, delete
+  isActive: tinyint("isActive").default(1).notNull(),
+  lastRunAt: timestamp("lastRunAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+export type RetentionPolicy = typeof retentionPolicies.$inferSelect;
+
+// ===== Batch 22: Accessibility checks =====
+export const accessibilityChecks = mysqlTable("accessibility_checks", {
+  id: int("id").autoincrement().primaryKey(),
+  documentSlug: varchar("documentSlug", { length: 255 }).notNull(),
+  issueType: varchar("issueType", { length: 100 }).notNull(), // missing-alt, heading-skip, empty-link, low-contrast
+  severity: varchar("severity", { length: 50 }).default("warning").notNull(), // error, warning, info
+  description: text("description"),
+  lineReference: text("lineReference"),
+  isResolved: tinyint("isResolved").default(0).notNull(),
+  checkedAt: timestamp("checkedAt").defaultNow().notNull(),
+});
+export type AccessibilityCheck = typeof accessibilityChecks.$inferSelect;
+
+// ===== Batch 22: Custom report builder =====
+export const customReports = mysqlTable("custom_reports", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  description: text("description"),
+  config: text("config").notNull(), // JSON: metrics, filters, groupBy, dateRange, chartType
+  createdBy: varchar("createdBy", { length: 255 }).notNull(),
+  lastRunAt: timestamp("lastRunAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+});
+export type CustomReport = typeof customReports.$inferSelect;

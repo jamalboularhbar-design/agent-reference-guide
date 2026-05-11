@@ -243,3 +243,13 @@
 - [x] Admin email digest configuration (configure daily/weekly email summaries of key metrics to owner)
 - [x] Document related media attachments (link images/files to documents, display in a media gallery section)
 - [x] Global site statistics public page (/stats) showing total docs, categories, total reads, and growth chart
+- [x] Multi-tenant workspace support (teams/departments with isolated document collections and cross-team shared search)
+- [x] Automated content review scheduling (recurring review cycles per document with auto-assignment and escalation alerts)
+- [x] Admin API playground page (live tRPC endpoint explorer with authenticated requests, input builder, response viewer)
+- [x] Document co-authoring activity log (track multiple editors per document with contribution stats and edit timeline)
+- [x] Admin content migration tool (bulk re-categorize, re-tag, and re-assign documents with preview before applying)
+- [x] User reading path recommendations (guided learning paths auto-generated from dependency trees and reading history)
+- [x] Document sentiment analysis dashboard (AI-powered sentiment scoring of feedback and comments per document)
+- [x] Admin data retention policy manager (configure retention rules per category with auto-purge scheduling)
+- [x] Document accessibility checker (scan content for accessibility issues: alt text, heading hierarchy, contrast)
+- [x] Admin custom report builder (drag-and-drop report designer combining any metrics into exportable custom reports)

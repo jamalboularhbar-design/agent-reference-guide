@@ -6,7 +6,8 @@ import {
   Columns3, Clock, MessageSquare, GripVertical, Copy, Download,
   Shield, FileJson, Activity, FolderInput, Merge, Image, Calendar,
   BarChart2, LinkIcon, CalendarCheck, Tags as TagsIcon, HeartPulse,
-  Workflow, FileSpreadsheet, Lightbulb, LayoutDashboard, Search, Bell
+  Workflow, FileSpreadsheet, Lightbulb, LayoutDashboard, Search, Bell,
+  Building2, Code2, ArrowRightLeft, SmilePlus, Accessibility, FileBarChart
 } from 'lucide-react';
 
 const adminLinks = [
@@ -63,6 +64,14 @@ const adminLinks = [
   { label: 'Session Analytics', href: '/admin/session-analytics', icon: Clock },
   { label: 'Freshness Report', href: '/admin/freshness', icon: Activity },
   { label: 'Email Digest', href: '/admin/email-digest', icon: Bell },
+  { label: 'Workspaces', href: '/admin/workspaces', icon: Building2 },
+  { label: 'Review Scheduling', href: '/admin/review-scheduling', icon: CalendarClock },
+  { label: 'API Playground', href: '/admin/api-playground', icon: Code2 },
+  { label: 'Content Migration', href: '/admin/content-migration', icon: ArrowRightLeft },
+  { label: 'Sentiment Dashboard', href: '/admin/sentiment', icon: SmilePlus },
+  { label: 'Retention Policies', href: '/admin/retention', icon: Shield },
+  { label: 'Accessibility Checker', href: '/admin/accessibility', icon: Accessibility },
+  { label: 'Custom Reports', href: '/admin/custom-reports', icon: FileBarChart },
 ];
 
 export default function AdminNavDropdown() {

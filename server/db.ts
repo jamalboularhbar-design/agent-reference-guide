@@ -1,6 +1,6 @@
 import { eq, like, or, sql, desc, asc, count, and } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, documents, documentRatings, readingLists, readingListItems, searchAnalytics, documentTags, documentComments, documentVersions, customCategories, downloadHistory, announcements, activityLog, documentAuditTrail, bookmarkNotes, shareLinks, scheduledPublish, inlineComments, brandingSettings, webhooks, recentlyViewed, documentFeedback, categoryOrdering, documentSubscriptions, subscriptionNotifications, userReadingPosition, searchHistory, aiSummaries, documentTranslations, userPreferences, readingStreakLeaderboard, glossaryTerms, documentDependencies, readingGoals, readingProgress, documentTemplates, savedFilters, documentQuizzes, reviewReminders, documentAnnotations, documentCollections, collectionItems, workflowStatuses, workflowTransitions, documentWorkflowStatus, archivalPolicies, archivedDocuments, contentGapSuggestions, duplicateContentPairs, activityFeed, documentSnapshots, readingCorrelations, quizResults, documentSeoMeta, systemNotificationLog, adminPermissions, approvalSlaConfig, webhookEventLog, documentAccessRequests, onboardingProgress, documentCitations, readingSessions, documentQualityAudits, emailDigestConfig, documentMedia } from "../drizzle/schema";
+import { InsertUser, users, documents, documentRatings, readingLists, readingListItems, searchAnalytics, documentTags, documentComments, documentVersions, customCategories, downloadHistory, announcements, activityLog, documentAuditTrail, bookmarkNotes, shareLinks, scheduledPublish, inlineComments, brandingSettings, webhooks, recentlyViewed, documentFeedback, categoryOrdering, documentSubscriptions, subscriptionNotifications, userReadingPosition, searchHistory, aiSummaries, documentTranslations, userPreferences, readingStreakLeaderboard, glossaryTerms, documentDependencies, readingGoals, readingProgress, documentTemplates, savedFilters, documentQuizzes, reviewReminders, documentAnnotations, documentCollections, collectionItems, workflowStatuses, workflowTransitions, documentWorkflowStatus, archivalPolicies, archivedDocuments, contentGapSuggestions, duplicateContentPairs, activityFeed, documentSnapshots, readingCorrelations, quizResults, documentSeoMeta, systemNotificationLog, adminPermissions, approvalSlaConfig, webhookEventLog, documentAccessRequests, onboardingProgress, documentCitations, readingSessions, documentQualityAudits, emailDigestConfig, documentMedia, workspaces, workspaceMembers, reviewSchedules, coAuthorActivity, migrationJobs, sentimentScores, retentionPolicies, accessibilityChecks, customReports } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -3582,4 +3582,381 @@ export async function getPublicSiteStats() {
     totalReaders: readerStats?.totalReaders || 0,
     growthByMonth: (growthData as any)?.[0] || [],
   };
+}
+
+
+// ===== Batch 22: Multi-tenant workspaces =====
+export async function listWorkspaces() {
+  const db = await getDb();
+  if (!db) return [] as any;
+  return db.select().from(workspaces).orderBy(desc(workspaces.createdAt));
+}
+
+export async function createWorkspace(data: { name: string; slug: string; description?: string; ownerId: string }) {
+  const db = await getDb();
+  if (!db) return [] as any;
+  await db.insert(workspaces).values(data);
+  return { success: true };
+}
+
+export async function getWorkspaceBySlug(slug: string) {
+  const db = await getDb();
+  if (!db) return [] as any;
+  const rows = await db.select().from(workspaces).where(eq(workspaces.slug, slug)).limit(1);
+  return rows[0] || null;
+}
+
+export async function listWorkspaceMembers(workspaceId: number) {
+  const db = await getDb();
+  if (!db) return [] as any;
+  return db.select().from(workspaceMembers).where(eq(workspaceMembers.workspaceId, workspaceId));
+}
+
+export async function addWorkspaceMember(data: { workspaceId: number; userId: string; role?: string }) {
+  const db = await getDb();
+  if (!db) return [] as any;
+  await db.insert(workspaceMembers).values({ ...data, role: data.role || "member" });
+  return { success: true };
+}
+
+export async function removeWorkspaceMember(id: number) {
+  const db = await getDb();
+  if (!db) return [] as any;
+  await db.delete(workspaceMembers).where(eq(workspaceMembers.id, id));
+  return { success: true };
+}
+
+// ===== Batch 22: Automated review scheduling =====
+export async function listReviewSchedules() {
+  const db = await getDb();
+  if (!db) return [] as any;
+  return db.select().from(reviewSchedules).orderBy(asc(reviewSchedules.nextReviewAt));
+}
+
+export async function upsertReviewSchedule(data: { documentSlug: string; intervalDays: number; assigneeId?: string; escalationDays?: number }) {
+  const db = await getDb();
+  if (!db) return [] as any;
+  const existing = await db.select().from(reviewSchedules).where(eq(reviewSchedules.documentSlug, data.documentSlug)).limit(1);
+  const nextReviewAt = new Date(Date.now() + data.intervalDays * 86400000);
+  if (existing.length > 0) {
+    await db.update(reviewSchedules).set({ ...data, nextReviewAt, isActive: 1 }).where(eq(reviewSchedules.documentSlug, data.documentSlug));
+  } else {
+    await db.insert(reviewSchedules).values({ ...data, nextReviewAt, isActive: 1 });
+  }
+  return { success: true };
+}
+
+export async function getOverdueScheduledReviews() {
+  const db = await getDb();
+  if (!db) return [] as any;
+  return db.select().from(reviewSchedules).where(
+    and(eq(reviewSchedules.isActive, 1), sql`${reviewSchedules.nextReviewAt} < NOW()`)
+  );
+}
+
+export async function markReviewComplete(documentSlug: string) {
+  const db = await getDb();
+  if (!db) return [] as any;
+  const rows = await db.select().from(reviewSchedules).where(eq(reviewSchedules.documentSlug, documentSlug)).limit(1);
+  if (rows.length > 0) {
+    const nextReviewAt = new Date(Date.now() + rows[0].intervalDays * 86400000);
+    await db.update(reviewSchedules).set({ lastReviewedAt: new Date(), nextReviewAt }).where(eq(reviewSchedules.documentSlug, documentSlug));
+  }
+  return { success: true };
+}
+
+// ===== Batch 22: Co-authoring activity log =====
+export async function logCoAuthorActivity(data: { documentSlug: string; userId: string; userName?: string; actionType: string; fieldChanged?: string; summary?: string }) {
+  const db = await getDb();
+  if (!db) return [] as any;
+  await db.insert(coAuthorActivity).values(data);
+  return { success: true };
+}
+
+export async function getCoAuthorActivity(documentSlug: string) {
+  const db = await getDb();
+  if (!db) return [] as any;
+  return db.select().from(coAuthorActivity).where(eq(coAuthorActivity.documentSlug, documentSlug)).orderBy(desc(coAuthorActivity.createdAt)).limit(100);
+}
+
+export async function getDocumentContributors(documentSlug: string) {
+  const db = await getDb();
+  if (!db) return [] as any;
+  const rows = await db.execute(sql`
+    SELECT userId, userName, COUNT(*) as actionCount,
+           MAX(createdAt) as lastActivity,
+           GROUP_CONCAT(DISTINCT actionType) as actionTypes
+    FROM co_author_activity
+    WHERE documentSlug = ${documentSlug}
+    GROUP BY userId, userName
+    ORDER BY actionCount DESC
+  `);
+  return (rows as any)?.[0] || [];
+}
+
+// ===== Batch 22: Content migration tool =====
+export async function createMigrationJob(data: { name: string; operationType: string; filterCriteria: string; targetValue: string; createdBy: string }) {
+  const db = await getDb();
+  if (!db) return [] as any;
+  // Count affected documents based on filter
+  const filters = JSON.parse(data.filterCriteria);
+  let affectedCount = 0;
+  if (filters.category) {
+    const rows = await db.select({ c: count() }).from(documents).where(eq(documents.category, filters.category));
+    affectedCount = rows[0]?.c || 0;
+  }
+  await db.insert(migrationJobs).values({ ...data, affectedCount, status: "preview" });
+  return { success: true, affectedCount };
+}
+
+export async function listMigrationJobs() {
+  const db = await getDb();
+  if (!db) return [] as any;
+  return db.select().from(migrationJobs).orderBy(desc(migrationJobs.createdAt)).limit(50);
+}
+
+export async function executeMigrationJob(jobId: number) {
+  const db = await getDb();
+  if (!db) return [] as any;
+  const rows = await db.select().from(migrationJobs).where(eq(migrationJobs.id, jobId)).limit(1);
+  if (!rows[0]) return { success: false, error: "Job not found" };
+  const job = rows[0];
+  const filters = JSON.parse(job.filterCriteria || "{}");
+  const target = JSON.parse(job.targetValue || "{}");
+  
+  await db.update(migrationJobs).set({ status: "running" }).where(eq(migrationJobs.id, jobId));
+  
+  try {
+    if (job.operationType === "re-categorize" && filters.category && target.category) {
+      await db.update(documents).set({ category: target.category }).where(eq(documents.category, filters.category));
+    }
+    await db.update(migrationJobs).set({ status: "completed", processedCount: job.affectedCount, completedAt: new Date() }).where(eq(migrationJobs.id, jobId));
+    return { success: true };
+  } catch (e) {
+    await db.update(migrationJobs).set({ status: "failed" }).where(eq(migrationJobs.id, jobId));
+    return { success: false, error: String(e) };
+  }
+}
+
+// ===== Batch 22: Reading path recommendations =====
+export async function getReadingPathForUser(userId: string) {
+  const db = await getDb();
+  if (!db) return [] as any;
+  // Get user's reading history
+  const readDocs = await db.select({ slug: recentlyViewed.documentSlug }).from(recentlyViewed).where(eq(recentlyViewed.visitorId, userId));
+  const readSlugs = readDocs.map(r => r.slug);
+  
+  // Get unread documents that are prerequisites or related
+  if (readSlugs.length === 0) {
+    // New user: recommend popular docs
+    const popular = await db.select().from(documents).where(eq(documents.status, "published")).orderBy(desc(documents.viewCount)).limit(10);
+    return popular;
+  }
+  
+  // Find docs in same categories as what user has read, but not yet read
+  const readCategories = await db.execute(sql`
+    SELECT DISTINCT category FROM documents WHERE slug IN (${sql.join(readSlugs.map(s => sql`${s}`), sql`, `)})
+  `);
+  const cats = ((readCategories as any)?.[0] || []).map((r: any) => r.category);
+  
+  if (cats.length === 0) {
+    return db.select().from(documents).where(eq(documents.status, "published")).orderBy(desc(documents.viewCount)).limit(10);
+  }
+  
+  const recommended = await db.execute(sql`
+    SELECT * FROM documents 
+    WHERE status = 'published' 
+      AND category IN (${sql.join(cats.map((c: string) => sql`${c}`), sql`, `)})
+      AND slug NOT IN (${sql.join(readSlugs.map(s => sql`${s}`), sql`, `)})
+    ORDER BY viewCount DESC
+    LIMIT 10
+  `);
+  return (recommended as any)?.[0] || [];
+}
+
+// ===== Batch 22: Sentiment analysis =====
+export async function upsertSentimentScore(data: { documentSlug: string; overallScore: number; positiveCount: number; negativeCount: number; neutralCount: number }) {
+  const db = await getDb();
+  if (!db) return [] as any;
+  const existing = await db.select().from(sentimentScores).where(eq(sentimentScores.documentSlug, data.documentSlug)).limit(1);
+  if (existing.length > 0) {
+    await db.update(sentimentScores).set({ ...data, lastAnalyzedAt: new Date() }).where(eq(sentimentScores.documentSlug, data.documentSlug));
+  } else {
+    await db.insert(sentimentScores).values(data);
+  }
+  return { success: true };
+}
+
+export async function getSentimentScores() {
+  const db = await getDb();
+  if (!db) return [] as any;
+  return db.select().from(sentimentScores).orderBy(asc(sentimentScores.overallScore));
+}
+
+export async function getSentimentForDocument(documentSlug: string) {
+  const db = await getDb();
+  if (!db) return [] as any;
+  const rows = await db.select().from(sentimentScores).where(eq(sentimentScores.documentSlug, documentSlug)).limit(1);
+  return rows[0] || null;
+}
+
+// ===== Batch 22: Data retention policies =====
+export async function listRetentionPolicies() {
+  const db = await getDb();
+  if (!db) return [] as any;
+  return db.select().from(retentionPolicies).orderBy(asc(retentionPolicies.category));
+}
+
+export async function upsertRetentionPolicy(data: { category: string; retentionDays: number; action: string }) {
+  const db = await getDb();
+  if (!db) return [] as any;
+  const existing = await db.select().from(retentionPolicies).where(eq(retentionPolicies.category, data.category)).limit(1);
+  if (existing.length > 0) {
+    await db.update(retentionPolicies).set({ retentionDays: data.retentionDays, action: data.action as any }).where(eq(retentionPolicies.category, data.category));
+  } else {
+    await db.insert(retentionPolicies).values({ ...data, isActive: 1 });
+  }
+  return { success: true };
+}
+
+export async function deleteRetentionPolicy(id: number) {
+  const db = await getDb();
+  if (!db) return [] as any;
+  await db.delete(retentionPolicies).where(eq(retentionPolicies.id, id));
+  return { success: true };
+}
+
+// ===== Batch 22: Accessibility checker =====
+export async function runAccessibilityCheck(documentSlug: string, content: string) {
+  const db = await getDb();
+  if (!db) return [] as any;
+  // Clear old checks
+  await db.delete(accessibilityChecks).where(eq(accessibilityChecks.documentSlug, documentSlug));
+  
+  const issues: { issueType: string; severity: string; description: string; lineReference?: string }[] = [];
+  const lines = content.split("\n");
+  
+  // Check for images without alt text
+  lines.forEach((line, i) => {
+    if (line.match(/!\[\]\(/) || line.match(/<img(?![^>]*alt=)/)) {
+      issues.push({ issueType: "missing-alt", severity: "error", description: "Image missing alt text", lineReference: `Line ${i + 1}` });
+    }
+  });
+  
+  // Check heading hierarchy
+  let lastLevel = 0;
+  lines.forEach((line, i) => {
+    const match = line.match(/^(#{1,6})\s/);
+    if (match) {
+      const level = match[1].length;
+      if (level > lastLevel + 1 && lastLevel > 0) {
+        issues.push({ issueType: "heading-skip", severity: "warning", description: `Heading level skipped from h${lastLevel} to h${level}`, lineReference: `Line ${i + 1}` });
+      }
+      lastLevel = level;
+    }
+  });
+  
+  // Check for empty links
+  lines.forEach((line, i) => {
+    if (line.match(/\[]\(/) || line.match(/<a[^>]*>\s*<\/a>/)) {
+      issues.push({ issueType: "empty-link", severity: "warning", description: "Link with empty text", lineReference: `Line ${i + 1}` });
+    }
+  });
+  
+  // Insert all issues
+  for (const issue of issues) {
+    await db.insert(accessibilityChecks).values({ documentSlug, ...issue });
+  }
+  
+  return { issueCount: issues.length, issues };
+}
+
+export async function getAccessibilityIssues(documentSlug: string) {
+  const db = await getDb();
+  if (!db) return [] as any;
+  return db.select().from(accessibilityChecks).where(eq(accessibilityChecks.documentSlug, documentSlug)).orderBy(desc(accessibilityChecks.severity));
+}
+
+export async function getAllAccessibilityIssues() {
+  const db = await getDb();
+  if (!db) return [] as any;
+  return db.select().from(accessibilityChecks).where(eq(accessibilityChecks.isResolved, 0)).orderBy(desc(accessibilityChecks.severity)).limit(200);
+}
+
+export async function resolveAccessibilityIssue(id: number) {
+  const db = await getDb();
+  if (!db) return [] as any;
+  await db.update(accessibilityChecks).set({ isResolved: 1 }).where(eq(accessibilityChecks.id, id));
+  return { success: true };
+}
+
+// ===== Batch 22: Custom report builder =====
+export async function listCustomReports(userId: string) {
+  const db = await getDb();
+  if (!db) return [] as any;
+  return db.select().from(customReports).where(eq(customReports.createdBy, userId)).orderBy(desc(customReports.updatedAt));
+}
+
+export async function createCustomReport(data: { name: string; description?: string; config: string; createdBy: string }) {
+  const db = await getDb();
+  if (!db) return [] as any;
+  await db.insert(customReports).values(data);
+  return { success: true };
+}
+
+export async function updateCustomReport(id: number, data: { name?: string; description?: string; config?: string }) {
+  const db = await getDb();
+  if (!db) return [] as any;
+  await db.update(customReports).set({ ...data, updatedAt: new Date() }).where(eq(customReports.id, id));
+  return { success: true };
+}
+
+export async function deleteCustomReport(id: number) {
+  const db = await getDb();
+  if (!db) return [] as any;
+  await db.delete(customReports).where(eq(customReports.id, id));
+  return { success: true };
+}
+
+export async function executeCustomReport(config: string) {
+  const db = await getDb();
+  if (!db) return [] as any;
+  const cfg = JSON.parse(config);
+  const results: Record<string, any> = {};
+  
+  // Execute each metric in the config
+  for (const metric of (cfg.metrics || [])) {
+    switch (metric) {
+      case "total_documents":
+        const docCount = await db.select({ c: count() }).from(documents);
+        results.total_documents = docCount[0]?.c || 0;
+        break;
+      case "total_views":
+        const viewSum = await db.execute(sql`SELECT COALESCE(SUM(viewCount), 0) as total FROM documents`);
+        results.total_views = (viewSum as any)?.[0]?.[0]?.total || 0;
+        break;
+      case "avg_rating":
+        const avgRating = await db.execute(sql`SELECT AVG(CASE WHEN isPositive = 1 THEN 1 ELSE 0 END) as avg FROM document_ratings`);
+        results.avg_rating = (avgRating as any)?.[0]?.[0]?.avg || 0;
+        break;
+      case "documents_by_category":
+        const byCat = await db.execute(sql`SELECT category, COUNT(*) as count FROM documents GROUP BY category ORDER BY count DESC`);
+        results.documents_by_category = (byCat as any)?.[0] || [];
+        break;
+      case "documents_by_status":
+        const byStatus = await db.execute(sql`SELECT status, COUNT(*) as count FROM documents GROUP BY status`);
+        results.documents_by_status = (byStatus as any)?.[0] || [];
+        break;
+      case "top_viewed":
+        const topViewed = await db.select().from(documents).orderBy(desc(documents.viewCount)).limit(10);
+        results.top_viewed = topViewed;
+        break;
+      case "recent_activity":
+        const recent = await db.select().from(activityLog).orderBy(desc(activityLog.createdAt)).limit(20);
+        results.recent_activity = recent;
+        break;
+    }
+  }
+  
+  return results;
 }
