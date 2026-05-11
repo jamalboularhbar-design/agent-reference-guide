@@ -292,7 +292,7 @@
 - [x] One-page product overview PDF — leave-behind for in-person meetings summarizing the pitch deck
 - [x] State of Operational Knowledge lead magnet report — downloadable PDF with industry stats, gated behind email
 - [x] Demo video placeholder section on landing page hero
-- [ ] Email automation setup guide — connect leads table to nurture campaign
-- [ ] Product Hunt "Coming Soon" preparation guide
-- [ ] Stripe integration for self-serve Starter tier payments
-- [ ] Product Hunt launch day checklist
+- [x] Email automation setup guide — connect leads table to nurture campaign
+- [x] Product Hunt "Coming Soon" preparation guide
+- [x] Stripe integration for self-serve Starter tier payments
+- [x] Product Hunt launch day checklist
