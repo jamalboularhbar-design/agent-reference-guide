@@ -56,6 +56,13 @@ import {
   getWordCountAnalytics, getAllDocumentLinks,
   getReadingStreakLeaderboard, updateStreakLeaderboard,
   getDocumentVersionsForDiff,
+  getSavedFilters, createSavedFilter, deleteSavedFilter,
+  getDocumentQuiz, saveDocumentQuiz,
+  getReviewReminders, createReviewReminder, deleteReviewReminder, getOverdueReviews,
+  getDocumentAnnotations, createAnnotation, deleteAnnotation, updateAnnotationNote,
+  bulkAssignTags, bulkRemoveTags,
+  getContentHealthScores,
+  getRelatedByTags,
 } from "./db";
 import { invokeLLM } from "./_core/llm";
 import { notifyOwner } from "./_core/notification";
@@ -1388,6 +1395,119 @@ export const appRouter = router({
     get: publicProcedure
       .input(z.object({ slug: z.string() }))
       .query(async ({ input }) => getDocumentVersionsForDiff(input.slug)),
+  }),
+
+  // ==================== Batch 17 ====================
+
+  // ─── Saved Filters ───────────────────────────────────────────────────────
+  savedFilters: router({
+    list: protectedProcedure.query(async ({ ctx }) => getSavedFilters(ctx.user.openId)),
+    create: protectedProcedure
+      .input(z.object({ name: z.string(), filterConfig: z.string() }))
+      .mutation(async ({ ctx, input }) => {
+        await createSavedFilter(ctx.user.openId, input.name, input.filterConfig);
+        return { success: true };
+      }),
+    delete: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        await deleteSavedFilter(input.id, ctx.user.openId);
+        return { success: true };
+      }),
+  }),
+
+  // ─── Document Quiz Generator ───────────────────────────────────────────
+  quiz: router({
+    get: publicProcedure
+      .input(z.object({ documentId: z.number() }))
+      .query(async ({ input }) => getDocumentQuiz(input.documentId)),
+    generate: protectedProcedure
+      .input(z.object({ documentId: z.number(), content: z.string() }))
+      .mutation(async ({ input }) => {
+        const response = await invokeLLM({
+          messages: [
+            { role: 'system', content: 'You are a quiz generator. Generate exactly 5 multiple-choice comprehension questions based on the document content. Return valid JSON array of objects with fields: question (string), options (array of 4 strings), correctIndex (0-3 number).' },
+            { role: 'user', content: `Generate 5 quiz questions for this document:\n\n${input.content.slice(0, 4000)}` },
+          ],
+          response_format: { type: 'json_schema', json_schema: { name: 'quiz', strict: true, schema: { type: 'object', properties: { questions: { type: 'array', items: { type: 'object', properties: { question: { type: 'string' }, options: { type: 'array', items: { type: 'string' } }, correctIndex: { type: 'integer' } }, required: ['question', 'options', 'correctIndex'], additionalProperties: false } } }, required: ['questions'], additionalProperties: false } } },
+        });
+        const content = response.choices?.[0]?.message?.content as string || '{"questions":[]}';
+        const parsed = JSON.parse(content);
+        const questions = JSON.stringify(parsed.questions || []);
+        await saveDocumentQuiz(input.documentId, questions);
+        return { questions: parsed.questions || [] };
+      }),
+  }),
+
+  // ─── Review Reminders ───────────────────────────────────────────────────
+  reviewReminders: router({
+    list: adminProcedure.query(async () => getReviewReminders()),
+    overdue: adminProcedure.query(async () => getOverdueReviews()),
+    create: adminProcedure
+      .input(z.object({ documentId: z.number(), reviewDate: z.string(), frequency: z.enum(['once', 'weekly', 'monthly', 'quarterly']) }))
+      .mutation(async ({ input }) => {
+        await createReviewReminder(input.documentId, new Date(input.reviewDate), input.frequency);
+        return { success: true };
+      }),
+    delete: adminProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        await deleteReviewReminder(input.id);
+        return { success: true };
+      }),
+  }),
+
+  // ─── Document Annotations ───────────────────────────────────────────────
+  annotations: router({
+    list: protectedProcedure
+      .input(z.object({ documentId: z.number() }))
+      .query(async ({ ctx, input }) => getDocumentAnnotations(input.documentId, ctx.user.openId)),
+    create: protectedProcedure
+      .input(z.object({ documentId: z.number(), highlightText: z.string(), note: z.string().optional(), color: z.string().default('yellow'), startOffset: z.number(), endOffset: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        await createAnnotation({ ...input, userOpenId: ctx.user.openId });
+        return { success: true };
+      }),
+    delete: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        await deleteAnnotation(input.id, ctx.user.openId);
+        return { success: true };
+      }),
+    updateNote: protectedProcedure
+      .input(z.object({ id: z.number(), note: z.string() }))
+      .mutation(async ({ ctx, input }) => {
+        await updateAnnotationNote(input.id, ctx.user.openId, input.note);
+        return { success: true };
+      }),
+  }),
+
+  // ─── Bulk Tag Assignment ────────────────────────────────────────────────
+  bulkTags: router({
+    assign: adminProcedure
+      .input(z.object({ documentSlugs: z.array(z.string()), tags: z.array(z.string()) }))
+      .mutation(async ({ input }) => {
+        await bulkAssignTags(input.documentSlugs, input.tags);
+        return { success: true };
+      }),
+    remove: adminProcedure
+      .input(z.object({ documentSlugs: z.array(z.string()), tags: z.array(z.string()) }))
+      .mutation(async ({ input }) => {
+        await bulkRemoveTags(input.documentSlugs, input.tags);
+        return { success: true };
+      }),
+  }),
+
+  // ─── Content Health Score ───────────────────────────────────────────────
+  contentHealth: router({
+    scores: adminProcedure.query(async () => getContentHealthScores()),
+  }),
+
+  // ─── Related by Tags ───────────────────────────────────────────────────
+  relatedByTags: router({
+    get: publicProcedure
+      .input(z.object({ slug: z.string() }))
+      .query(async ({ input }) => getRelatedByTags(input.slug)),
   }),
 });
 export type AppRouter = typeof appRouter;

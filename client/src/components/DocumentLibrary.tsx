@@ -17,6 +17,7 @@ import DocumentLibrarySkeleton from './DocumentLibrarySkeleton';
 import BulkExport from './BulkExport';
 import KeyboardNavigation from './KeyboardNavigation';
 import { usePreferences } from '@/hooks/usePreferences';
+import SavedFilters from './SavedFilters';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import { Pin } from 'lucide-react';
 
@@ -372,6 +373,20 @@ export default function DocumentLibrary() {
           </div>
         </div>
       )}
+
+      {/* Saved Filters */}
+      <div className="mb-4">
+        <SavedFilters
+          currentFilter={{ category: selectedCategory, sort: sortBy, search: searchQuery, status: statusFilter }}
+          onApplyFilter={(config) => {
+            if (config.category) setSelectedCategory(config.category);
+            if (config.sort) setSortBy(config.sort);
+            if (config.search !== undefined) setSearchQuery(config.search);
+            if (config.status) setStatusFilter(config.status);
+            setCurrentPage(1);
+          }}
+        />
+      </div>
 
       {/* Category View (when no search and All selected) */}
       {!isLoading && !searchQuery && selectedCategory === 'All' ? (

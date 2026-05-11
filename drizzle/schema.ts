@@ -470,3 +470,50 @@ export const readingStreakLeaderboard = mysqlTable("reading_streak_leaderboard",
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
 export type ReadingStreakEntry = typeof readingStreakLeaderboard.$inferSelect;
+
+
+// ===== BATCH 17 TABLES =====
+
+// Saved filters/views per user
+export const savedFilters = mysqlTable("saved_filters", {
+  id: int("id").autoincrement().primaryKey(),
+  userOpenId: varchar("userOpenId", { length: 64 }).notNull(),
+  name: varchar("name", { length: 255 }).notNull(),
+  filterConfig: text("filterConfig").notNull(), // JSON: {category, status, sort, search, tags}
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+export type SavedFilter = typeof savedFilters.$inferSelect;
+
+// Document reading quizzes (AI-generated)
+export const documentQuizzes = mysqlTable("document_quizzes", {
+  id: int("id").autoincrement().primaryKey(),
+  documentId: int("documentId").notNull(),
+  questions: mediumtext("questions").notNull(), // JSON array of {question, options, correctIndex}
+  generatedAt: timestamp("generatedAt").defaultNow().notNull(),
+});
+export type DocumentQuiz = typeof documentQuizzes.$inferSelect;
+
+// Admin scheduled review reminders
+export const reviewReminders = mysqlTable("review_reminders", {
+  id: int("id").autoincrement().primaryKey(),
+  documentId: int("documentId").notNull(),
+  reviewDate: timestamp("reviewDate").notNull(),
+  frequency: mysqlEnum("frequency", ["once", "weekly", "monthly", "quarterly"]).default("once").notNull(),
+  lastNotified: timestamp("lastNotified"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+export type ReviewReminder = typeof reviewReminders.$inferSelect;
+
+// Document annotations/highlights
+export const documentAnnotations = mysqlTable("document_annotations", {
+  id: int("id").autoincrement().primaryKey(),
+  documentId: int("documentId").notNull(),
+  userOpenId: varchar("userOpenId", { length: 64 }).notNull(),
+  highlightText: text("highlightText").notNull(),
+  note: text("note"),
+  color: varchar("color", { length: 20 }).default("yellow").notNull(),
+  startOffset: int("startOffset").notNull(),
+  endOffset: int("endOffset").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+export type DocumentAnnotation = typeof documentAnnotations.$inferSelect;

@@ -1,6 +1,6 @@
 import { eq, like, or, sql, desc, asc, count, and } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, documents, documentRatings, readingLists, readingListItems, searchAnalytics, documentTags, documentComments, documentVersions, customCategories, downloadHistory, announcements, activityLog, documentAuditTrail, bookmarkNotes, shareLinks, scheduledPublish, inlineComments, brandingSettings, webhooks, recentlyViewed, documentFeedback, categoryOrdering, documentSubscriptions, subscriptionNotifications, userReadingPosition, searchHistory, aiSummaries, documentTranslations, userPreferences, readingStreakLeaderboard } from "../drizzle/schema";
+import { InsertUser, users, documents, documentRatings, readingLists, readingListItems, searchAnalytics, documentTags, documentComments, documentVersions, customCategories, downloadHistory, announcements, activityLog, documentAuditTrail, bookmarkNotes, shareLinks, scheduledPublish, inlineComments, brandingSettings, webhooks, recentlyViewed, documentFeedback, categoryOrdering, documentSubscriptions, subscriptionNotifications, userReadingPosition, searchHistory, aiSummaries, documentTranslations, userPreferences, readingStreakLeaderboard, glossaryTerms, documentDependencies, readingGoals, readingProgress, documentTemplates, savedFilters, documentQuizzes, reviewReminders, documentAnnotations, documentCollections, collectionItems } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -1078,8 +1078,6 @@ export async function getCategoryDistribution() {
 
 // ─── Glossary ────────────────────────────────────────────────────────────
 
-import { glossaryTerms, documentDependencies, readingGoals, readingProgress, documentTemplates } from "../drizzle/schema";
-
 export async function getGlossaryTerms(category?: string) {
   const db = await getDb();
   if (!db) return [];
@@ -1973,8 +1971,6 @@ export async function getReadingHistory(visitorId: string, limit = 50) {
 
 // ==================== Batch 14 ====================
 
-import { documentCollections, collectionItems } from "../drizzle/schema";
-
 // ─── Document Visibility / Access Control ─────────────────────────────────
 
 export async function setDocumentVisibility(slug: string, visibility: 'public' | 'private') {
@@ -2520,4 +2516,185 @@ export async function getDocumentVersionsForDiff(documentSlug: string) {
     .where(and(eq(documentAuditTrail.documentSlug, documentSlug), eq(documentAuditTrail.field, 'content')))
     .orderBy(desc(documentAuditTrail.createdAt))
     .limit(20);
+}
+
+
+// ==================== Batch 17 ====================
+
+// ─── Saved Filters ────────────────────────────────────────────────────────
+export async function getSavedFilters(userOpenId: string) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(savedFilters)
+    .where(eq(savedFilters.userOpenId, userOpenId))
+    .orderBy(desc(savedFilters.createdAt));
+}
+
+export async function createSavedFilter(userOpenId: string, name: string, filterConfig: string) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+  await db.insert(savedFilters).values({ userOpenId, name, filterConfig });
+}
+
+export async function deleteSavedFilter(id: number, userOpenId: string) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+  await db.delete(savedFilters).where(and(eq(savedFilters.id, id), eq(savedFilters.userOpenId, userOpenId)));
+}
+
+// ─── Document Quizzes ─────────────────────────────────────────────────────
+export async function getDocumentQuiz(documentId: number) {
+  const db = await getDb();
+  if (!db) return null;
+  const rows = await db.select().from(documentQuizzes)
+    .where(eq(documentQuizzes.documentId, documentId))
+    .orderBy(desc(documentQuizzes.generatedAt))
+    .limit(1);
+  return rows[0] || null;
+}
+
+export async function saveDocumentQuiz(documentId: number, questions: string) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+  // Delete old quiz for this doc
+  await db.delete(documentQuizzes).where(eq(documentQuizzes.documentId, documentId));
+  await db.insert(documentQuizzes).values({ documentId, questions });
+}
+
+// ─── Review Reminders ─────────────────────────────────────────────────────
+export async function getReviewReminders() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select({
+    id: reviewReminders.id,
+    documentId: reviewReminders.documentId,
+    reviewDate: reviewReminders.reviewDate,
+    frequency: reviewReminders.frequency,
+    lastNotified: reviewReminders.lastNotified,
+    createdAt: reviewReminders.createdAt,
+  }).from(reviewReminders).orderBy(asc(reviewReminders.reviewDate));
+}
+
+export async function createReviewReminder(documentId: number, reviewDate: Date, frequency: 'once' | 'weekly' | 'monthly' | 'quarterly') {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+  await db.insert(reviewReminders).values({ documentId, reviewDate, frequency });
+}
+
+export async function deleteReviewReminder(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+  await db.delete(reviewReminders).where(eq(reviewReminders.id, id));
+}
+
+export async function getOverdueReviews() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select({
+    reminderId: reviewReminders.id,
+    documentId: reviewReminders.documentId,
+    reviewDate: reviewReminders.reviewDate,
+    frequency: reviewReminders.frequency,
+    docTitle: documents.title,
+    docSlug: documents.slug,
+  }).from(reviewReminders)
+    .innerJoin(documents, eq(reviewReminders.documentId, documents.id))
+    .where(sql`${reviewReminders.reviewDate} <= NOW()`)
+    .orderBy(asc(reviewReminders.reviewDate));
+}
+
+// ─── Document Annotations ─────────────────────────────────────────────────
+export async function getDocumentAnnotations(documentId: number, userOpenId: string) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(documentAnnotations)
+    .where(and(eq(documentAnnotations.documentId, documentId), eq(documentAnnotations.userOpenId, userOpenId)))
+    .orderBy(asc(documentAnnotations.startOffset));
+}
+
+export async function createAnnotation(data: { documentId: number; userOpenId: string; highlightText: string; note?: string; color: string; startOffset: number; endOffset: number }) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+  await db.insert(documentAnnotations).values(data);
+}
+
+export async function deleteAnnotation(id: number, userOpenId: string) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+  await db.delete(documentAnnotations).where(and(eq(documentAnnotations.id, id), eq(documentAnnotations.userOpenId, userOpenId)));
+}
+
+export async function updateAnnotationNote(id: number, userOpenId: string, note: string) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+  await db.update(documentAnnotations)
+    .set({ note })
+    .where(and(eq(documentAnnotations.id, id), eq(documentAnnotations.userOpenId, userOpenId)));
+}
+
+// ─── Admin Bulk Tag Assignment ────────────────────────────────────────────
+export async function bulkAssignTags(documentSlugs: string[], tags: string[]) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+  const values = documentSlugs.flatMap(slug =>
+    tags.map(tag => ({ documentSlug: slug, tag }))
+  );
+  if (values.length > 0) {
+    await db.execute(sql`INSERT IGNORE INTO document_tags (documentSlug, tag) VALUES ${sql.join(values.map(v => sql`(${v.documentSlug}, ${v.tag})`), sql`,`)}`);
+  }
+}
+
+export async function bulkRemoveTags(documentSlugs: string[], tags: string[]) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+  for (const tag of tags) {
+    await db.delete(documentTags).where(
+      and(
+        sql`${documentTags.documentSlug} IN (${sql.join(documentSlugs.map(s => sql`${s}`), sql`,`)})`,
+        eq(documentTags.tag, tag)
+      )
+    );
+  }
+}
+
+// ─── Content Health Score ─────────────────────────────────────────────────
+export async function getContentHealthScores() {
+  const db = await getDb();
+  if (!db) return [];
+  // Get all documents with their metadata
+  const docs = await db.select({
+    id: documents.id,
+    slug: documents.slug,
+    title: documents.title,
+    category: documents.category,
+    wordCount: documents.wordCount,
+    updatedAt: documents.updatedAt,
+    viewCount: documents.viewCount,
+    upvotes: documents.upvotes,
+    downvotes: documents.downvotes,
+  }).from(documents).orderBy(desc(documents.updatedAt));
+  return docs;
+}
+
+// ─── Related Documents by Tag Similarity ──────────────────────────────────────────
+export async function getRelatedByTags(documentSlug: string, limit = 5) {
+  const db = await getDb();
+  if (!db) return [];
+  // Get tags for this document
+  const docTags = await db.select({ tag: documentTags.tag }).from(documentTags)
+    .where(eq(documentTags.documentSlug, documentSlug));
+  if (docTags.length === 0) return [];
+  const tagValues = docTags.map(t => t.tag);
+  // Find other documents sharing these tags, ranked by overlap count
+  const related = await db.execute(sql`
+    SELECT dt.documentSlug, d.title, d.slug, d.category, COUNT(*) as sharedTags
+    FROM document_tags dt
+    INNER JOIN documents d ON d.slug = dt.documentSlug
+    WHERE dt.tag IN (${sql.join(tagValues.map(t => sql`${t}`), sql`,`)})
+      AND dt.documentSlug != ${documentSlug}
+    GROUP BY dt.documentSlug, d.title, d.slug, d.category
+    ORDER BY sharedTags DESC
+    LIMIT ${limit}
+  `);
+  return (related as any)[0] || [];
 }

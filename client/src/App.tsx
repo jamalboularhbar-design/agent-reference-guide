@@ -65,6 +65,9 @@ import AdminWordCountPage from "./pages/AdminWordCountPage";
 import AdminBrokenLinksPage from "./pages/AdminBrokenLinksPage";
 import LeaderboardPage from "./pages/LeaderboardPage";
 import DiffViewerPage from "./pages/DiffViewerPage";
+import AdminReviewRemindersPage from "./pages/AdminReviewRemindersPage";
+import AdminBulkTagsPage from "./pages/AdminBulkTagsPage";
+import AdminContentHealthPage from "./pages/AdminContentHealthPage";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -126,6 +129,9 @@ function Router() {
       <Route path={"/admin/broken-links"} component={AdminBrokenLinksPage} />
       <Route path={"/leaderboard"} component={LeaderboardPage} />
       <Route path={"/diff/:slug"} component={DiffViewerPage} />
+      <Route path={"/admin/review-reminders"} component={AdminReviewRemindersPage} />
+      <Route path={"/admin/bulk-tags"} component={AdminBulkTagsPage} />
+      <Route path={"/admin/content-health"} component={AdminContentHealthPage} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />

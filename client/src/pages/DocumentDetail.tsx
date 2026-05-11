@@ -41,6 +41,10 @@ import AISummaryPanel from '@/components/AISummaryPanel';
 import TranslationPanel from '@/components/TranslationPanel';
 import ContextualHelp from '@/components/ContextualHelp';
 import { usePreferences } from '@/hooks/usePreferences';
+import DocumentQuiz from '@/components/DocumentQuiz';
+import DocumentAnnotations from '@/components/DocumentAnnotations';
+import RelatedByTags from '@/components/RelatedByTags';
+import TextToSpeech from '@/components/TextToSpeech';
 
 // Reading time calculation - uses configurable WPM from branding settings
 function getReadingTime(wordCount: number, wpm = 200): string {
@@ -593,6 +597,12 @@ export default function DocumentDetail() {
             {/* AI Summary & Translation */}
             <AISummaryPanel slug={document.slug} />
             <TranslationPanel slug={document.slug} />
+
+            {/* Batch 17: Quiz, Annotations, Related by Tags */}
+            <TextToSpeech content={document.content || ''} />
+            <DocumentQuiz documentId={document.id} content={document.content || ''} />
+            <DocumentAnnotations documentId={document.id} />
+            <RelatedByTags slug={document.slug} />
 
             {/* AI-Suggested Related Documents */}
             <AISuggestions slug={document.slug} />

@@ -5,7 +5,7 @@ import {
   Globe, CalendarClock, Paintbrush, Webhook, Users, Archive, 
   Columns3, Clock, MessageSquare, GripVertical, Copy, Download,
   Shield, FileJson, Activity, FolderInput, Merge, Image, Calendar,
-  BarChart2, LinkIcon
+  BarChart2, LinkIcon, CalendarCheck, Tags as TagsIcon, HeartPulse
 } from 'lucide-react';
 
 const adminLinks = [
@@ -39,6 +39,9 @@ const adminLinks = [
   { label: 'Category Covers', href: '/admin/category-covers', icon: Image },
   { label: 'Word Count Stats', href: '/admin/word-count', icon: BarChart2 },
   { label: 'Broken Links', href: '/admin/broken-links', icon: LinkIcon },
+  { label: 'Review Reminders', href: '/admin/review-reminders', icon: CalendarCheck },
+  { label: 'Bulk Tags', href: '/admin/bulk-tags', icon: TagsIcon },
+  { label: 'Content Health', href: '/admin/content-health', icon: HeartPulse },
 ];
 
 export default function AdminNavDropdown() {
