@@ -117,6 +117,8 @@ import AdminDuplicateDetectorPage from "./pages/AdminDuplicateDetectorPage";
 import AdminKnowledgeGraphPage from "./pages/AdminKnowledgeGraphPage";
 import AdminPerformanceBenchmarksPage from "./pages/AdminPerformanceBenchmarksPage";
 import UserCollectionsPage from "./pages/UserCollectionsPage";
+import LandingPage from "./pages/LandingPage";
+import AdminLeadsPage from "./pages/AdminLeadsPage";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -230,6 +232,8 @@ function Router() {
       <Route path={"/admin/knowledge-graph"} component={AdminKnowledgeGraphPage} />
       <Route path={"/admin/benchmarks"} component={AdminPerformanceBenchmarksPage} />
       <Route path={"/my-collections"} component={UserCollectionsPage} />
+      <Route path="/product" component={LandingPage} />
+      <Route path="/admin/leads" component={AdminLeadsPage} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />

@@ -283,3 +283,6 @@
 - [x] Add "Add to Collection" button on DocumentDetail page for quick collection management
 - [x] Integrate ReadingTimeEstimate component into DocumentDetail page near document title
 - [x] Fix tRPC "Unexpected token '<', <!doctype" error (Vite catch-all serving HTML for API routes during HMR restarts)
+- [x] OpsCanvas product landing page with hero, features, pricing, and lead capture form (/product)
+- [x] Leads database table and tRPC endpoints (submit, list, updateStatus)
+- [x] Admin Lead Management page (/admin/leads) with status pipeline

@@ -84,6 +84,7 @@ const adminLinks = [
   { label: 'Duplicate Detector+', href: '/admin/duplicate-detector', icon: Copy },
   { label: 'Knowledge Graph', href: '/admin/knowledge-graph', icon: Share2 },
   { label: 'Benchmarks', href: '/admin/benchmarks', icon: TrendingUp },
+  { label: 'Lead Management', href: '/admin/leads', icon: Users },
 ];
 
 export default function AdminNavDropdown() {

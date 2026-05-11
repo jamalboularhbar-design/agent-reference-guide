@@ -124,6 +124,7 @@ import {
   getUserDocCollections, createUserDocCollection, deleteUserDocCollection, getUserDocCollectionItems, addDocToCollection, removeDocFromCollection,
   getPerformanceBenchmarks, savePerformanceBenchmark,
   getKnowledgeGraphData,
+  createLead, getLeads, updateLeadStatus,
 } from "./db";
 import { invokeLLM } from "./_core/llm";
 import { notifyOwner } from "./_core/notification";
@@ -2380,6 +2381,26 @@ export const appRouter = router({
   // Batch 25: Knowledge Graph
   knowledgeGraph: router({
     data: adminProcedure.query(async () => getKnowledgeGraphData()),
+  }),
+  // Lead capture (public endpoint for landing page)
+  leads: router({
+    submit: publicProcedure.input(z.object({
+      fullName: z.string().min(1),
+      email: z.string().email(),
+      company: z.string().optional(),
+      jobTitle: z.string().optional(),
+      teamSize: z.string().optional(),
+      source: z.string().optional(),
+      message: z.string().optional(),
+    })).mutation(async ({ input }) => {
+      const id = await createLead(input);
+      return { success: true, id };
+    }),
+    list: adminProcedure.input(z.object({ status: z.string().optional() }).optional()).query(async ({ input }) => getLeads(input?.status)),
+    updateStatus: adminProcedure.input(z.object({ id: z.number(), status: z.string() })).mutation(async ({ input }) => {
+      await updateLeadStatus(input.id, input.status);
+      return { success: true };
+    }),
   }),
 });
 export type AppRouter = typeof appRouter;

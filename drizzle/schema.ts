@@ -1121,3 +1121,18 @@ export const performanceBenchmarks = mysqlTable("performance_benchmarks", {
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 export type PerformanceBenchmark = typeof performanceBenchmarks.$inferSelect;
+
+// ── Leads / Waitlist ──────────────────────────────────────
+export const leads = mysqlTable("leads", {
+  id: int("id").primaryKey().autoincrement(),
+  fullName: varchar("fullName", { length: 255 }).notNull(),
+  email: varchar("email", { length: 255 }).notNull(),
+  company: varchar("company", { length: 255 }),
+  jobTitle: varchar("jobTitle", { length: 255 }),
+  teamSize: varchar("teamSize", { length: 50 }),
+  source: varchar("source", { length: 100 }).default("landing_page"),
+  message: text("message"),
+  status: varchar("status", { length: 50 }).default("new").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+export type Lead = typeof leads.$inferSelect;

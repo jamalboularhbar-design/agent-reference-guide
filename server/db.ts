@@ -1,6 +1,6 @@
 import { eq, like, or, sql, desc, asc, count, and } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, documents, documentRatings, readingLists, readingListItems, searchAnalytics, documentTags, documentComments, documentVersions, customCategories, downloadHistory, announcements, activityLog, documentAuditTrail, bookmarkNotes, shareLinks, scheduledPublish, inlineComments, brandingSettings, webhooks, recentlyViewed, documentFeedback, categoryOrdering, documentSubscriptions, subscriptionNotifications, userReadingPosition, searchHistory, aiSummaries, documentTranslations, userPreferences, readingStreakLeaderboard, glossaryTerms, documentDependencies, readingGoals, readingProgress, documentTemplates, savedFilters, documentQuizzes, reviewReminders, documentAnnotations, documentCollections, collectionItems, workflowStatuses, workflowTransitions, documentWorkflowStatus, archivalPolicies, archivedDocuments, contentGapSuggestions, duplicateContentPairs, activityFeed, documentSnapshots, readingCorrelations, quizResults, documentSeoMeta, systemNotificationLog, adminPermissions, approvalSlaConfig, webhookEventLog, documentAccessRequests, onboardingProgress, documentCitations, readingSessions, documentQualityAudits, emailDigestConfig, documentMedia, workspaces, workspaceMembers, reviewSchedules, coAuthorActivity, migrationJobs, sentimentScores, retentionPolicies, accessibilityChecks, customReports, pushNotifications, templateMarketplace, templateRatings, complianceReports, documentChangeLog, userLandingPreference, bulkExportJobs, documentCrossReferences, userEngagementScorecard, scheduledAnnouncements, dashboardWidgetConfig, brokenLinkScans, savedSearchFilters, duplicateContentScans, userDocCollections, userDocCollectionItems, performanceBenchmarks } from "../drizzle/schema";
+import { InsertUser, users, documents, documentRatings, readingLists, readingListItems, searchAnalytics, documentTags, documentComments, documentVersions, customCategories, downloadHistory, announcements, activityLog, documentAuditTrail, bookmarkNotes, shareLinks, scheduledPublish, inlineComments, brandingSettings, webhooks, recentlyViewed, documentFeedback, categoryOrdering, documentSubscriptions, subscriptionNotifications, userReadingPosition, searchHistory, aiSummaries, documentTranslations, userPreferences, readingStreakLeaderboard, glossaryTerms, documentDependencies, readingGoals, readingProgress, documentTemplates, savedFilters, documentQuizzes, reviewReminders, documentAnnotations, documentCollections, collectionItems, workflowStatuses, workflowTransitions, documentWorkflowStatus, archivalPolicies, archivedDocuments, contentGapSuggestions, duplicateContentPairs, activityFeed, documentSnapshots, readingCorrelations, quizResults, documentSeoMeta, systemNotificationLog, adminPermissions, approvalSlaConfig, webhookEventLog, documentAccessRequests, onboardingProgress, documentCitations, readingSessions, documentQualityAudits, emailDigestConfig, documentMedia, workspaces, workspaceMembers, reviewSchedules, coAuthorActivity, migrationJobs, sentimentScores, retentionPolicies, accessibilityChecks, customReports, pushNotifications, templateMarketplace, templateRatings, complianceReports, documentChangeLog, userLandingPreference, bulkExportJobs, documentCrossReferences, userEngagementScorecard, scheduledAnnouncements, dashboardWidgetConfig, brokenLinkScans, savedSearchFilters, duplicateContentScans, userDocCollections, userDocCollectionItems, performanceBenchmarks, leads } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -4505,4 +4505,27 @@ export async function getKnowledgeGraphData() {
   const nodes = docs.map(d => ({ id: d.id, label: d.title, slug: d.slug, group: d.category }));
   const edges = refs.map(r => ({ source: r.sourceDocId, target: r.targetDocId, type: r.status }));
   return { nodes, edges };
+}
+
+// ── Leads / Waitlist ──────────────────────────────────────
+export async function createLead(data: { fullName: string; email: string; company?: string; jobTitle?: string; teamSize?: string; source?: string; message?: string }) {
+  const db = await getDb();
+  if (!db) return null;
+  const [result] = await db.insert(leads).values({ ...data });
+  return result.insertId;
+}
+
+export async function getLeads(status?: string) {
+  const db = await getDb();
+  if (!db) return [];
+  if (status) {
+    return db.select().from(leads).where(eq(leads.status, status)).orderBy(desc(leads.createdAt));
+  }
+  return db.select().from(leads).orderBy(desc(leads.createdAt));
+}
+
+export async function updateLeadStatus(id: number, newStatus: string) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(leads).set({ status: newStatus }).where(eq(leads.id, id));
 }
