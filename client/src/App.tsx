@@ -105,6 +105,12 @@ import ReadingPathPage from "./pages/ReadingPathPage";
 import NotificationCenterPage from "./pages/NotificationCenterPage";
 import TemplateMarketplacePage from "./pages/TemplateMarketplacePage";
 import AdminComplianceReportPage from "./pages/AdminComplianceReportPage";
+import AdminChangeLogPage from "./pages/AdminChangeLogPage";
+import LandingPreferencePage from "./pages/LandingPreferencePage";
+import AdminCrossReferencesPage from "./pages/AdminCrossReferencesPage";
+import AdminEngagementScorecardsPage from "./pages/AdminEngagementScorecardsPage";
+import AdminAnnouncementSchedulerPage from "./pages/AdminAnnouncementSchedulerPage";
+import UserEngagementScorePage from "./pages/UserEngagementScorePage";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -206,6 +212,12 @@ function Router() {
       <Route path={"/notifications"} component={NotificationCenterPage} />
       <Route path={"/templates/marketplace"} component={TemplateMarketplacePage} />
       <Route path={"/admin/compliance-reports"} component={AdminComplianceReportPage} />
+      <Route path={"/admin/change-log"} component={AdminChangeLogPage} />
+      <Route path={"/landing-preference"} component={LandingPreferencePage} />
+      <Route path={"/admin/cross-references"} component={AdminCrossReferencesPage} />
+      <Route path={"/admin/engagement-scorecards"} component={AdminEngagementScorecardsPage} />
+      <Route path={"/admin/announcement-scheduler"} component={AdminAnnouncementSchedulerPage} />
+      <Route path={"/my-engagement"} component={UserEngagementScorePage} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />

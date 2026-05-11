@@ -7,7 +7,8 @@ import {
   Shield, FileJson, Activity, FolderInput, Merge, Image, Calendar,
   BarChart2, LinkIcon, CalendarCheck, Tags as TagsIcon, HeartPulse,
   Workflow, FileSpreadsheet, Lightbulb, LayoutDashboard, Search, Bell,
-  Building2, Code2, ArrowRightLeft, SmilePlus, Accessibility, FileBarChart
+  Building2, Code2, ArrowRightLeft, SmilePlus, Accessibility, FileBarChart,
+  History, Link2, Trophy, Megaphone
 } from 'lucide-react';
 
 const adminLinks = [
@@ -73,6 +74,10 @@ const adminLinks = [
   { label: 'Accessibility Checker', href: '/admin/accessibility', icon: Accessibility },
   { label: 'Custom Reports', href: '/admin/custom-reports', icon: FileBarChart },
   { label: 'Compliance Reports', href: '/admin/compliance-reports', icon: Shield },
+  { label: 'Change Log', href: '/admin/change-log', icon: History },
+  { label: 'Cross-References', href: '/admin/cross-references', icon: Link2 },
+  { label: 'Engagement Scorecards', href: '/admin/engagement-scorecards', icon: Trophy },
+  { label: 'Announcement Scheduler', href: '/admin/announcement-scheduler', icon: Megaphone },
 ];
 
 export default function AdminNavDropdown() {

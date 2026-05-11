@@ -123,7 +123,7 @@ export default function AdminHeatmapPage() {
         {heatmapData && heatmapData.length > 0 && (
           <div className="mt-8 grid grid-cols-3 gap-4">
             <div className="p-4 rounded-xl border border-border/50 text-center">
-              <p className="text-2xl font-bold text-foreground">{heatmapData.reduce((sum, e) => sum + e.count, 0)}</p>
+              <p className="text-2xl font-bold text-foreground">{heatmapData.reduce((sum: number, e: any) => sum + e.count, 0)}</p>
               <p className="text-xs text-muted-foreground mt-1">Total Views ({days}d)</p>
             </div>
             <div className="p-4 rounded-xl border border-border/50 text-center">

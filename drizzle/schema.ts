@@ -950,3 +950,87 @@ export const complianceReports = mysqlTable("compliance_reports", {
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 export type ComplianceReport = typeof complianceReports.$inferSelect;
+
+// ===== BATCH 24 =====
+
+// Document change log timeline
+export const documentChangeLog = mysqlTable("document_change_log", {
+  id: int("id").autoincrement().primaryKey(),
+  documentId: int("documentId").notNull(),
+  documentTitle: varchar("documentTitle", { length: 500 }),
+  changeType: varchar("changeType", { length: 50 }).notNull(), // created, edited, published, archived, tagged, categorized, reviewed
+  changeDescription: text("changeDescription"),
+  changedBy: varchar("changedBy", { length: 255 }).notNull(),
+  changedByName: varchar("changedByName", { length: 255 }),
+  metadata: text("metadata"), // JSON: additional change details
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+export type DocumentChangeLog = typeof documentChangeLog.$inferSelect;
+
+// User landing page preference
+export const userLandingPreference = mysqlTable("user_landing_preference", {
+  id: int("id").autoincrement().primaryKey(),
+  userOpenId: varchar("userOpenId", { length: 255 }).notNull().unique(),
+  landingPage: varchar("landingPage", { length: 100 }).notNull().default("/"),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type UserLandingPreference = typeof userLandingPreference.$inferSelect;
+
+// Bulk export jobs
+export const bulkExportJobs = mysqlTable("bulk_export_jobs", {
+  id: int("id").autoincrement().primaryKey(),
+  requestedBy: varchar("requestedBy", { length: 255 }).notNull(),
+  format: varchar("format", { length: 20 }).notNull().default("markdown"),
+  documentIds: text("documentIds").notNull(), // JSON array of doc IDs
+  status: varchar("status", { length: 50 }).notNull().default("pending"),
+  fileUrl: text("fileUrl"),
+  totalDocs: int("totalDocs").notNull().default(0),
+  processedDocs: int("processedDocs").notNull().default(0),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  completedAt: timestamp("completedAt"),
+});
+export type BulkExportJob = typeof bulkExportJobs.$inferSelect;
+
+// Document cross-references (auto-detected related docs)
+export const documentCrossReferences = mysqlTable("document_cross_references", {
+  id: int("id").autoincrement().primaryKey(),
+  sourceDocId: int("sourceDocId").notNull(),
+  targetDocId: int("targetDocId").notNull(),
+  relevanceScore: float("relevanceScore").notNull().default(0),
+  reason: varchar("reason", { length: 500 }),
+  status: varchar("status", { length: 50 }).notNull().default("suggested"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+export type DocumentCrossReference = typeof documentCrossReferences.$inferSelect;
+
+// User engagement scorecards
+export const userEngagementScorecard = mysqlTable("user_engagement_scorecard", {
+  id: int("id").autoincrement().primaryKey(),
+  userOpenId: varchar("userOpenId", { length: 255 }).notNull().unique(),
+  userName: varchar("userName", { length: 255 }),
+  docsRead: int("docsRead").notNull().default(0),
+  quizzesTaken: int("quizzesTaken").notNull().default(0),
+  commentsMade: int("commentsMade").notNull().default(0),
+  streakDays: int("streakDays").notNull().default(0),
+  bookmarkCount: int("bookmarkCount").notNull().default(0),
+  totalTimeMinutes: int("totalTimeMinutes").notNull().default(0),
+  engagementScore: float("engagementScore").notNull().default(0),
+  lastActiveAt: timestamp("lastActiveAt"),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type UserEngagementScorecard = typeof userEngagementScorecard.$inferSelect;
+
+// Scheduled announcements
+export const scheduledAnnouncements = mysqlTable("scheduled_announcements", {
+  id: int("id").autoincrement().primaryKey(),
+  title: varchar("title", { length: 500 }).notNull(),
+  content: text("content").notNull(),
+  type: varchar("type", { length: 50 }).notNull().default("info"),
+  scheduledFor: timestamp("scheduledFor").notNull(),
+  expiresAt: timestamp("expiresAt"),
+  createdBy: varchar("createdBy", { length: 255 }).notNull(),
+  status: varchar("status", { length: 50 }).notNull().default("scheduled"),
+  publishedAt: timestamp("publishedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+export type ScheduledAnnouncement = typeof scheduledAnnouncements.$inferSelect;

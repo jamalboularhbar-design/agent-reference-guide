@@ -1,6 +1,6 @@
 import { eq, like, or, sql, desc, asc, count, and } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, documents, documentRatings, readingLists, readingListItems, searchAnalytics, documentTags, documentComments, documentVersions, customCategories, downloadHistory, announcements, activityLog, documentAuditTrail, bookmarkNotes, shareLinks, scheduledPublish, inlineComments, brandingSettings, webhooks, recentlyViewed, documentFeedback, categoryOrdering, documentSubscriptions, subscriptionNotifications, userReadingPosition, searchHistory, aiSummaries, documentTranslations, userPreferences, readingStreakLeaderboard, glossaryTerms, documentDependencies, readingGoals, readingProgress, documentTemplates, savedFilters, documentQuizzes, reviewReminders, documentAnnotations, documentCollections, collectionItems, workflowStatuses, workflowTransitions, documentWorkflowStatus, archivalPolicies, archivedDocuments, contentGapSuggestions, duplicateContentPairs, activityFeed, documentSnapshots, readingCorrelations, quizResults, documentSeoMeta, systemNotificationLog, adminPermissions, approvalSlaConfig, webhookEventLog, documentAccessRequests, onboardingProgress, documentCitations, readingSessions, documentQualityAudits, emailDigestConfig, documentMedia, workspaces, workspaceMembers, reviewSchedules, coAuthorActivity, migrationJobs, sentimentScores, retentionPolicies, accessibilityChecks, customReports, pushNotifications, templateMarketplace, templateRatings, complianceReports } from "../drizzle/schema";
+import { InsertUser, users, documents, documentRatings, readingLists, readingListItems, searchAnalytics, documentTags, documentComments, documentVersions, customCategories, downloadHistory, announcements, activityLog, documentAuditTrail, bookmarkNotes, shareLinks, scheduledPublish, inlineComments, brandingSettings, webhooks, recentlyViewed, documentFeedback, categoryOrdering, documentSubscriptions, subscriptionNotifications, userReadingPosition, searchHistory, aiSummaries, documentTranslations, userPreferences, readingStreakLeaderboard, glossaryTerms, documentDependencies, readingGoals, readingProgress, documentTemplates, savedFilters, documentQuizzes, reviewReminders, documentAnnotations, documentCollections, collectionItems, workflowStatuses, workflowTransitions, documentWorkflowStatus, archivalPolicies, archivedDocuments, contentGapSuggestions, duplicateContentPairs, activityFeed, documentSnapshots, readingCorrelations, quizResults, documentSeoMeta, systemNotificationLog, adminPermissions, approvalSlaConfig, webhookEventLog, documentAccessRequests, onboardingProgress, documentCitations, readingSessions, documentQualityAudits, emailDigestConfig, documentMedia, workspaces, workspaceMembers, reviewSchedules, coAuthorActivity, migrationJobs, sentimentScores, retentionPolicies, accessibilityChecks, customReports, pushNotifications, templateMarketplace, templateRatings, complianceReports, documentChangeLog, userLandingPreference, bulkExportJobs, documentCrossReferences, userEngagementScorecard, scheduledAnnouncements } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -2144,15 +2144,14 @@ export async function getReadingHeatmap(days = 30) {
   const db = await getDb();
   if (!db) return [];
 
-  return db.select({
-    hour: sql<number>`HOUR(${activityLog.createdAt})`,
-    dayOfWeek: sql<number>`DAYOFWEEK(${activityLog.createdAt})`,
-    count: count(),
-  })
-    .from(activityLog)
-    .where(sql`${activityLog.action} = 'view' AND ${activityLog.createdAt} >= DATE_SUB(NOW(), INTERVAL ${sql.raw(String(days))} DAY)`)
-    .groupBy(sql`HOUR(${activityLog.createdAt})`, sql`DAYOFWEEK(${activityLog.createdAt})`)
-    .orderBy(sql`DAYOFWEEK(${activityLog.createdAt})`, sql`HOUR(${activityLog.createdAt})`);
+  const result = await db.execute(sql`
+    SELECT HOUR(createdAt) as hour, DAYOFWEEK(createdAt) as dayOfWeek, COUNT(*) as count
+    FROM activity_log
+    WHERE action = 'view' AND createdAt >= DATE_SUB(NOW(), INTERVAL ${sql.raw(String(days))} DAY)
+    GROUP BY hour, dayOfWeek
+    ORDER BY dayOfWeek, hour
+  `);
+  return (result as any)[0] || [];
 }
 
 // ─── Batch 15: Document Subscriptions ────────────────────────────────────────
@@ -3257,46 +3256,45 @@ export async function saveCitation(documentId: number, style: string, citation: 
 export async function getReadingActivityOverTime(days = 30) {
   const db = await getDb();
   if (!db) return [];
-  return db.select({
-    date: sql<string>`DATE(${recentlyViewed.viewedAt})`,
-    readers: sql<number>`COUNT(DISTINCT ${recentlyViewed.visitorId})`,
-    reads: count(),
-  })
-    .from(recentlyViewed)
-    .where(sql`${recentlyViewed.viewedAt} >= DATE_SUB(NOW(), INTERVAL ${sql.raw(String(days))} DAY)`)
-    .groupBy(sql`DATE(${recentlyViewed.viewedAt})`)
-    .orderBy(sql`DATE(${recentlyViewed.viewedAt})`);
+  const result = await db.execute(sql`
+    SELECT DATE(viewedAt) as date, COUNT(DISTINCT visitorId) as readers, COUNT(*) as reads
+    FROM recently_viewed
+    WHERE viewedAt >= DATE_SUB(NOW(), INTERVAL ${sql.raw(String(days))} DAY)
+    GROUP BY date
+    ORDER BY date
+  `);
+  return (result as any)[0] || [];
 }
 
 // Engagement over time (ratings per day)
 export async function getEngagementOverTime(days = 30) {
   const db = await getDb();
   if (!db) return [];
-  return db.select({
-    date: sql<string>`DATE(${documentRatings.createdAt})`,
-    upvotes: sql<number>`SUM(CASE WHEN ${documentRatings.rating} = 'up' THEN 1 ELSE 0 END)`,
-    downvotes: sql<number>`SUM(CASE WHEN ${documentRatings.rating} = 'down' THEN 1 ELSE 0 END)`,
-    total: count(),
-  })
-    .from(documentRatings)
-    .where(sql`${documentRatings.createdAt} >= DATE_SUB(NOW(), INTERVAL ${sql.raw(String(days))} DAY)`)
-    .groupBy(sql`DATE(${documentRatings.createdAt})`)
-    .orderBy(sql`DATE(${documentRatings.createdAt})`);
+  const result = await db.execute(sql`
+    SELECT DATE(createdAt) as date,
+      SUM(CASE WHEN rating = 'up' THEN 1 ELSE 0 END) as upvotes,
+      SUM(CASE WHEN rating = 'down' THEN 1 ELSE 0 END) as downvotes,
+      COUNT(*) as total
+    FROM document_ratings
+    WHERE createdAt >= DATE_SUB(NOW(), INTERVAL ${sql.raw(String(days))} DAY)
+    GROUP BY date
+    ORDER BY date
+  `);
+  return (result as any)[0] || [];
 }
 
 // Activity breakdown by action type over time
 export async function getActivityBreakdown(days = 30) {
   const db = await getDb();
   if (!db) return [];
-  return db.select({
-    date: sql<string>`DATE(${activityLog.createdAt})`,
-    action: activityLog.action,
-    count: count(),
-  })
-    .from(activityLog)
-    .where(sql`${activityLog.createdAt} >= DATE_SUB(NOW(), INTERVAL ${sql.raw(String(days))} DAY)`)
-    .groupBy(sql`DATE(${activityLog.createdAt})`, activityLog.action)
-    .orderBy(sql`DATE(${activityLog.createdAt})`);
+  const result = await db.execute(sql`
+    SELECT DATE(createdAt) as date, action, COUNT(*) as count
+    FROM activity_log
+    WHERE createdAt >= DATE_SUB(NOW(), INTERVAL ${sql.raw(String(days))} DAY)
+    GROUP BY date, action
+    ORDER BY date
+  `);
+  return (result as any)[0] || [];
 }
 
 // Top documents by engagement (views + ratings combined)
@@ -3322,15 +3320,15 @@ export async function getTopDocsByEngagement(limit = 10) {
 export async function getContentGrowthOverTime(days = 90) {
   const db = await getDb();
   if (!db) return [];
-  return db.select({
-    date: sql<string>`DATE(${documents.createdAt})`,
-    newDocs: count(),
-    cumulativeTotal: sql<number>`(SELECT COUNT(*) FROM documents d2 WHERE DATE(d2.createdAt) <= DATE(${documents.createdAt}))`,
-  })
-    .from(documents)
-    .where(sql`${documents.createdAt} >= DATE_SUB(NOW(), INTERVAL ${sql.raw(String(days))} DAY)`)
-    .groupBy(sql`DATE(${documents.createdAt})`)
-    .orderBy(sql`DATE(${documents.createdAt})`);
+  const result = await db.execute(sql`
+    SELECT DATE(createdAt) as date, COUNT(*) as newDocs,
+      (SELECT COUNT(*) FROM documents d2 WHERE DATE(d2.createdAt) <= DATE(documents.createdAt)) as cumulativeTotal
+    FROM documents
+    WHERE createdAt >= DATE_SUB(NOW(), INTERVAL ${sql.raw(String(days))} DAY)
+    GROUP BY date
+    ORDER BY date
+  `);
+  return (result as any)[0] || [];
 }
 
 // Analytics summary stats
@@ -3370,15 +3368,14 @@ export async function getAnalyticsSummary() {
 export async function getHourlyActivityHeatmap(days = 30) {
   const db = await getDb();
   if (!db) return [];
-  return db.select({
-    dayOfWeek: sql<number>`DAYOFWEEK(${activityLog.createdAt})`,
-    hourOfDay: sql<number>`HOUR(${activityLog.createdAt})`,
-    count: count(),
-  })
-    .from(activityLog)
-    .where(sql`${activityLog.createdAt} >= DATE_SUB(NOW(), INTERVAL ${sql.raw(String(days))} DAY)`)
-    .groupBy(sql`DAYOFWEEK(${activityLog.createdAt})`, sql`HOUR(${activityLog.createdAt})`)
-    .orderBy(sql`DAYOFWEEK(${activityLog.createdAt})`, sql`HOUR(${activityLog.createdAt})`);
+  const result = await db.execute(sql`
+    SELECT DAYOFWEEK(createdAt) as dayOfWeek, HOUR(createdAt) as hourOfDay, COUNT(*) as count
+    FROM activity_log
+    WHERE createdAt >= DATE_SUB(NOW(), INTERVAL ${sql.raw(String(days))} DAY)
+    GROUP BY dayOfWeek, hourOfDay
+    ORDER BY dayOfWeek, hourOfDay
+  `);
+  return (result as any)[0] || [];
 }
 
 
@@ -4091,5 +4088,165 @@ export async function deleteComplianceReport(id: number) {
   const db = await getDb();
   if (!db) return [] as any;
   await db.delete(complianceReports).where(eq(complianceReports.id, id));
+  return { success: true };
+}
+
+
+// ===== BATCH 24 =====
+
+// Feature 1: GROUP BY audit - already fixed above (raw SQL approach)
+
+// Feature 4: Document change log timeline
+export async function getDocumentChangeLog(filters: { documentId?: number; changeType?: string; changedBy?: string; days?: number } = {}) {
+  const db = await getDb();
+  if (!db) return [];
+  const conditions: any[] = [];
+  if (filters.documentId) conditions.push(eq(documentChangeLog.documentId, filters.documentId));
+  if (filters.changeType) conditions.push(eq(documentChangeLog.changeType, filters.changeType));
+  if (filters.changedBy) conditions.push(eq(documentChangeLog.changedBy, filters.changedBy));
+  if (filters.days) conditions.push(sql`${documentChangeLog.createdAt} >= DATE_SUB(NOW(), INTERVAL ${sql.raw(String(filters.days))} DAY)`);
+  const query = db.select().from(documentChangeLog).orderBy(desc(documentChangeLog.createdAt)).limit(200);
+  if (conditions.length > 0) return query.where(and(...conditions));
+  return query;
+}
+
+export async function addDocumentChangeLog(entry: { documentId: number; documentTitle?: string; changeType: string; changeDescription?: string; changedBy: string; changedByName?: string; metadata?: string }) {
+  const db = await getDb();
+  if (!db) return null;
+  await db.insert(documentChangeLog).values(entry);
+  return { success: true };
+}
+
+// Feature 5: User landing page preference
+export async function getUserLandingPreference(userOpenId: string) {
+  const db = await getDb();
+  if (!db) return null;
+  const rows = await db.select().from(userLandingPreference).where(eq(userLandingPreference.userOpenId, userOpenId)).limit(1);
+  return rows[0] || null;
+}
+
+export async function setUserLandingPreference(userOpenId: string, landingPage: string) {
+  const db = await getDb();
+  if (!db) return null;
+  const existing = await db.select().from(userLandingPreference).where(eq(userLandingPreference.userOpenId, userOpenId)).limit(1);
+  if (existing.length > 0) {
+    await db.update(userLandingPreference).set({ landingPage }).where(eq(userLandingPreference.userOpenId, userOpenId));
+  } else {
+    await db.insert(userLandingPreference).values({ userOpenId, landingPage });
+  }
+  return { success: true };
+}
+
+// Feature 6: Admin bulk export tool
+export async function createBulkExportJob(requestedBy: string, format: string, documentIds: number[]) {
+  const db = await getDb();
+  if (!db) return null;
+  await db.insert(bulkExportJobs).values({
+    requestedBy,
+    format,
+    documentIds: JSON.stringify(documentIds),
+    totalDocs: documentIds.length,
+    status: "pending",
+  });
+  const rows = await db.select().from(bulkExportJobs).where(eq(bulkExportJobs.requestedBy, requestedBy)).orderBy(desc(bulkExportJobs.createdAt)).limit(1);
+  return rows[0] || null;
+}
+
+export async function getBulkExportJobs(requestedBy?: string) {
+  const db = await getDb();
+  if (!db) return [];
+  if (requestedBy) return db.select().from(bulkExportJobs).where(eq(bulkExportJobs.requestedBy, requestedBy)).orderBy(desc(bulkExportJobs.createdAt)).limit(50);
+  return db.select().from(bulkExportJobs).orderBy(desc(bulkExportJobs.createdAt)).limit(50);
+}
+
+export async function updateBulkExportJob(id: number, updates: { status?: string; fileUrl?: string; processedDocs?: number; completedAt?: Date }) {
+  const db = await getDb();
+  if (!db) return null;
+  await db.update(bulkExportJobs).set(updates as any).where(eq(bulkExportJobs.id, id));
+  return { success: true };
+}
+
+// Feature 7: Document cross-reference linker
+export async function getDocumentCrossReferences(docId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(documentCrossReferences)
+    .where(or(eq(documentCrossReferences.sourceDocId, docId), eq(documentCrossReferences.targetDocId, docId)))
+    .orderBy(desc(documentCrossReferences.relevanceScore));
+}
+
+export async function addDocumentCrossReference(sourceDocId: number, targetDocId: number, relevanceScore: number, reason?: string) {
+  const db = await getDb();
+  if (!db) return null;
+  await db.insert(documentCrossReferences).values({ sourceDocId, targetDocId, relevanceScore, reason: reason || null });
+  return { success: true };
+}
+
+export async function updateCrossReferenceStatus(id: number, status: string) {
+  const db = await getDb();
+  if (!db) return null;
+  await db.update(documentCrossReferences).set({ status }).where(eq(documentCrossReferences.id, id));
+  return { success: true };
+}
+
+export async function getAllCrossReferences() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(documentCrossReferences).orderBy(desc(documentCrossReferences.relevanceScore)).limit(200);
+}
+
+// Feature 8: User engagement scorecard
+export async function getUserEngagementScorecards(limit = 50) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(userEngagementScorecard).orderBy(desc(userEngagementScorecard.engagementScore)).limit(limit);
+}
+
+export async function getUserEngagementScorecard(userOpenId: string) {
+  const db = await getDb();
+  if (!db) return null;
+  const rows = await db.select().from(userEngagementScorecard).where(eq(userEngagementScorecard.userOpenId, userOpenId)).limit(1);
+  return rows[0] || null;
+}
+
+export async function upsertUserEngagementScorecard(userOpenId: string, data: { userName?: string; docsRead?: number; quizzesTaken?: number; commentsMade?: number; streakDays?: number; bookmarkCount?: number; totalTimeMinutes?: number; engagementScore?: number }) {
+  const db = await getDb();
+  if (!db) return null;
+  const existing = await db.select().from(userEngagementScorecard).where(eq(userEngagementScorecard.userOpenId, userOpenId)).limit(1);
+  if (existing.length > 0) {
+    await db.update(userEngagementScorecard).set({ ...data, lastActiveAt: new Date() }).where(eq(userEngagementScorecard.userOpenId, userOpenId));
+  } else {
+    await db.insert(userEngagementScorecard).values({ userOpenId, ...data, lastActiveAt: new Date() } as any);
+  }
+  return { success: true };
+}
+
+// Feature 10: Admin announcement scheduling
+export async function getScheduledAnnouncements(status?: string) {
+  const db = await getDb();
+  if (!db) return [];
+  if (status) return db.select().from(scheduledAnnouncements).where(eq(scheduledAnnouncements.status, status)).orderBy(desc(scheduledAnnouncements.scheduledFor));
+  return db.select().from(scheduledAnnouncements).orderBy(desc(scheduledAnnouncements.scheduledFor)).limit(100);
+}
+
+export async function createScheduledAnnouncement(data: { title: string; content: string; type: string; scheduledFor: Date; expiresAt?: Date; createdBy: string }) {
+  const db = await getDb();
+  if (!db) return null;
+  await db.insert(scheduledAnnouncements).values(data as any);
+  const rows = await db.select().from(scheduledAnnouncements).where(eq(scheduledAnnouncements.createdBy, data.createdBy)).orderBy(desc(scheduledAnnouncements.createdAt)).limit(1);
+  return rows[0] || null;
+}
+
+export async function updateScheduledAnnouncement(id: number, updates: { title?: string; content?: string; type?: string; scheduledFor?: Date; expiresAt?: Date; status?: string; publishedAt?: Date }) {
+  const db = await getDb();
+  if (!db) return null;
+  await db.update(scheduledAnnouncements).set(updates as any).where(eq(scheduledAnnouncements.id, id));
+  return { success: true };
+}
+
+export async function deleteScheduledAnnouncement(id: number) {
+  const db = await getDb();
+  if (!db) return null;
+  await db.delete(scheduledAnnouncements).where(eq(scheduledAnnouncements.id, id));
   return { success: true };
 }

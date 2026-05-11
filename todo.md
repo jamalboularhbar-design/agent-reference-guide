@@ -258,3 +258,13 @@
 - [x] Admin audit compliance report (downloadable PDF report of access requests, retention executions, accessibility scans for date range)
 - [x] Fix: SQL GROUP BY error on download_history DATE(createdAt) in advanced analytics
 - [x] Fix: SQL GROUP BY error on activity_log DATE(createdAt) in advanced analytics
+- [x] Fix: Audit and rewrite all remaining Drizzle GROUP BY DATE() queries to use db.execute raw SQL (4 remaining)
+- [x] React error boundaries around admin dashboard analytics widgets (prevent one failing query from blanking the page)
+- [x] Loading skeleton shimmer placeholders for analytics charts and dashboard stat cards
+- [x] Admin document change log timeline (visual timeline of all changes across all documents with filters by author/date/type)
+- [x] User preference for default landing page (choose home, dashboard, or specific category as default after login)
+- [x] Admin bulk export tool (export selected documents as ZIP with Markdown/HTML/PDF format options)
+- [x] Document cross-reference linker (auto-detect and suggest links between related documents based on content similarity)
+- [x] Admin user engagement scorecard (per-user metrics: docs read, quizzes taken, comments made, streak days)
+- [x] Document print-optimized view (clean print stylesheet with proper page breaks, headers, footers for physical copies)
+- [x] Admin announcement scheduling (schedule announcements for future publish with preview and auto-expire)

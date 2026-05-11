@@ -109,6 +109,12 @@ import {
   getPushNotifications, getUnreadPushCount, createPushNotification, markPushNotificationRead, markAllPushRead, deletePushNotification,
   listMarketplaceTemplates, getMarketplaceTemplate, submitMarketplaceTemplate, rateTemplate, getTemplateRatings, incrementMarketplaceTemplateUsage,
   listComplianceReports, generateComplianceReport, getComplianceReport, deleteComplianceReport,
+  getDocumentChangeLog, addDocumentChangeLog,
+  getUserLandingPreference, setUserLandingPreference,
+  createBulkExportJob, getBulkExportJobs, updateBulkExportJob,
+  getDocumentCrossReferences, addDocumentCrossReference, updateCrossReferenceStatus, getAllCrossReferences,
+  getUserEngagementScorecards, getUserEngagementScorecard, upsertUserEngagementScorecard,
+  getScheduledAnnouncements, createScheduledAnnouncement, updateScheduledAnnouncement, deleteScheduledAnnouncement,
 } from "./db";
 import { invokeLLM } from "./_core/llm";
 import { notifyOwner } from "./_core/notification";
@@ -1800,6 +1806,10 @@ export const appRouter = router({
 
   crossReferences: router({
     allTitles: publicProcedure.query(() => getAllDocumentTitlesAndSlugs()),
+    forDocument: publicProcedure.input(z.object({ docId: z.number() })).query(async ({ input }) => getDocumentCrossReferences(input.docId)),
+    all: adminProcedure.query(async () => getAllCrossReferences()),
+    add: adminProcedure.input(z.object({ sourceDocId: z.number(), targetDocId: z.number(), relevanceScore: z.number(), reason: z.string().optional() })).mutation(async ({ input }) => addDocumentCrossReference(input.sourceDocId, input.targetDocId, input.relevanceScore, input.reason)),
+    updateStatus: adminProcedure.input(z.object({ id: z.number(), status: z.string() })).mutation(async ({ input }) => updateCrossReferenceStatus(input.id, input.status)),
   }),
 
   userDashboard: router({
@@ -2233,7 +2243,37 @@ export const appRouter = router({
     generate: adminProcedure.input(z.object({ title: z.string(), dateFrom: z.string(), dateTo: z.string() })).mutation(async ({ ctx, input }) => generateComplianceReport({ title: input.title, dateFrom: new Date(input.dateFrom), dateTo: new Date(input.dateTo), generatedBy: ctx.user.openId })),
     get: adminProcedure.input(z.object({ id: z.number() })).query(async ({ input }) => getComplianceReport(input.id)),
     delete: adminProcedure.input(z.object({ id: z.number() })).mutation(async ({ input }) => deleteComplianceReport(input.id)),
+   }),
+  // ===== Batch 24 =====
+  changeLog: router({
+    list: adminProcedure.input(z.object({ documentId: z.number().optional(), changeType: z.string().optional(), changedBy: z.string().optional(), days: z.number().optional() }).optional()).query(async ({ input }) => getDocumentChangeLog(input || {})),
+    add: adminProcedure.input(z.object({ documentId: z.number(), documentTitle: z.string().optional(), changeType: z.string(), changeDescription: z.string().optional(), changedBy: z.string(), changedByName: z.string().optional(), metadata: z.string().optional() })).mutation(async ({ input }) => addDocumentChangeLog(input)),
   }),
-
+  landingPreference: router({
+    get: protectedProcedure.query(async ({ ctx }) => getUserLandingPreference(ctx.user.openId)),
+    set: protectedProcedure.input(z.object({ landingPage: z.string() })).mutation(async ({ ctx, input }) => setUserLandingPreference(ctx.user.openId, input.landingPage)),
+  }),
+  bulkExport: router({
+    create: adminProcedure.input(z.object({ format: z.string(), documentIds: z.array(z.number()) })).mutation(async ({ ctx, input }) => createBulkExportJob(ctx.user.openId, input.format, input.documentIds)),
+    list: adminProcedure.query(async ({ ctx }) => getBulkExportJobs(ctx.user.openId)),
+    update: adminProcedure.input(z.object({ id: z.number(), status: z.string().optional(), fileUrl: z.string().optional(), processedDocs: z.number().optional() })).mutation(async ({ input }) => updateBulkExportJob(input.id, input)),
+  }),
+  engagementScorecard: router({
+    list: adminProcedure.input(z.object({ limit: z.number().optional() }).optional()).query(async ({ input }) => getUserEngagementScorecards(input?.limit)),
+    get: protectedProcedure.query(async ({ ctx }) => getUserEngagementScorecard(ctx.user.openId)),
+    upsert: adminProcedure.input(z.object({ userOpenId: z.string(), userName: z.string().optional(), docsRead: z.number().optional(), quizzesTaken: z.number().optional(), commentsMade: z.number().optional(), streakDays: z.number().optional(), bookmarkCount: z.number().optional(), totalTimeMinutes: z.number().optional(), engagementScore: z.number().optional() })).mutation(async ({ input }) => upsertUserEngagementScorecard(input.userOpenId, input)),
+  }),
+  scheduledAnnouncements: router({
+    list: adminProcedure.input(z.object({ status: z.string().optional() }).optional()).query(async ({ input }) => getScheduledAnnouncements(input?.status)),
+    create: adminProcedure.input(z.object({ title: z.string(), content: z.string(), type: z.string(), scheduledFor: z.string(), expiresAt: z.string().optional() })).mutation(async ({ ctx, input }) => createScheduledAnnouncement({ ...input, scheduledFor: new Date(input.scheduledFor), expiresAt: input.expiresAt ? new Date(input.expiresAt) : undefined, createdBy: ctx.user.openId })),
+    update: adminProcedure.input(z.object({ id: z.number(), title: z.string().optional(), content: z.string().optional(), type: z.string().optional(), scheduledFor: z.string().optional(), expiresAt: z.string().optional(), status: z.string().optional() })).mutation(async ({ input }) => {
+      const updates: any = { ...input };
+      delete updates.id;
+      if (updates.scheduledFor) updates.scheduledFor = new Date(updates.scheduledFor);
+      if (updates.expiresAt) updates.expiresAt = new Date(updates.expiresAt);
+      return updateScheduledAnnouncement(input.id, updates);
+    }),
+    delete: adminProcedure.input(z.object({ id: z.number() })).mutation(async ({ input }) => deleteScheduledAnnouncement(input.id)),
+  }),
 });
 export type AppRouter = typeof appRouter;
