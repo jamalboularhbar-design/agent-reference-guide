@@ -1,4 +1,4 @@
-import { Sparkles, List, BookOpen, FileText, Tag, Columns, Book, Target, Code, Bookmark, Sun, Moon, Clock, Library, Bell, Network, Trophy, Settings } from 'lucide-react';
+import { Sparkles, List, BookOpen, FileText, Tag, Columns, Book, Target, Code, Bookmark, Sun, Moon, Clock, Library, Bell, Network, Trophy, Settings, FileDown } from 'lucide-react';
 import { trpc } from '@/lib/trpc';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useLocation } from 'wouter';
@@ -141,6 +141,13 @@ export default function Header() {
             title="My Bookmarks"
           >
             <Bookmark className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => navigate('/export')}
+            className="hidden lg:block p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-card/80 border border-border/50 transition-colors active:bg-card/60"
+            title="Export Documents"
+          >
+            <FileDown className="w-4 h-4" />
           </button>
           <NotificationBell navigate={navigate} />
           {user?.role === 'admin' && <AdminNavDropdown />}

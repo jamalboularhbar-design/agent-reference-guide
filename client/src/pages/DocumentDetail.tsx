@@ -45,6 +45,7 @@ import DocumentQuiz from '@/components/DocumentQuiz';
 import DocumentAnnotations from '@/components/DocumentAnnotations';
 import RelatedByTags from '@/components/RelatedByTags';
 import TextToSpeech from '@/components/TextToSpeech';
+import QuickEditInline from '@/components/QuickEditInline';
 
 // Reading time calculation - uses configurable WPM from branding settings
 function getReadingTime(wordCount: number, wpm = 200): string {
@@ -428,6 +429,7 @@ export default function DocumentDetail() {
             {document && <SubscribeButton targetType="document" targetValue={document.slug} />}
             {document && <ReadingPositionTracker documentSlug={document.slug} />}
             {document && <ShareDocument title={document.title} slug={document.slug} category={document.category} />}
+            {document && <QuickEditInline documentId={document.id} title={document.title} content={document.content || ''} onSaved={() => { /* invalidate via trpc utils */ }} />}
             {document && <DistractionFreeMode><ReactMarkdown remarkPlugins={[remarkGfm]}>{document.content || ''}</ReactMarkdown></DistractionFreeMode>}
           </div>
         </div>

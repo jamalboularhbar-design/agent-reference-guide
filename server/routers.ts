@@ -63,6 +63,16 @@ import {
   bulkAssignTags, bulkRemoveTags,
   getContentHealthScores,
   getRelatedByTags,
+  getWorkflowStatuses, createWorkflowStatus, deleteWorkflowStatus,
+  getWorkflowTransitions, setWorkflowTransition, removeWorkflowTransition,
+  getDocumentWorkflowStatus, setDocumentWorkflowStatus,
+  getAnalyticsForExport,
+  getArchivalPolicy, upsertArchivalPolicy, getStaleDocumentsForArchival, archiveDocument, getArchivedDocuments, unarchiveDocument,
+  getContentGapSuggestions, saveContentGapSuggestions, updateContentGapStatus,
+  getDuplicateContentPairs, saveDuplicatePair, updateDuplicateStatus,
+  addActivityFeedEntry, getActivityFeed,
+  quickEditDocument,
+  generateEmbedCode,
 } from "./db";
 import { invokeLLM } from "./_core/llm";
 import { notifyOwner } from "./_core/notification";
@@ -1508,6 +1518,192 @@ export const appRouter = router({
     get: publicProcedure
       .input(z.object({ slug: z.string() }))
       .query(async ({ input }) => getRelatedByTags(input.slug)),
+  }),
+
+  // ============ BATCH 18 PROCEDURES ============
+
+  // ─── Custom Workflow Statuses ──────────────────────────────────────────
+  workflow: router({
+    statuses: adminProcedure.query(async () => getWorkflowStatuses()),
+    createStatus: adminProcedure
+      .input(z.object({ name: z.string(), color: z.string().optional(), sortOrder: z.number().optional() }))
+      .mutation(async ({ input }) => { await createWorkflowStatus({ name: input.name, color: input.color || '#6b7280', sortOrder: input.sortOrder }); return { success: true }; }),
+    deleteStatus: adminProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => { await deleteWorkflowStatus(input.id); return { success: true }; }),
+    transitions: adminProcedure.query(async () => getWorkflowTransitions()),
+    addTransition: adminProcedure
+      .input(z.object({ fromId: z.number(), toId: z.number() }))
+      .mutation(async ({ input }) => { await setWorkflowTransition(input.fromId, input.toId); return { success: true }; }),
+    removeTransition: adminProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => { await removeWorkflowTransition(input.id); return { success: true }; }),
+    getDocStatus: publicProcedure
+      .input(z.object({ documentId: z.number() }))
+      .query(async ({ input }) => getDocumentWorkflowStatus(input.documentId)),
+    setDocStatus: adminProcedure
+      .input(z.object({ documentId: z.number(), statusId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        await setDocumentWorkflowStatus(input.documentId, input.statusId, ctx.user.openId);
+        return { success: true };
+      }),
+  }),
+
+  // ─── Analytics CSV Export (extended) ──────────────────────────────────
+  analyticsExportFull: router({
+    csv: adminProcedure.query(async () => getAnalyticsForExport()),
+  }),
+
+  // ─── Archival Policy ──────────────────────────────────────────────────
+  archival: router({
+    policy: adminProcedure.query(async () => getArchivalPolicy()),
+    updatePolicy: adminProcedure
+      .input(z.object({ daysWithoutViews: z.number().min(1), enabled: z.boolean() }))
+      .mutation(async ({ input }) => { await upsertArchivalPolicy(input.daysWithoutViews, input.enabled); return { success: true }; }),
+    staleDocs: adminProcedure
+      .input(z.object({ days: z.number().min(1) }))
+      .query(async ({ input }) => getStaleDocumentsForArchival(input.days)),
+    archive: adminProcedure
+      .input(z.object({ documentId: z.number(), reason: z.string().optional() }))
+      .mutation(async ({ input }) => { await archiveDocument(input.documentId, input.reason || 'manual'); return { success: true }; }),
+    archived: adminProcedure.query(async () => getArchivedDocuments()),
+    unarchive: adminProcedure
+      .input(z.object({ archiveId: z.number() }))
+      .mutation(async ({ input }) => { await unarchiveDocument(input.archiveId); return { success: true }; }),
+  }),
+
+  // ─── Quick Edit (inline) ──────────────────────────────────────────────
+  quickEdit: router({
+    update: adminProcedure
+      .input(z.object({ documentId: z.number(), title: z.string().optional(), content: z.string().optional() }))
+      .mutation(async ({ input }) => {
+        await quickEditDocument(input.documentId, { title: input.title, content: input.content });
+        return { success: true };
+      }),
+  }),
+
+  // ─── Content Gap Analysis ─────────────────────────────────────────────
+  contentGap: router({
+    suggestions: adminProcedure.query(async () => getContentGapSuggestions()),
+    analyze: adminProcedure.mutation(async () => {
+      const categories = await getDocumentCategories();
+      const docs = await getDocuments({ limit: 500, offset: 0 });
+      const catSummary = categories.map(c => `${c.category} (${c.count} docs)`).join(', ');
+      const docTitles = docs.documents.map(d => `[${d.category}] ${d.title}`).join('\n');
+      const response = await invokeLLM({
+        messages: [
+          { role: 'system', content: 'You are a content strategist. Analyze the existing document categories and titles, then suggest 5-10 missing topics that would fill gaps in the knowledge base. Return JSON array with objects having: category, suggestedTitle, suggestedDescription.' },
+          { role: 'user', content: `Categories: ${catSummary}\n\nExisting documents:\n${docTitles}\n\nSuggest missing topics as JSON array.` },
+        ],
+        response_format: { type: 'json_schema', json_schema: { name: 'content_gaps', strict: true, schema: { type: 'object', properties: { suggestions: { type: 'array', items: { type: 'object', properties: { category: { type: 'string' }, suggestedTitle: { type: 'string' }, suggestedDescription: { type: 'string' } }, required: ['category', 'suggestedTitle', 'suggestedDescription'], additionalProperties: false } } }, required: ['suggestions'], additionalProperties: false } } },
+      });
+      const parsed = JSON.parse(response.choices[0].message.content as string);
+      if (parsed.suggestions?.length) await saveContentGapSuggestions(parsed.suggestions);
+      return { count: parsed.suggestions?.length || 0 };
+    }),
+    updateStatus: adminProcedure
+      .input(z.object({ id: z.number(), status: z.enum(['accepted', 'dismissed']) }))
+      .mutation(async ({ input }) => { await updateContentGapStatus(input.id, input.status); return { success: true }; }),
+  }),
+
+  // ─── Duplicate Content Detection ──────────────────────────────────────
+  duplicates: router({
+    pairs: adminProcedure.query(async () => getDuplicateContentPairs()),
+    scan: adminProcedure.mutation(async () => {
+      const docs = await getDocuments({ limit: 200, offset: 0 });
+      const allDocs: { id: number; content: string }[] = [];
+      for (const d of docs.documents) {
+        const full = await getDocumentBySlug(d.slug);
+        if (full?.content && full.content.length > 100) allDocs.push({ id: full.id, content: full.content });
+      }
+      let found = 0;
+      for (let i = 0; i < allDocs.length && i < 100; i++) {
+        for (let j = i + 1; j < allDocs.length && j < 100; j++) {
+          const a = allDocs[i].content.toLowerCase().split(/\s+/);
+          const b = allDocs[j].content.toLowerCase().split(/\s+/);
+          const setA = new Set<string>(a);
+          const setB = new Set<string>(b);
+          const intersection = Array.from(setA).filter(w => setB.has(w)).length;
+          const union = new Set<string>([...Array.from(setA), ...Array.from(setB)]).size;
+          const similarity = union > 0 ? Math.round((intersection / union) * 100) : 0;
+          if (similarity > 60) {
+            await saveDuplicatePair(allDocs[i].id, allDocs[j].id, similarity);
+            found++;
+          }
+        }
+      }
+      return { found };
+    }),
+    updateStatus: adminProcedure
+      .input(z.object({ id: z.number(), status: z.enum(['resolved', 'ignored']) }))
+      .mutation(async ({ input }) => { await updateDuplicateStatus(input.id, input.status); return { success: true }; }),
+  }),
+
+  // ─── Activity Feed ────────────────────────────────────────────────────
+  activityFeed: router({
+    get: protectedProcedure.query(async ({ ctx }) => getActivityFeed(ctx.user.openId)),
+    add: protectedProcedure
+      .input(z.object({ action: z.string(), documentId: z.number().optional(), documentTitle: z.string().optional(), documentSlug: z.string().optional(), category: z.string().optional() }))
+      .mutation(async ({ ctx, input }) => {
+        await addActivityFeedEntry({ userOpenId: ctx.user.openId, ...input });
+        return { success: true };
+      }),
+  }),
+
+  // ─── Document Embed Code ──────────────────────────────────────────────
+  embed: router({
+    generate: publicProcedure
+      .input(z.object({ slug: z.string(), baseUrl: z.string() }))
+      .query(async ({ input }) => generateEmbedCode(input.slug, input.baseUrl)),
+  }),
+
+  // ─── Multi-Document PDF Export ────────────────────────────────────────
+  multiPdfExport: router({
+    getDocContents: publicProcedure
+      .input(z.object({ slugs: z.array(z.string()) }))
+      .query(async ({ input }) => {
+        const results = [];
+        for (const slug of input.slugs) {
+          const doc = await getDocumentBySlug(slug);
+          if (doc) results.push({ title: doc.title, content: doc.content || '', category: doc.category });
+        }
+        return results;
+      }),
+  }),
+
+  // ─── Section Reading Times ────────────────────────────────────────────
+  sectionReadingTimes: router({
+    get: publicProcedure
+      .input(z.object({ slug: z.string(), wpm: z.number().optional() }))
+      .query(async ({ input }) => {
+        const doc = await getDocumentBySlug(input.slug);
+        if (!doc || !doc.content) return [];
+        const wpm = input.wpm || 200;
+        const lines = doc.content.split('\n');
+        const sections: { heading: string; level: number; wordCount: number; readingTime: string }[] = [];
+        let currentHeading = '';
+        let currentLevel = 0;
+        let currentWords = 0;
+        for (const line of lines) {
+          const headingMatch = line.match(/^(#{1,6})\s+(.+)/);
+          if (headingMatch) {
+            if (currentHeading) {
+              const mins = Math.ceil(currentWords / wpm);
+              sections.push({ heading: currentHeading, level: currentLevel, wordCount: currentWords, readingTime: mins < 1 ? '<1 min' : `${mins} min` });
+            }
+            currentHeading = headingMatch[2];
+            currentLevel = headingMatch[1].length;
+            currentWords = 0;
+          } else {
+            currentWords += line.split(/\s+/).filter(Boolean).length;
+          }
+        }
+        if (currentHeading) {
+          const mins = Math.ceil(currentWords / wpm);
+          sections.push({ heading: currentHeading, level: currentLevel, wordCount: currentWords, readingTime: mins < 1 ? '<1 min' : `${mins} min` });
+        }
+        return sections;
+      }),
   }),
 });
 export type AppRouter = typeof appRouter;

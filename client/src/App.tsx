@@ -68,6 +68,12 @@ import DiffViewerPage from "./pages/DiffViewerPage";
 import AdminReviewRemindersPage from "./pages/AdminReviewRemindersPage";
 import AdminBulkTagsPage from "./pages/AdminBulkTagsPage";
 import AdminContentHealthPage from "./pages/AdminContentHealthPage";
+import AdminWorkflowPage from "./pages/AdminWorkflowPage";
+import AdminAnalyticsExportPage from "./pages/AdminAnalyticsExportPage";
+import AdminArchivalPage from "./pages/AdminArchivalPage";
+import AdminContentGapPage from "./pages/AdminContentGapPage";
+import AdminDuplicatesPage from "./pages/AdminDuplicatesPage";
+import MultiPdfExportPage from "./pages/MultiPdfExportPage";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -132,6 +138,12 @@ function Router() {
       <Route path={"/admin/review-reminders"} component={AdminReviewRemindersPage} />
       <Route path={"/admin/bulk-tags"} component={AdminBulkTagsPage} />
       <Route path={"/admin/content-health"} component={AdminContentHealthPage} />
+      <Route path={"/admin/workflow"} component={AdminWorkflowPage} />
+      <Route path={"/admin/analytics-export"} component={AdminAnalyticsExportPage} />
+      <Route path={"/admin/archival"} component={AdminArchivalPage} />
+      <Route path={"/admin/content-gap"} component={AdminContentGapPage} />
+      <Route path={"/admin/duplicates"} component={AdminDuplicatesPage} />
+      <Route path={"/export"} component={MultiPdfExportPage} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />

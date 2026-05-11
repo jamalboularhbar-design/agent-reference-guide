@@ -517,3 +517,83 @@ export const documentAnnotations = mysqlTable("document_annotations", {
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 export type DocumentAnnotation = typeof documentAnnotations.$inferSelect;
+
+// ============ BATCH 18 TABLES ============
+
+// Custom workflow statuses (admin-defined pipelines)
+export const workflowStatuses = mysqlTable("workflow_statuses", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 100 }).notNull(),
+  color: varchar("color", { length: 20 }).default("#6b7280").notNull(),
+  sortOrder: int("sortOrder").default(0).notNull(),
+  isDefault: int("isDefault").default(0).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+export type WorkflowStatus = typeof workflowStatuses.$inferSelect;
+
+// Workflow transitions (which status can transition to which)
+export const workflowTransitions = mysqlTable("workflow_transitions", {
+  id: int("id").autoincrement().primaryKey(),
+  fromStatusId: int("fromStatusId").notNull(),
+  toStatusId: int("toStatusId").notNull(),
+});
+
+// Document custom status assignments
+export const documentWorkflowStatus = mysqlTable("document_workflow_status", {
+  id: int("id").autoincrement().primaryKey(),
+  documentId: int("documentId").notNull(),
+  statusId: int("statusId").notNull(),
+  assignedBy: varchar("assignedBy", { length: 64 }).notNull(),
+  assignedAt: timestamp("assignedAt").defaultNow().notNull(),
+});
+
+// Archival policy settings
+export const archivalPolicies = mysqlTable("archival_policies", {
+  id: int("id").autoincrement().primaryKey(),
+  daysWithoutViews: int("daysWithoutViews").default(90).notNull(),
+  enabled: int("enabled").default(0).notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+// Archived documents log
+export const archivedDocuments = mysqlTable("archived_documents", {
+  id: int("id").autoincrement().primaryKey(),
+  documentId: int("documentId").notNull(),
+  archivedAt: timestamp("archivedAt").defaultNow().notNull(),
+  reason: varchar("reason", { length: 255 }).default("auto").notNull(),
+});
+
+// Content gap suggestions (AI-generated)
+export const contentGapSuggestions = mysqlTable("content_gap_suggestions", {
+  id: int("id").autoincrement().primaryKey(),
+  category: varchar("category", { length: 100 }).notNull(),
+  suggestedTitle: varchar("suggestedTitle", { length: 500 }).notNull(),
+  suggestedDescription: text("suggestedDescription"),
+  status: mysqlEnum("gap_status", ["pending", "accepted", "dismissed"]).default("pending").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+export type ContentGapSuggestion = typeof contentGapSuggestions.$inferSelect;
+
+// Duplicate content pairs (detected by scanner)
+export const duplicateContentPairs = mysqlTable("duplicate_content_pairs", {
+  id: int("id").autoincrement().primaryKey(),
+  documentId1: int("documentId1").notNull(),
+  documentId2: int("documentId2").notNull(),
+  similarityScore: int("similarityScore").default(0).notNull(),
+  status: mysqlEnum("dup_status", ["pending", "resolved", "ignored"]).default("pending").notNull(),
+  detectedAt: timestamp("detectedAt").defaultNow().notNull(),
+});
+
+// User activity feed entries
+export const activityFeed = mysqlTable("activity_feed", {
+  id: int("id").autoincrement().primaryKey(),
+  userOpenId: varchar("userOpenId", { length: 64 }).notNull(),
+  action: varchar("action", { length: 50 }).notNull(),
+  documentId: int("documentId"),
+  documentTitle: varchar("documentTitle", { length: 500 }),
+  documentSlug: varchar("documentSlug", { length: 255 }),
+  category: varchar("category", { length: 100 }),
+  metadata: text("metadata"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+export type ActivityFeedEntry = typeof activityFeed.$inferSelect;

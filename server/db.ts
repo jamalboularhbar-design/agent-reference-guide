@@ -1,6 +1,6 @@
 import { eq, like, or, sql, desc, asc, count, and } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, documents, documentRatings, readingLists, readingListItems, searchAnalytics, documentTags, documentComments, documentVersions, customCategories, downloadHistory, announcements, activityLog, documentAuditTrail, bookmarkNotes, shareLinks, scheduledPublish, inlineComments, brandingSettings, webhooks, recentlyViewed, documentFeedback, categoryOrdering, documentSubscriptions, subscriptionNotifications, userReadingPosition, searchHistory, aiSummaries, documentTranslations, userPreferences, readingStreakLeaderboard, glossaryTerms, documentDependencies, readingGoals, readingProgress, documentTemplates, savedFilters, documentQuizzes, reviewReminders, documentAnnotations, documentCollections, collectionItems } from "../drizzle/schema";
+import { InsertUser, users, documents, documentRatings, readingLists, readingListItems, searchAnalytics, documentTags, documentComments, documentVersions, customCategories, downloadHistory, announcements, activityLog, documentAuditTrail, bookmarkNotes, shareLinks, scheduledPublish, inlineComments, brandingSettings, webhooks, recentlyViewed, documentFeedback, categoryOrdering, documentSubscriptions, subscriptionNotifications, userReadingPosition, searchHistory, aiSummaries, documentTranslations, userPreferences, readingStreakLeaderboard, glossaryTerms, documentDependencies, readingGoals, readingProgress, documentTemplates, savedFilters, documentQuizzes, reviewReminders, documentAnnotations, documentCollections, collectionItems, workflowStatuses, workflowTransitions, documentWorkflowStatus, archivalPolicies, archivedDocuments, contentGapSuggestions, duplicateContentPairs, activityFeed } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -2697,4 +2697,227 @@ export async function getRelatedByTags(documentSlug: string, limit = 5) {
     LIMIT ${limit}
   `);
   return (related as any)[0] || [];
+}
+// ============ BATCH 18 HELPERS ============
+
+// --- Custom Workflow Statuses ---
+export async function getWorkflowStatuses() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(workflowStatuses).orderBy(asc(workflowStatuses.sortOrder));
+}
+
+export async function createWorkflowStatus(data: { name: string; color: string; sortOrder?: number }) {
+  const db = await getDb();
+  if (!db) return;
+  await db.insert(workflowStatuses).values(data);
+}
+
+export async function deleteWorkflowStatus(id: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.delete(workflowTransitions).where(or(eq(workflowTransitions.fromStatusId, id), eq(workflowTransitions.toStatusId, id)));
+  await db.delete(documentWorkflowStatus).where(eq(documentWorkflowStatus.statusId, id));
+  await db.delete(workflowStatuses).where(eq(workflowStatuses.id, id));
+}
+
+export async function getWorkflowTransitions() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(workflowTransitions);
+}
+
+export async function setWorkflowTransition(fromId: number, toId: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.insert(workflowTransitions).values({ fromStatusId: fromId, toStatusId: toId });
+}
+
+export async function removeWorkflowTransition(id: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.delete(workflowTransitions).where(eq(workflowTransitions.id, id));
+}
+
+export async function getDocumentWorkflowStatus(documentId: number) {
+  const db = await getDb();
+  if (!db) return null;
+  const rows = await db.select().from(documentWorkflowStatus).where(eq(documentWorkflowStatus.documentId, documentId)).limit(1);
+  return rows[0] || null;
+}
+
+export async function setDocumentWorkflowStatus(documentId: number, statusId: number, assignedBy: string) {
+  const db = await getDb();
+  if (!db) return;
+  const existing = await getDocumentWorkflowStatus(documentId);
+  if (existing) {
+    await db.update(documentWorkflowStatus).set({ statusId, assignedBy, assignedAt: new Date() }).where(eq(documentWorkflowStatus.documentId, documentId));
+  } else {
+    await db.insert(documentWorkflowStatus).values({ documentId, statusId, assignedBy });
+  }
+}
+
+// --- Analytics CSV Export ---
+export async function getAnalyticsForExport() {
+  const db = await getDb();
+  if (!db) return [];
+  const rows = await db.execute(sql`
+    SELECT d.title, d.slug, d.category, d.wordCount, d.viewCount, d.upvotes, d.downvotes, d.status, d.visibility, d.createdAt, d.updatedAt
+    FROM documents d
+    ORDER BY d.viewCount DESC
+  `);
+  return (rows as any)[0] || [];
+}
+
+// --- Archival Policy ---
+export async function getArchivalPolicy() {
+  const db = await getDb();
+  if (!db) return null;
+  const rows = await db.select().from(archivalPolicies).limit(1);
+  return rows[0] || null;
+}
+
+export async function upsertArchivalPolicy(daysWithoutViews: number, enabled: boolean) {
+  const db = await getDb();
+  if (!db) return;
+  const existing = await getArchivalPolicy();
+  if (existing) {
+    await db.update(archivalPolicies).set({ daysWithoutViews, enabled: enabled ? 1 : 0 }).where(eq(archivalPolicies.id, existing.id));
+  } else {
+    await db.insert(archivalPolicies).values({ daysWithoutViews, enabled: enabled ? 1 : 0 });
+  }
+}
+
+export async function getStaleDocumentsForArchival(daysThreshold: number) {
+  const db = await getDb();
+  if (!db) return [];
+  const rows = await db.execute(sql`
+    SELECT d.id, d.title, d.slug, d.category, d.viewCount, d.updatedAt
+    FROM documents d
+    LEFT JOIN archived_documents a ON a.documentId = d.id
+    WHERE a.id IS NULL
+      AND d.updatedAt < DATE_SUB(NOW(), INTERVAL ${daysThreshold} DAY)
+    ORDER BY d.updatedAt ASC
+    LIMIT 100
+  `);
+  return (rows as any)[0] || [];
+}
+
+export async function archiveDocument(documentId: number, reason: string) {
+  const db = await getDb();
+  if (!db) return;
+  await db.insert(archivedDocuments).values({ documentId, reason });
+  await db.update(documents).set({ visibility: "private" }).where(eq(documents.id, documentId));
+}
+
+export async function getArchivedDocuments() {
+  const db = await getDb();
+  if (!db) return [];
+  const rows = await db.execute(sql`
+    SELECT a.id, a.documentId, a.archivedAt, a.reason, d.title, d.slug, d.category
+    FROM archived_documents a
+    INNER JOIN documents d ON d.id = a.documentId
+    ORDER BY a.archivedAt DESC
+  `);
+  return (rows as any)[0] || [];
+}
+
+export async function unarchiveDocument(archiveId: number) {
+  const db = await getDb();
+  if (!db) return;
+  const rows = await db.select().from(archivedDocuments).where(eq(archivedDocuments.id, archiveId)).limit(1);
+  if (rows[0]) {
+    await db.update(documents).set({ visibility: "public" }).where(eq(documents.id, rows[0].documentId));
+    await db.delete(archivedDocuments).where(eq(archivedDocuments.id, archiveId));
+  }
+}
+
+// --- Content Gap Analysis ---
+export async function getContentGapSuggestions() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(contentGapSuggestions).orderBy(desc(contentGapSuggestions.createdAt));
+}
+
+export async function saveContentGapSuggestions(suggestions: { category: string; suggestedTitle: string; suggestedDescription?: string }[]) {
+  const db = await getDb();
+  if (!db) return;
+  if (suggestions.length === 0) return;
+  await db.insert(contentGapSuggestions).values(suggestions);
+}
+
+export async function updateContentGapStatus(id: number, status: "accepted" | "dismissed") {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(contentGapSuggestions).set({ status }).where(eq(contentGapSuggestions.id, id));
+}
+
+// --- Duplicate Content Detection ---
+export async function getDuplicateContentPairs() {
+  const db = await getDb();
+  if (!db) return [];
+  const rows = await db.execute(sql`
+    SELECT dp.id, dp.documentId1, dp.documentId2, dp.similarityScore, dp.status, dp.detectedAt,
+           d1.title as title1, d1.slug as slug1, d2.title as title2, d2.slug as slug2
+    FROM duplicate_content_pairs dp
+    INNER JOIN documents d1 ON d1.id = dp.documentId1
+    INNER JOIN documents d2 ON d2.id = dp.documentId2
+    ORDER BY dp.similarityScore DESC
+  `);
+  return (rows as any)[0] || [];
+}
+
+export async function saveDuplicatePair(docId1: number, docId2: number, score: number) {
+  const db = await getDb();
+  if (!db) return;
+  // Check if pair already exists
+  const existing = await db.execute(sql`
+    SELECT id FROM duplicate_content_pairs
+    WHERE (documentId1 = ${docId1} AND documentId2 = ${docId2})
+       OR (documentId1 = ${docId2} AND documentId2 = ${docId1})
+    LIMIT 1
+  `);
+  if (((existing as any)[0] || []).length > 0) return;
+  await db.insert(duplicateContentPairs).values({ documentId1: docId1, documentId2: docId2, similarityScore: score });
+}
+
+export async function updateDuplicateStatus(id: number, status: "resolved" | "ignored") {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(duplicateContentPairs).set({ status }).where(eq(duplicateContentPairs.id, id));
+}
+
+// --- Activity Feed ---
+export async function addActivityFeedEntry(data: { userOpenId: string; action: string; documentId?: number; documentTitle?: string; documentSlug?: string; category?: string; metadata?: string }) {
+  const db = await getDb();
+  if (!db) return;
+  await db.insert(activityFeed).values(data);
+}
+
+export async function getActivityFeed(userOpenId: string, limit = 30) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(activityFeed).where(eq(activityFeed.userOpenId, userOpenId)).orderBy(desc(activityFeed.createdAt)).limit(limit);
+}
+
+// --- Quick Edit (inline) ---
+export async function quickEditDocument(documentId: number, updates: { title?: string; content?: string }) {
+  const db = await getDb();
+  if (!db) return;
+  const setData: Record<string, any> = {};
+  if (updates.title) setData.title = updates.title;
+  if (updates.content !== undefined) {
+    setData.content = updates.content;
+    setData.wordCount = updates.content.split(/\s+/).filter(Boolean).length;
+  }
+  if (Object.keys(setData).length > 0) {
+    await db.update(documents).set(setData).where(eq(documents.id, documentId));
+  }
+}
+
+// --- Document Embed Code ---
+export function generateEmbedCode(slug: string, baseUrl: string) {
+  const iframeCode = `<iframe src="${baseUrl}/embed/${slug}" width="100%" height="600" frameborder="0" style="border: 1px solid #e5e7eb; border-radius: 8px;"></iframe>`;
+  const linkCode = `<a href="${baseUrl}/documents/${slug}" target="_blank" rel="noopener noreferrer">View Document</a>`;
+  return { iframe: iframeCode, link: linkCode };
 }

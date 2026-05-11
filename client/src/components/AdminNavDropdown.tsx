@@ -5,7 +5,8 @@ import {
   Globe, CalendarClock, Paintbrush, Webhook, Users, Archive, 
   Columns3, Clock, MessageSquare, GripVertical, Copy, Download,
   Shield, FileJson, Activity, FolderInput, Merge, Image, Calendar,
-  BarChart2, LinkIcon, CalendarCheck, Tags as TagsIcon, HeartPulse
+  BarChart2, LinkIcon, CalendarCheck, Tags as TagsIcon, HeartPulse,
+  Workflow, FileSpreadsheet, Lightbulb
 } from 'lucide-react';
 
 const adminLinks = [
@@ -42,6 +43,11 @@ const adminLinks = [
   { label: 'Review Reminders', href: '/admin/review-reminders', icon: CalendarCheck },
   { label: 'Bulk Tags', href: '/admin/bulk-tags', icon: TagsIcon },
   { label: 'Content Health', href: '/admin/content-health', icon: HeartPulse },
+  { label: 'Custom Workflows', href: '/admin/workflow', icon: Workflow },
+  { label: 'Analytics Export', href: '/admin/analytics-export', icon: FileSpreadsheet },
+  { label: 'Archival Policy', href: '/admin/archival', icon: Archive },
+  { label: 'Content Gap Analysis', href: '/admin/content-gap', icon: Lightbulb },
+  { label: 'Duplicate Detector', href: '/admin/duplicates', icon: Copy },
 ];
 
 export default function AdminNavDropdown() {
