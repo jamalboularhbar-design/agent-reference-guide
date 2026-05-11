@@ -115,6 +115,36 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* Demo Video Section */}
+      <section className="py-16 px-4 bg-gradient-to-b from-transparent to-white/[0.02]">
+        <div className="max-w-4xl mx-auto text-center">
+          <h2 className="text-2xl sm:text-3xl font-bold mb-4">See OpsCanvas in Action</h2>
+          <p className="text-gray-400 mb-8">Watch a 2-minute walkthrough of the platform</p>
+          <div className="relative mx-auto max-w-3xl aspect-video rounded-xl overflow-hidden border border-white/10 bg-[#0F1A2E] flex items-center justify-center group cursor-pointer" onClick={() => toast.info('Demo video coming soon! Request a live demo instead.', { action: { label: 'Request Demo', onClick: () => { const el = document.getElementById('contact'); el?.scrollIntoView({ behavior: 'smooth' }); } } })}>
+            <div className="absolute inset-0 bg-gradient-to-br from-teal-500/5 to-cyan-500/5" />
+            <img src={HERO_IMG} alt="OpsCanvas Demo" className="absolute inset-0 w-full h-full object-cover opacity-30" />
+            <div className="relative flex flex-col items-center gap-4">
+              <div className="w-20 h-20 rounded-full bg-teal-500/20 border-2 border-teal-400 flex items-center justify-center group-hover:bg-teal-500/30 transition-colors">
+                <svg className="w-8 h-8 text-teal-400 ml-1" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+              </div>
+              <span className="text-sm text-gray-400">Click to play demo</span>
+            </div>
+          </div>
+          <div className="mt-6 flex justify-center gap-4">
+            <Link href="/roi">
+              <Button variant="outline" className="border-white/20 text-white hover:bg-white/5">
+                Try ROI Calculator
+              </Button>
+            </Link>
+            <a href="#contact">
+              <Button className="bg-teal-500 hover:bg-teal-400 text-black font-semibold">
+                Request Live Demo <ArrowRight className="w-4 h-4 ml-2" />
+              </Button>
+            </a>
+          </div>
+        </div>
+      </section>
+
       {/* Social Proof Bar */}
       <section className="py-12 border-y border-white/5 bg-white/[0.02]">
         <div className="max-w-7xl mx-auto px-4">

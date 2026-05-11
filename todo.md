@@ -286,3 +286,13 @@
 - [x] OpsCanvas product landing page with hero, features, pricing, and lead capture form (/product)
 - [x] Leads database table and tRPC endpoints (submit, list, updateStatus)
 - [x] Admin Lead Management page (/admin/leads) with status pipeline
+- [x] ROI Calculator page — interactive savings estimator where prospects input team size and see projected savings
+- [x] LinkedIn content calendar — 12 posts (3/week for 4 weeks pre-launch) about operational knowledge pain points
+- [x] Ops leader dinner invitations — personalized invites for NY (June 17) and SF (June 25) dinners
+- [x] One-page product overview PDF — leave-behind for in-person meetings summarizing the pitch deck
+- [x] State of Operational Knowledge lead magnet report — downloadable PDF with industry stats, gated behind email
+- [x] Demo video placeholder section on landing page hero
+- [ ] Email automation setup guide — connect leads table to nurture campaign
+- [ ] Product Hunt "Coming Soon" preparation guide
+- [ ] Stripe integration for self-serve Starter tier payments
+- [ ] Product Hunt launch day checklist
