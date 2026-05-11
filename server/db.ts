@@ -1021,14 +1021,14 @@ export async function getViewsOverTime(days = 30) {
   const db = await getDb();
   if (!db) return [];
 
-  return db.select({
-    date: sql<string>`DATE(${activityLog.createdAt})`,
-    views: count(),
-  })
-    .from(activityLog)
-    .where(sql`${activityLog.action} = 'view' AND ${activityLog.createdAt} >= DATE_SUB(NOW(), INTERVAL ${sql.raw(String(days))} DAY)`)
-    .groupBy(sql`DATE(${activityLog.createdAt})`)
-    .orderBy(sql`DATE(${activityLog.createdAt})`);
+  const result = await db.execute(sql`
+    SELECT DATE(createdAt) as date, COUNT(*) as views
+    FROM activity_log
+    WHERE action = 'view' AND createdAt >= DATE_SUB(NOW(), INTERVAL ${sql.raw(String(days))} DAY)
+    GROUP BY date
+    ORDER BY date
+  `);
+  return (result as any)[0] || [];
 }
 
 export async function getTopDocuments(limit = 10) {
@@ -1052,14 +1052,14 @@ export async function getDownloadTrends(days = 30) {
   const db = await getDb();
   if (!db) return [];
 
-  return db.select({
-    date: sql<string>`DATE(${downloadHistory.createdAt})`,
-    downloads: count(),
-  })
-    .from(downloadHistory)
-    .where(sql`${downloadHistory.createdAt} >= DATE_SUB(NOW(), INTERVAL ${sql.raw(String(days))} DAY)`)
-    .groupBy(sql`DATE(${downloadHistory.createdAt})`)
-    .orderBy(sql`DATE(${downloadHistory.createdAt})`);
+  const result = await db.execute(sql`
+    SELECT DATE(createdAt) as date, COUNT(*) as downloads
+    FROM download_history
+    WHERE createdAt >= DATE_SUB(NOW(), INTERVAL ${sql.raw(String(days))} DAY)
+    GROUP BY date
+    ORDER BY date
+  `);
+  return (result as any)[0] || [];
 }
 
 export async function getCategoryDistribution() {
