@@ -3249,3 +3249,134 @@ export async function saveCitation(documentId: number, style: string, citation: 
     await db.insert(documentCitations).values({ documentId, style, citation });
   }
 }
+
+
+// ===== ADVANCED ANALYTICS =====
+
+// Reading activity over time (unique readers per day)
+export async function getReadingActivityOverTime(days = 30) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select({
+    date: sql<string>`DATE(${recentlyViewed.viewedAt})`,
+    readers: sql<number>`COUNT(DISTINCT ${recentlyViewed.visitorId})`,
+    reads: count(),
+  })
+    .from(recentlyViewed)
+    .where(sql`${recentlyViewed.viewedAt} >= DATE_SUB(NOW(), INTERVAL ${days} DAY)`)
+    .groupBy(sql`DATE(${recentlyViewed.viewedAt})`)
+    .orderBy(sql`DATE(${recentlyViewed.viewedAt})`);
+}
+
+// Engagement over time (ratings per day)
+export async function getEngagementOverTime(days = 30) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select({
+    date: sql<string>`DATE(${documentRatings.createdAt})`,
+    upvotes: sql<number>`SUM(CASE WHEN ${documentRatings.rating} = 'up' THEN 1 ELSE 0 END)`,
+    downvotes: sql<number>`SUM(CASE WHEN ${documentRatings.rating} = 'down' THEN 1 ELSE 0 END)`,
+    total: count(),
+  })
+    .from(documentRatings)
+    .where(sql`${documentRatings.createdAt} >= DATE_SUB(NOW(), INTERVAL ${days} DAY)`)
+    .groupBy(sql`DATE(${documentRatings.createdAt})`)
+    .orderBy(sql`DATE(${documentRatings.createdAt})`);
+}
+
+// Activity breakdown by action type over time
+export async function getActivityBreakdown(days = 30) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select({
+    date: sql<string>`DATE(${activityLog.createdAt})`,
+    action: activityLog.action,
+    count: count(),
+  })
+    .from(activityLog)
+    .where(sql`${activityLog.createdAt} >= DATE_SUB(NOW(), INTERVAL ${days} DAY)`)
+    .groupBy(sql`DATE(${activityLog.createdAt})`, activityLog.action)
+    .orderBy(sql`DATE(${activityLog.createdAt})`);
+}
+
+// Top documents by engagement (views + ratings combined)
+export async function getTopDocsByEngagement(limit = 10) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select({
+    slug: documents.slug,
+    title: documents.title,
+    category: documents.category,
+    viewCount: documents.viewCount,
+    upvotes: documents.upvotes,
+    downvotes: documents.downvotes,
+    wordCount: documents.wordCount,
+    engagementScore: sql<number>`COALESCE(${documents.viewCount}, 0) + COALESCE(${documents.upvotes}, 0) * 5 - COALESCE(${documents.downvotes}, 0) * 3`,
+  })
+    .from(documents)
+    .orderBy(sql`COALESCE(${documents.viewCount}, 0) + COALESCE(${documents.upvotes}, 0) * 5 - COALESCE(${documents.downvotes}, 0) * 3 DESC`)
+    .limit(limit);
+}
+
+// Content growth over time (new documents created per day)
+export async function getContentGrowthOverTime(days = 90) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select({
+    date: sql<string>`DATE(${documents.createdAt})`,
+    newDocs: count(),
+    cumulativeTotal: sql<number>`(SELECT COUNT(*) FROM documents d2 WHERE DATE(d2.createdAt) <= DATE(${documents.createdAt}))`,
+  })
+    .from(documents)
+    .where(sql`${documents.createdAt} >= DATE_SUB(NOW(), INTERVAL ${days} DAY)`)
+    .groupBy(sql`DATE(${documents.createdAt})`)
+    .orderBy(sql`DATE(${documents.createdAt})`);
+}
+
+// Analytics summary stats
+export async function getAnalyticsSummary() {
+  const db = await getDb();
+  if (!db) return null;
+  const [docStats] = await db.select({
+    totalDocs: count(),
+    totalViews: sql<number>`COALESCE(SUM(${documents.viewCount}), 0)`,
+    totalUpvotes: sql<number>`COALESCE(SUM(${documents.upvotes}), 0)`,
+    totalDownvotes: sql<number>`COALESCE(SUM(${documents.downvotes}), 0)`,
+    avgWordCount: sql<number>`ROUND(AVG(COALESCE(${documents.wordCount}, 0)))`,
+  }).from(documents);
+  
+  const [downloadStats] = await db.select({
+    totalDownloads: count(),
+  }).from(downloadHistory);
+  
+  const [readerStats] = await db.select({
+    uniqueReaders: sql<number>`COUNT(DISTINCT ${recentlyViewed.visitorId})`,
+  }).from(recentlyViewed);
+  
+  const [todayViews] = await db.select({
+    views: count(),
+  }).from(activityLog)
+    .where(sql`${activityLog.action} = 'view' AND DATE(${activityLog.createdAt}) = CURDATE()`);
+  
+  return {
+    ...docStats,
+    totalDownloads: downloadStats?.totalDownloads || 0,
+    uniqueReaders: readerStats?.uniqueReaders || 0,
+    todayViews: todayViews?.views || 0,
+  };
+}
+
+// Hourly activity heatmap data (hour of day vs day of week)
+export async function getHourlyActivityHeatmap(days = 30) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select({
+    dayOfWeek: sql<number>`DAYOFWEEK(${activityLog.createdAt})`,
+    hourOfDay: sql<number>`HOUR(${activityLog.createdAt})`,
+    count: count(),
+  })
+    .from(activityLog)
+    .where(sql`${activityLog.createdAt} >= DATE_SUB(NOW(), INTERVAL ${days} DAY)`)
+    .groupBy(sql`DAYOFWEEK(${activityLog.createdAt})`, sql`HOUR(${activityLog.createdAt})`)
+    .orderBy(sql`DAYOFWEEK(${activityLog.createdAt})`, sql`HOUR(${activityLog.createdAt})`);
+}

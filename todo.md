@@ -227,3 +227,9 @@
 - [x] User onboarding checklist (personalized checklist: read 5 docs, complete a quiz, bookmark a doc, etc.)
 - [x] Admin system health monitor (server uptime, DB connection status, storage usage, API response times)
 - [x] Document citation generator (auto-generate APA/MLA/Chicago citation for any document with copy button)
+- [x] Advanced analytics: time-series chart for document views over time (daily/weekly/monthly)
+- [x] Advanced analytics: reading trends chart (documents read per day, active readers over time)
+- [x] Advanced analytics: top documents bar chart (most viewed, most downloaded, highest rated)
+- [x] Advanced analytics: download activity trend line chart
+- [x] Advanced analytics: category distribution pie/doughnut chart
+- [x] Advanced analytics: backend tRPC procedures for aggregated time-series data

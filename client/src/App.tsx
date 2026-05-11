@@ -86,6 +86,7 @@ import AdminAccessRequestsPage from "./pages/AdminAccessRequestsPage";
 import AdminBatchSummarizePage from "./pages/AdminBatchSummarizePage";
 import AdminSystemHealthPage from "./pages/AdminSystemHealthPage";
 import VersionComparisonPage from "./pages/VersionComparisonPage";
+import AdminAdvancedAnalyticsPage from "./pages/AdminAdvancedAnalyticsPage";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -168,6 +169,7 @@ function Router() {
       <Route path={"/admin/batch-summarize"} component={AdminBatchSummarizePage} />
       <Route path={"/admin/system-health"} component={AdminSystemHealthPage} />
       <Route path={"/doc/:slug/compare"} component={VersionComparisonPage} />
+      <Route path={"/admin/advanced-analytics"} component={AdminAdvancedAnalyticsPage} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />

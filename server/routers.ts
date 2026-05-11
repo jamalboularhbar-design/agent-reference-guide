@@ -90,6 +90,8 @@ import {
   getDocumentsWithoutSummary,
   getOnboardingProgress, completeOnboardingTask, initOnboardingTasks,
   getCachedCitation, saveCitation,
+  getReadingActivityOverTime, getEngagementOverTime, getActivityBreakdown,
+  getTopDocsByEngagement, getContentGrowthOverTime, getAnalyticsSummary, getHourlyActivityHeatmap,
 } from "./db";
 import { invokeLLM } from "./_core/llm";
 import { notifyOwner } from "./_core/notification";
@@ -1882,6 +1884,49 @@ export const appRouter = router({
       await saveCitation(input.documentId, input.style, citation);
       return { id: 0, documentId: input.documentId, style: input.style, citation, createdAt: new Date() };
     }),
+  }),
+
+  // ===== ADVANCED ANALYTICS =====
+  advancedAnalytics: router({
+    summary: adminProcedure.query(async () => {
+      return getAnalyticsSummary();
+    }),
+
+    readingActivity: adminProcedure
+      .input(z.object({ days: z.number().min(1).max(90).optional().default(30) }))
+      .query(async ({ input }) => {
+        return getReadingActivityOverTime(input.days);
+      }),
+
+    engagement: adminProcedure
+      .input(z.object({ days: z.number().min(1).max(90).optional().default(30) }))
+      .query(async ({ input }) => {
+        return getEngagementOverTime(input.days);
+      }),
+
+    activityBreakdown: adminProcedure
+      .input(z.object({ days: z.number().min(1).max(90).optional().default(30) }))
+      .query(async ({ input }) => {
+        return getActivityBreakdown(input.days);
+      }),
+
+    topByEngagement: adminProcedure
+      .input(z.object({ limit: z.number().min(1).max(50).optional().default(10) }))
+      .query(async ({ input }) => {
+        return getTopDocsByEngagement(input.limit);
+      }),
+
+    contentGrowth: adminProcedure
+      .input(z.object({ days: z.number().min(1).max(180).optional().default(90) }))
+      .query(async ({ input }) => {
+        return getContentGrowthOverTime(input.days);
+      }),
+
+    hourlyHeatmap: adminProcedure
+      .input(z.object({ days: z.number().min(1).max(90).optional().default(30) }))
+      .query(async ({ input }) => {
+        return getHourlyActivityHeatmap(input.days);
+      }),
   }),
 
 });

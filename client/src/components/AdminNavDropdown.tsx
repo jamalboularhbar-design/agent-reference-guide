@@ -57,6 +57,7 @@ const adminLinks = [
   { label: 'Access Requests', href: '/admin/access-requests', icon: Users },
   { label: 'Batch Summarize', href: '/admin/batch-summarize', icon: Lightbulb },
   { label: 'System Health', href: '/admin/system-health', icon: Activity },
+  { label: 'Advanced Analytics', href: '/admin/advanced-analytics', icon: BarChart3 },
 ];
 
 export default function AdminNavDropdown() {

@@ -176,6 +176,10 @@ export default function AdminDashboardPage() {
               <Download className="w-4 h-4" />
               Export CSV
             </button>
+            <Link href="/admin/advanced-analytics" className="flex items-center gap-2 px-3 py-2 bg-indigo-500/10 border border-indigo-500/30 rounded-lg text-sm text-indigo-400 hover:bg-indigo-500/20 transition-colors">
+              <TrendingUp className="w-4 h-4" />
+              Advanced Analytics
+            </Link>
             <Link href="/admin/editor" className="text-sm text-gray-400 hover:text-[#d4af37]">
               ← Back to Admin
             </Link>
