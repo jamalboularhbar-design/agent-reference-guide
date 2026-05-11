@@ -58,6 +58,11 @@ const adminLinks = [
   { label: 'Batch Summarize', href: '/admin/batch-summarize', icon: Lightbulb },
   { label: 'System Health', href: '/admin/system-health', icon: Activity },
   { label: 'Advanced Analytics', href: '/admin/advanced-analytics', icon: BarChart3 },
+  { label: 'Period Comparison', href: '/admin/comparative-analytics', icon: BarChart2 },
+  { label: 'Quality Audit', href: '/admin/quality-audit', icon: Shield },
+  { label: 'Session Analytics', href: '/admin/session-analytics', icon: Clock },
+  { label: 'Freshness Report', href: '/admin/freshness', icon: Activity },
+  { label: 'Email Digest', href: '/admin/email-digest', icon: Bell },
 ];
 
 export default function AdminNavDropdown() {

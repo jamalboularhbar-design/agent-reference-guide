@@ -1,6 +1,6 @@
 import { eq, like, or, sql, desc, asc, count, and } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, documents, documentRatings, readingLists, readingListItems, searchAnalytics, documentTags, documentComments, documentVersions, customCategories, downloadHistory, announcements, activityLog, documentAuditTrail, bookmarkNotes, shareLinks, scheduledPublish, inlineComments, brandingSettings, webhooks, recentlyViewed, documentFeedback, categoryOrdering, documentSubscriptions, subscriptionNotifications, userReadingPosition, searchHistory, aiSummaries, documentTranslations, userPreferences, readingStreakLeaderboard, glossaryTerms, documentDependencies, readingGoals, readingProgress, documentTemplates, savedFilters, documentQuizzes, reviewReminders, documentAnnotations, documentCollections, collectionItems, workflowStatuses, workflowTransitions, documentWorkflowStatus, archivalPolicies, archivedDocuments, contentGapSuggestions, duplicateContentPairs, activityFeed, documentSnapshots, readingCorrelations, quizResults, documentSeoMeta, systemNotificationLog, adminPermissions, approvalSlaConfig, webhookEventLog, documentAccessRequests, onboardingProgress, documentCitations } from "../drizzle/schema";
+import { InsertUser, users, documents, documentRatings, readingLists, readingListItems, searchAnalytics, documentTags, documentComments, documentVersions, customCategories, downloadHistory, announcements, activityLog, documentAuditTrail, bookmarkNotes, shareLinks, scheduledPublish, inlineComments, brandingSettings, webhooks, recentlyViewed, documentFeedback, categoryOrdering, documentSubscriptions, subscriptionNotifications, userReadingPosition, searchHistory, aiSummaries, documentTranslations, userPreferences, readingStreakLeaderboard, glossaryTerms, documentDependencies, readingGoals, readingProgress, documentTemplates, savedFilters, documentQuizzes, reviewReminders, documentAnnotations, documentCollections, collectionItems, workflowStatuses, workflowTransitions, documentWorkflowStatus, archivalPolicies, archivedDocuments, contentGapSuggestions, duplicateContentPairs, activityFeed, documentSnapshots, readingCorrelations, quizResults, documentSeoMeta, systemNotificationLog, adminPermissions, approvalSlaConfig, webhookEventLog, documentAccessRequests, onboardingProgress, documentCitations, readingSessions, documentQualityAudits, emailDigestConfig, documentMedia } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -3379,4 +3379,207 @@ export async function getHourlyActivityHeatmap(days = 30) {
     .where(sql`${activityLog.createdAt} >= DATE_SUB(NOW(), INTERVAL ${days} DAY)`)
     .groupBy(sql`DAYOFWEEK(${activityLog.createdAt})`, sql`HOUR(${activityLog.createdAt})`)
     .orderBy(sql`DAYOFWEEK(${activityLog.createdAt})`, sql`HOUR(${activityLog.createdAt})`);
+}
+
+
+// ===== BATCH 21: FOLLOW-UP FEATURES =====
+
+// Feature 1: Comparative period analytics
+export async function getComparativePeriodAnalytics(days = 30) {
+  const db = await getDb();
+  if (!db) return null;
+  // Current period
+  const [currentViews] = await db.select({ total: count() }).from(activityLog)
+    .where(sql`${activityLog.action} = 'view' AND ${activityLog.createdAt} >= DATE_SUB(NOW(), INTERVAL ${days} DAY)`);
+  const [currentDownloads] = await db.select({ total: count() }).from(downloadHistory)
+    .where(sql`${downloadHistory.createdAt} >= DATE_SUB(NOW(), INTERVAL ${days} DAY)`);
+  const [currentRatings] = await db.select({ total: count() }).from(documentRatings)
+    .where(sql`${documentRatings.createdAt} >= DATE_SUB(NOW(), INTERVAL ${days} DAY)`);
+  const [currentReaders] = await db.select({ total: sql<number>`COUNT(DISTINCT ${recentlyViewed.visitorId})` }).from(recentlyViewed)
+    .where(sql`${recentlyViewed.viewedAt} >= DATE_SUB(NOW(), INTERVAL ${days} DAY)`);
+  // Previous period
+  const [prevViews] = await db.select({ total: count() }).from(activityLog)
+    .where(sql`${activityLog.action} = 'view' AND ${activityLog.createdAt} >= DATE_SUB(NOW(), INTERVAL ${days * 2} DAY) AND ${activityLog.createdAt} < DATE_SUB(NOW(), INTERVAL ${days} DAY)`);
+  const [prevDownloads] = await db.select({ total: count() }).from(downloadHistory)
+    .where(sql`${downloadHistory.createdAt} >= DATE_SUB(NOW(), INTERVAL ${days * 2} DAY) AND ${downloadHistory.createdAt} < DATE_SUB(NOW(), INTERVAL ${days} DAY)`);
+  const [prevRatings] = await db.select({ total: count() }).from(documentRatings)
+    .where(sql`${documentRatings.createdAt} >= DATE_SUB(NOW(), INTERVAL ${days * 2} DAY) AND ${documentRatings.createdAt} < DATE_SUB(NOW(), INTERVAL ${days} DAY)`);
+  const [prevReaders] = await db.select({ total: sql<number>`COUNT(DISTINCT ${recentlyViewed.visitorId})` }).from(recentlyViewed)
+    .where(sql`${recentlyViewed.viewedAt} >= DATE_SUB(NOW(), INTERVAL ${days * 2} DAY) AND ${recentlyViewed.viewedAt} < DATE_SUB(NOW(), INTERVAL ${days} DAY)`);
+  return {
+    current: { views: currentViews?.total || 0, downloads: currentDownloads?.total || 0, ratings: currentRatings?.total || 0, readers: currentReaders?.total || 0 },
+    previous: { views: prevViews?.total || 0, downloads: prevDownloads?.total || 0, ratings: prevRatings?.total || 0, readers: prevReaders?.total || 0 },
+  };
+}
+
+// Feature 4: Document popularity trending (weighted recency)
+export async function getTrendingDocuments(limit = 10) {
+  const db = await getDb();
+  if (!db) return [];
+  // Weighted score: views in last 7 days * 3 + views in 7-30 days * 1 + upvotes * 5
+  return db.execute(sql`
+    SELECT d.slug, d.title, d.category, d.viewCount, d.upvotes, d.downvotes,
+      COALESCE((SELECT COUNT(*) FROM activity_log a WHERE a.action = 'view' AND a.documentSlug = d.slug AND a.createdAt >= DATE_SUB(NOW(), INTERVAL 7 DAY)), 0) * 3 +
+      COALESCE((SELECT COUNT(*) FROM activity_log a WHERE a.action = 'view' AND a.documentSlug = d.slug AND a.createdAt >= DATE_SUB(NOW(), INTERVAL 30 DAY) AND a.createdAt < DATE_SUB(NOW(), INTERVAL 7 DAY)), 0) +
+      COALESCE(d.upvotes, 0) * 5 AS trendingScore
+    FROM documents d
+    ORDER BY trendingScore DESC
+    LIMIT ${limit}
+  `);
+}
+
+// Feature 5: Admin bulk document quality audit
+export async function runDocumentQualityAudit() {
+  const db = await getDb();
+  if (!db) return [];
+  const allDocs = await db.select({
+    slug: documents.slug,
+    title: documents.title,
+    content: documents.content,
+    category: documents.category,
+    wordCount: documents.wordCount,
+  }).from(documents);
+
+  const results: { slug: string; issues: string[]; score: number }[] = [];
+  for (const doc of allDocs) {
+    const issues: string[] = [];
+    let score = 100;
+    if (!doc.content || doc.content.length < 100) { issues.push('Content too short (< 100 chars)'); score -= 30; }
+    if (!doc.title || doc.title.length < 5) { issues.push('Title too short'); score -= 15; }
+    if ((doc.wordCount || 0) < 50) { issues.push('Word count below 50'); score -= 20; }
+    if (!doc.category) { issues.push('Missing category'); score -= 10; }
+    // Check for tags
+    const tags = await db.select({ id: documentTags.id }).from(documentTags).where(eq(documentTags.documentSlug, doc.slug)).limit(1);
+    if (tags.length === 0) { issues.push('No tags assigned'); score -= 10; }
+    if (issues.length > 0) {
+      results.push({ slug: doc.slug, issues, score: Math.max(0, score) });
+    }
+  }
+  // Save audit results
+  for (const r of results) {
+    await db.insert(documentQualityAudits).values({
+      documentSlug: r.slug,
+      issues: JSON.stringify(r.issues),
+      score: r.score,
+    });
+  }
+  return results;
+}
+
+export async function getLatestQualityAudits() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(documentQualityAudits).orderBy(desc(documentQualityAudits.auditedAt)).limit(500);
+}
+
+// Feature 6: User reading session analytics
+export async function recordReadingSession(data: { visitorId: string; documentSlug: string; durationSeconds: number; scrollDepthPercent: number; completed: number }) {
+  const db = await getDb();
+  if (!db) return;
+  await db.insert(readingSessions).values(data);
+}
+
+export async function getReadingSessionAnalytics(days = 30) {
+  const db = await getDb();
+  if (!db) return null;
+  const [stats] = await db.select({
+    totalSessions: count(),
+    avgDuration: sql<number>`ROUND(AVG(${readingSessions.durationSeconds}))`,
+    avgScrollDepth: sql<number>`ROUND(AVG(${readingSessions.scrollDepthPercent}))`,
+    completionRate: sql<number>`ROUND(AVG(${readingSessions.completed}) * 100)`,
+    uniqueReaders: sql<number>`COUNT(DISTINCT ${readingSessions.visitorId})`,
+  }).from(readingSessions)
+    .where(sql`${readingSessions.startedAt} >= DATE_SUB(NOW(), INTERVAL ${days} DAY)`);
+  
+  const sessionsOverTimeRaw = await db.execute(sql`
+    SELECT DATE(startedAt) as date, COUNT(*) as sessions, ROUND(AVG(durationSeconds)) as avgDuration
+    FROM reading_sessions
+    WHERE startedAt >= DATE_SUB(NOW(), INTERVAL ${days} DAY)
+    GROUP BY DATE(startedAt)
+    ORDER BY date
+  `);
+  const sessionsOverTime = (sessionsOverTimeRaw as any)?.[0] || [];
+  
+  return { summary: stats, overTime: sessionsOverTime };
+}
+
+// Feature 7: Document content freshness indicator
+export async function getDocumentFreshnessReport() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select({
+    slug: documents.slug,
+    title: documents.title,
+    category: documents.category,
+    updatedAt: documents.updatedAt,
+    createdAt: documents.createdAt,
+    daysSinceUpdate: sql<number>`DATEDIFF(NOW(), COALESCE(${documents.updatedAt}, ${documents.createdAt}))`,
+  }).from(documents).orderBy(sql`DATEDIFF(NOW(), COALESCE(${documents.updatedAt}, ${documents.createdAt})) DESC`);
+}
+
+// Feature 8: Email digest configuration
+export async function getEmailDigestConfig(ownerId: string) {
+  const db = await getDb();
+  if (!db) return null;
+  const [config] = await db.select().from(emailDigestConfig).where(eq(emailDigestConfig.ownerId, ownerId));
+  return config || null;
+}
+
+export async function upsertEmailDigestConfig(data: { ownerId: string; frequency: 'daily' | 'weekly' | 'monthly' | 'disabled'; includeMetrics: number; includeTopDocs: number; includeNewDocs: number }) {
+  const db = await getDb();
+  if (!db) return;
+  const existing = await getEmailDigestConfig(data.ownerId);
+  if (existing) {
+    await db.update(emailDigestConfig).set({ ...data, updatedAt: new Date() }).where(eq(emailDigestConfig.id, existing.id));
+  } else {
+    await db.insert(emailDigestConfig).values(data as any);
+  }
+}
+
+// Feature 9: Document media attachments
+export async function getDocumentMedia(slug: string) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(documentMedia).where(eq(documentMedia.documentSlug, slug)).orderBy(asc(documentMedia.sortOrder));
+}
+
+export async function addDocumentMedia(data: { documentSlug: string; fileName: string; fileUrl: string; fileType: string; fileSize: number; caption?: string }) {
+  const db = await getDb();
+  if (!db) return;
+  await db.insert(documentMedia).values(data);
+}
+
+export async function removeDocumentMedia(id: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.delete(documentMedia).where(eq(documentMedia.id, id));
+}
+
+// Feature 10: Global site statistics (public)
+export async function getPublicSiteStats() {
+  const db = await getDb();
+  if (!db) return null;
+  const [docStats] = await db.select({
+    totalDocs: count(),
+    totalViews: sql<number>`COALESCE(SUM(${documents.viewCount}), 0)`,
+    totalCategories: sql<number>`COUNT(DISTINCT ${documents.category})`,
+    totalWords: sql<number>`COALESCE(SUM(${documents.wordCount}), 0)`,
+  }).from(documents);
+  
+  const [readerStats] = await db.select({
+    totalReaders: sql<number>`COUNT(DISTINCT ${recentlyViewed.visitorId})`,
+  }).from(recentlyViewed);
+  
+  const growthData = await db.execute(sql`
+    SELECT DATE_FORMAT(createdAt, '%Y-%m') as month, COUNT(*) as count
+    FROM documents
+    GROUP BY DATE_FORMAT(createdAt, '%Y-%m')
+    ORDER BY month
+  `);
+  
+  return {
+    ...docStats,
+    totalReaders: readerStats?.totalReaders || 0,
+    growthByMonth: (growthData as any)?.[0] || [],
+  };
 }

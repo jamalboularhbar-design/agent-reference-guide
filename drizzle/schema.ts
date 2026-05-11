@@ -728,3 +728,55 @@ export const documentCitations = mysqlTable("document_citations", {
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 export type DocumentCitation = typeof documentCitations.$inferSelect;
+
+
+// ===== BATCH 21 TABLES =====
+
+// Reading sessions - track time spent per document
+export const readingSessions = mysqlTable("reading_sessions", {
+  id: int("id").autoincrement().primaryKey(),
+  visitorId: varchar("visitorId", { length: 100 }).notNull(),
+  documentSlug: varchar("documentSlug", { length: 255 }).notNull(),
+  startedAt: timestamp("startedAt").defaultNow().notNull(),
+  durationSeconds: int("durationSeconds").default(0).notNull(),
+  scrollDepthPercent: int("scrollDepthPercent").default(0).notNull(),
+  completed: int("completed").default(0).notNull(), // 1 = read to end
+});
+export type ReadingSession = typeof readingSessions.$inferSelect;
+
+// Document quality audits - results of bulk quality checks
+export const documentQualityAudits = mysqlTable("document_quality_audits", {
+  id: int("id").autoincrement().primaryKey(),
+  documentSlug: varchar("documentSlug", { length: 255 }).notNull(),
+  issues: text("issues").notNull(), // JSON array of issue strings
+  score: int("score").default(100).notNull(), // 0-100
+  auditedAt: timestamp("auditedAt").defaultNow().notNull(),
+});
+export type DocumentQualityAudit = typeof documentQualityAudits.$inferSelect;
+
+// Email digest config
+export const emailDigestConfig = mysqlTable("email_digest_config", {
+  id: int("id").autoincrement().primaryKey(),
+  ownerId: varchar("ownerId", { length: 100 }).notNull(),
+  frequency: mysqlEnum("frequency", ["daily", "weekly", "monthly", "disabled"]).default("weekly").notNull(),
+  includeMetrics: int("includeMetrics").default(1).notNull(),
+  includeTopDocs: int("includeTopDocs").default(1).notNull(),
+  includeNewDocs: int("includeNewDocs").default(1).notNull(),
+  lastSentAt: timestamp("lastSentAt"),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+});
+export type EmailDigestConfig = typeof emailDigestConfig.$inferSelect;
+
+// Document media attachments
+export const documentMedia = mysqlTable("document_media", {
+  id: int("id").autoincrement().primaryKey(),
+  documentSlug: varchar("documentSlug", { length: 255 }).notNull(),
+  fileName: varchar("fileName", { length: 255 }).notNull(),
+  fileUrl: text("fileUrl").notNull(),
+  fileType: varchar("fileType", { length: 50 }).notNull(), // image, pdf, video, etc.
+  fileSize: int("fileSize").default(0).notNull(), // bytes
+  caption: text("caption"),
+  sortOrder: int("sortOrder").default(0).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+export type DocumentMediaEntry = typeof documentMedia.$inferSelect;

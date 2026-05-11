@@ -127,6 +127,13 @@
       "when": 1778515014658,
       "tag": "0017_adorable_deathstrike",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "5",
+      "when": 1778517452063,
+      "tag": "0018_hot_natasha_romanoff",
+      "breakpoints": true
     }
   ]
 }

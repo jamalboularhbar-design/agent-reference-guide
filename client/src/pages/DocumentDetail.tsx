@@ -34,6 +34,9 @@ import { useTrackRecentView } from '@/components/RecentlyViewed';
 import CodeCopyButton from '@/components/CodeCopyButton';
 import DocumentFeedback from '@/components/DocumentFeedback';
 import CitationGenerator from '@/components/CitationGenerator';
+import ReadingSessionTracker from '@/components/ReadingSessionTracker';
+import DocumentMediaGallery from '@/components/DocumentMediaGallery';
+import ContentFreshnessBadge from '@/components/ContentFreshnessBadge';
 import DocumentNavigation from '@/components/DocumentNavigation';
 import QRCodeShare from '@/components/QRCodeShare';
 import SubscribeButton from '@/components/SubscribeButton';
@@ -505,6 +508,7 @@ export default function DocumentDetail() {
                   <FileText className="w-3.5 h-3.5" />
                   <span>{document.filename}</span>
                 </div>
+                {document.createdAt && (<ContentFreshnessBadge updatedAt={document.updatedAt} createdAt={document.createdAt} />)}
                 {document.createdAt && (
                   <div className="flex items-center gap-1.5">
                     <Calendar className="w-3.5 h-3.5" />
@@ -638,6 +642,12 @@ export default function DocumentDetail() {
 
             {/* Version Comparison */}
             <DocumentComparisonView slug={document.slug} />
+
+            {/* Reading Session Tracker */}
+            <ReadingSessionTracker slug={document.slug} />
+
+            {/* Media Gallery */}
+            <DocumentMediaGallery slug={document.slug} />
 
             {/* Citation Generator */}
             <CitationGenerator documentId={document.id} title={document.title} createdAt={document.createdAt ? new Date(document.createdAt).toISOString() : undefined} />

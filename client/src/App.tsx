@@ -87,6 +87,12 @@ import AdminBatchSummarizePage from "./pages/AdminBatchSummarizePage";
 import AdminSystemHealthPage from "./pages/AdminSystemHealthPage";
 import VersionComparisonPage from "./pages/VersionComparisonPage";
 import AdminAdvancedAnalyticsPage from "./pages/AdminAdvancedAnalyticsPage";
+import AdminComparativeAnalyticsPage from "./pages/AdminComparativeAnalyticsPage";
+import AdminQualityAuditPage from "./pages/AdminQualityAuditPage";
+import AdminSessionAnalyticsPage from "./pages/AdminSessionAnalyticsPage";
+import AdminFreshnessReportPage from "./pages/AdminFreshnessReportPage";
+import AdminEmailDigestPage from "./pages/AdminEmailDigestPage";
+import PublicStatsPage from "./pages/PublicStatsPage";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -170,6 +176,12 @@ function Router() {
       <Route path={"/admin/system-health"} component={AdminSystemHealthPage} />
       <Route path={"/doc/:slug/compare"} component={VersionComparisonPage} />
       <Route path={"/admin/advanced-analytics"} component={AdminAdvancedAnalyticsPage} />
+      <Route path={"/admin/comparative-analytics"} component={AdminComparativeAnalyticsPage} />
+      <Route path={"/admin/quality-audit"} component={AdminQualityAuditPage} />
+      <Route path={"/admin/session-analytics"} component={AdminSessionAnalyticsPage} />
+      <Route path={"/admin/freshness"} component={AdminFreshnessReportPage} />
+      <Route path={"/admin/email-digest"} component={AdminEmailDigestPage} />
+      <Route path={"/stats"} component={PublicStatsPage} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />

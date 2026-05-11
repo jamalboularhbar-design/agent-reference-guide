@@ -233,3 +233,13 @@
 - [x] Advanced analytics: download activity trend line chart
 - [x] Advanced analytics: category distribution pie/doughnut chart
 - [x] Advanced analytics: backend tRPC procedures for aggregated time-series data
+- [x] Comparative period analytics (compare current vs previous period with percentage change indicators)
+- [x] PDF analytics report export (download formatted PDF report of all analytics charts and summary stats)
+- [x] Real-time activity feed widget on admin dashboard (live-updating stream of recent user actions)
+- [x] Document popularity trending algorithm (weighted recency scoring: recent views count more than old ones)
+- [x] Admin bulk document quality audit (scan all docs for missing fields, short content, broken links, no tags)
+- [x] User reading session analytics (track time spent per document, average session duration, bounce rate)
+- [x] Document content freshness indicator (visual badge showing how recently content was updated: fresh/aging/stale)
+- [x] Admin email digest configuration (configure daily/weekly email summaries of key metrics to owner)
+- [x] Document related media attachments (link images/files to documents, display in a media gallery section)
+- [x] Global site statistics public page (/stats) showing total docs, categories, total reads, and growth chart

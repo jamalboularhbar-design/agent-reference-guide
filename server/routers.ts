@@ -92,6 +92,11 @@ import {
   getCachedCitation, saveCitation,
   getReadingActivityOverTime, getEngagementOverTime, getActivityBreakdown,
   getTopDocsByEngagement, getContentGrowthOverTime, getAnalyticsSummary, getHourlyActivityHeatmap,
+  getComparativePeriodAnalytics, getTrendingDocuments, runDocumentQualityAudit, getLatestQualityAudits,
+  recordReadingSession, getReadingSessionAnalytics, getDocumentFreshnessReport,
+  getEmailDigestConfig, upsertEmailDigestConfig,
+  getDocumentMedia, addDocumentMedia, removeDocumentMedia,
+  getPublicSiteStats,
 } from "./db";
 import { invokeLLM } from "./_core/llm";
 import { notifyOwner } from "./_core/notification";
@@ -1883,6 +1888,103 @@ export const appRouter = router({
       }
       await saveCitation(input.documentId, input.style, citation);
       return { id: 0, documentId: input.documentId, style: input.style, citation, createdAt: new Date() };
+    }),
+  }),
+
+  // ===== BATCH 21 FEATURES =====
+  batch21: router({
+    // Feature 1: Comparative period analytics
+    comparativePeriod: adminProcedure
+      .input(z.object({ days: z.number().min(1).max(90).optional().default(30) }))
+      .query(async ({ input }) => {
+        return getComparativePeriodAnalytics(input.days);
+      }),
+
+    // Feature 4: Trending documents
+    trending: publicProcedure
+      .input(z.object({ limit: z.number().min(1).max(50).optional().default(10) }))
+      .query(async ({ input }) => {
+        const result = await getTrendingDocuments(input.limit);
+        return (result as any)?.[0] || [];
+      }),
+
+    // Feature 5: Quality audit
+    runQualityAudit: adminProcedure.mutation(async () => {
+      return runDocumentQualityAudit();
+    }),
+    qualityAudits: adminProcedure.query(async () => {
+      return getLatestQualityAudits();
+    }),
+
+    // Feature 6: Reading sessions
+    recordSession: publicProcedure
+      .input(z.object({
+        visitorId: z.string(),
+        documentSlug: z.string(),
+        durationSeconds: z.number().min(0),
+        scrollDepthPercent: z.number().min(0).max(100),
+        completed: z.number().min(0).max(1),
+      }))
+      .mutation(async ({ input }) => {
+        await recordReadingSession(input);
+        return { success: true };
+      }),
+    sessionAnalytics: adminProcedure
+      .input(z.object({ days: z.number().min(1).max(90).optional().default(30) }))
+      .query(async ({ input }) => {
+        return getReadingSessionAnalytics(input.days);
+      }),
+
+    // Feature 7: Document freshness
+    freshnessReport: adminProcedure.query(async () => {
+      return getDocumentFreshnessReport();
+    }),
+
+    // Feature 8: Email digest config
+    emailDigest: adminProcedure.query(async ({ ctx }) => {
+      return getEmailDigestConfig(ctx.user.openId);
+    }),
+    updateEmailDigest: adminProcedure
+      .input(z.object({
+        frequency: z.enum(['daily', 'weekly', 'monthly', 'disabled']),
+        includeMetrics: z.number().min(0).max(1),
+        includeTopDocs: z.number().min(0).max(1),
+        includeNewDocs: z.number().min(0).max(1),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        await upsertEmailDigestConfig({ ownerId: ctx.user.openId, ...input });
+        return { success: true };
+      }),
+
+    // Feature 9: Document media
+    getMedia: publicProcedure
+      .input(z.object({ slug: z.string() }))
+      .query(async ({ input }) => {
+        return getDocumentMedia(input.slug);
+      }),
+    addMedia: adminProcedure
+      .input(z.object({
+        documentSlug: z.string(),
+        fileName: z.string(),
+        fileUrl: z.string(),
+        fileType: z.string(),
+        fileSize: z.number(),
+        caption: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        await addDocumentMedia(input);
+        return { success: true };
+      }),
+    removeMedia: adminProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        await removeDocumentMedia(input.id);
+        return { success: true };
+      }),
+
+    // Feature 10: Public site stats
+    publicStats: publicProcedure.query(async () => {
+      return getPublicSiteStats();
     }),
   }),
 

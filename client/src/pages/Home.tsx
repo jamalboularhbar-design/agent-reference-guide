@@ -15,6 +15,7 @@ import RecentlyViewed from '@/components/RecentlyViewed';
 import Favorites from '@/components/Favorites';
 import SearchAutocomplete from '@/components/SearchAutocomplete';
 import PopularDocuments from '@/components/PopularDocuments';
+import TrendingDocumentsSection from '@/components/TrendingDocumentsSection';
 import ReadingStreak from '@/components/ReadingStreak';
 import SmartSuggestions from '@/components/SmartSuggestions';
 import PinnedDocuments from '@/components/PinnedDocuments';
@@ -278,6 +279,9 @@ export default function Home() {
 
         {/* Popular/Trending Documents */}
         <PopularDocuments />
+
+        {/* Trending Now (weighted recency) */}
+        <TrendingDocumentsSection />
 
         {/* Document Statistics */}
         <section className="mt-16">
