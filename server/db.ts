@@ -1,6 +1,6 @@
 import { eq, like, or, sql, desc, asc, count, and } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, documents, documentRatings, readingLists, readingListItems, searchAnalytics, documentTags, documentComments, documentVersions, customCategories, downloadHistory, announcements, activityLog, documentAuditTrail, bookmarkNotes, shareLinks, scheduledPublish, inlineComments, brandingSettings, webhooks, recentlyViewed, documentFeedback, categoryOrdering, documentSubscriptions, subscriptionNotifications, userReadingPosition, searchHistory, aiSummaries, documentTranslations, userPreferences, readingStreakLeaderboard, glossaryTerms, documentDependencies, readingGoals, readingProgress, documentTemplates, savedFilters, documentQuizzes, reviewReminders, documentAnnotations, documentCollections, collectionItems, workflowStatuses, workflowTransitions, documentWorkflowStatus, archivalPolicies, archivedDocuments, contentGapSuggestions, duplicateContentPairs, activityFeed, documentSnapshots, readingCorrelations, quizResults, documentSeoMeta, systemNotificationLog, adminPermissions, approvalSlaConfig, webhookEventLog, documentAccessRequests, onboardingProgress, documentCitations, readingSessions, documentQualityAudits, emailDigestConfig, documentMedia, workspaces, workspaceMembers, reviewSchedules, coAuthorActivity, migrationJobs, sentimentScores, retentionPolicies, accessibilityChecks, customReports, pushNotifications, templateMarketplace, templateRatings, complianceReports, documentChangeLog, userLandingPreference, bulkExportJobs, documentCrossReferences, userEngagementScorecard, scheduledAnnouncements } from "../drizzle/schema";
+import { InsertUser, users, documents, documentRatings, readingLists, readingListItems, searchAnalytics, documentTags, documentComments, documentVersions, customCategories, downloadHistory, announcements, activityLog, documentAuditTrail, bookmarkNotes, shareLinks, scheduledPublish, inlineComments, brandingSettings, webhooks, recentlyViewed, documentFeedback, categoryOrdering, documentSubscriptions, subscriptionNotifications, userReadingPosition, searchHistory, aiSummaries, documentTranslations, userPreferences, readingStreakLeaderboard, glossaryTerms, documentDependencies, readingGoals, readingProgress, documentTemplates, savedFilters, documentQuizzes, reviewReminders, documentAnnotations, documentCollections, collectionItems, workflowStatuses, workflowTransitions, documentWorkflowStatus, archivalPolicies, archivedDocuments, contentGapSuggestions, duplicateContentPairs, activityFeed, documentSnapshots, readingCorrelations, quizResults, documentSeoMeta, systemNotificationLog, adminPermissions, approvalSlaConfig, webhookEventLog, documentAccessRequests, onboardingProgress, documentCitations, readingSessions, documentQualityAudits, emailDigestConfig, documentMedia, workspaces, workspaceMembers, reviewSchedules, coAuthorActivity, migrationJobs, sentimentScores, retentionPolicies, accessibilityChecks, customReports, pushNotifications, templateMarketplace, templateRatings, complianceReports, documentChangeLog, userLandingPreference, bulkExportJobs, documentCrossReferences, userEngagementScorecard, scheduledAnnouncements, dashboardWidgetConfig, brokenLinkScans, savedSearchFilters, duplicateContentScans, userDocCollections, userDocCollectionItems, performanceBenchmarks } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -4249,4 +4249,260 @@ export async function deleteScheduledAnnouncement(id: number) {
   if (!db) return null;
   await db.delete(scheduledAnnouncements).where(eq(scheduledAnnouncements.id, id));
   return { success: true };
+}
+
+// ─── Batch 25: Dashboard Widget Config ─────────────────────────────────────
+
+export async function getDashboardWidgetConfig(userOpenId: string) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(dashboardWidgetConfig).where(eq(dashboardWidgetConfig.userOpenId, userOpenId)).orderBy(asc(dashboardWidgetConfig.position));
+}
+
+export async function saveDashboardWidgetConfig(userOpenId: string, widgets: { widgetKey: string; position: number; visible: number; width: string }[]) {
+  const db = await getDb();
+  if (!db) return null;
+  await db.delete(dashboardWidgetConfig).where(eq(dashboardWidgetConfig.userOpenId, userOpenId));
+  if (widgets.length > 0) {
+    await db.insert(dashboardWidgetConfig).values(widgets.map(w => ({ ...w, userOpenId })));
+  }
+  return { success: true };
+}
+
+// ─── Batch 25: Document Version Rollback ───────────────────────────────────
+
+export async function rollbackDocumentVersion(slug: string, versionId: number, rolledBackBy: string) {
+  const db = await getDb();
+  if (!db) return null;
+  const version = await db.select().from(documentVersions).where(eq(documentVersions.id, versionId)).limit(1);
+  if (!version.length) return null;
+  const v = version[0];
+  // Create a new version entry for the rollback
+  await db.insert(documentVersions).values({
+    documentSlug: slug,
+    title: v.title,
+    content: v.content,
+    editedBy: rolledBackBy,
+    changeNote: `Rolled back to version #${versionId}`,
+  });
+  // Update the document content
+  await db.update(documents).set({
+    content: v.content,
+    wordCount: v.content ? v.content.split(/\s+/).filter(Boolean).length : 0,
+  }).where(eq(documents.slug, slug));
+  return { success: true, restoredVersionId: versionId };
+}
+
+// ─── Batch 25: Broken Link Checker ─────────────────────────────────────────
+
+export async function saveBrokenLinkScanResults(results: { documentId: number; documentTitle?: string; linkUrl: string; linkType: string; statusCode?: number; errorMessage?: string }[]) {
+  const db = await getDb();
+  if (!db) return null;
+  // Clear old results
+  await db.delete(brokenLinkScans);
+  if (results.length > 0) {
+    await db.insert(brokenLinkScans).values(results.map(r => ({
+      documentId: r.documentId,
+      documentTitle: r.documentTitle ?? null,
+      linkUrl: r.linkUrl,
+      linkType: r.linkType,
+      statusCode: r.statusCode ?? null,
+      errorMessage: r.errorMessage ?? null,
+    })));
+  }
+  return { saved: results.length };
+}
+
+export async function getBrokenLinkScanResults(opts?: { linkType?: string; limit?: number }) {
+  const db = await getDb();
+  if (!db) return [];
+  const conditions = [];
+  if (opts?.linkType) conditions.push(eq(brokenLinkScans.linkType, opts.linkType));
+  const query = conditions.length > 0
+    ? db.select().from(brokenLinkScans).where(sql`${sql.join(conditions, sql` AND `)}`).orderBy(desc(brokenLinkScans.scannedAt)).limit(opts?.limit ?? 500)
+    : db.select().from(brokenLinkScans).orderBy(desc(brokenLinkScans.scannedAt)).limit(opts?.limit ?? 500);
+  return query;
+}
+
+// ─── Batch 25: Saved Search Filters ────────────────────────────────────────
+
+export async function getSavedSearchFilters(userOpenId: string) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(savedSearchFilters).where(eq(savedSearchFilters.userOpenId, userOpenId)).orderBy(desc(savedSearchFilters.updatedAt));
+}
+
+export async function createSavedSearchFilter(data: { userOpenId: string; name: string; filterConfig: string }) {
+  const db = await getDb();
+  if (!db) return null;
+  await db.insert(savedSearchFilters).values(data);
+  return { success: true };
+}
+
+export async function deleteSavedSearchFilter(id: number, userOpenId: string) {
+  const db = await getDb();
+  if (!db) return null;
+  await db.delete(savedSearchFilters).where(sql`${savedSearchFilters.id} = ${id} AND ${savedSearchFilters.userOpenId} = ${userOpenId}`);
+  return { success: true };
+}
+
+export async function incrementSavedFilterUsage(id: number) {
+  const db = await getDb();
+  if (!db) return null;
+  await db.update(savedSearchFilters).set({ usageCount: sql`${savedSearchFilters.usageCount} + 1` }).where(eq(savedSearchFilters.id, id));
+  return { success: true };
+}
+
+// ─── Batch 25: Reading Time Estimator ──────────────────────────────────────
+
+export async function getDocumentReadingEstimate(slug: string) {
+  const db = await getDb();
+  if (!db) return null;
+  const doc = await db.select({ wordCount: documents.wordCount, title: documents.title }).from(documents).where(eq(documents.slug, slug)).limit(1);
+  if (!doc.length) return null;
+  const wc = doc[0].wordCount ?? 0;
+  const avgWPM = 200;
+  const minutes = Math.ceil(wc / avgWPM);
+  const complexity = wc > 5000 ? 'advanced' : wc > 2000 ? 'intermediate' : 'beginner';
+  return { wordCount: wc, estimatedMinutes: minutes, complexity, title: doc[0].title };
+}
+
+// ─── Batch 25: Duplicate Content Detector ──────────────────────────────────
+
+export async function saveDuplicateContentResults(results: { sourceDocId: number; sourceDocTitle?: string; targetDocId: number; targetDocTitle?: string; similarityScore: number }[]) {
+  const db = await getDb();
+  if (!db) return null;
+  await db.delete(duplicateContentScans).where(sql`1=1`);
+  if (results.length > 0) {
+    await db.insert(duplicateContentScans).values(results.map(r => ({
+      sourceDocId: r.sourceDocId,
+      sourceDocTitle: r.sourceDocTitle ?? null,
+      targetDocId: r.targetDocId,
+      targetDocTitle: r.targetDocTitle ?? null,
+      similarityScore: r.similarityScore,
+    })));
+  }
+  return { saved: results.length };
+}
+
+export async function getDuplicateContentResults(opts?: { minScore?: number; status?: string }) {
+  const db = await getDb();
+  if (!db) return [];
+  const conditions = [];
+  if (opts?.minScore) conditions.push(sql`${duplicateContentScans.similarityScore} >= ${opts.minScore}`);
+  if (opts?.status) conditions.push(eq(duplicateContentScans.status, opts.status));
+  const query = conditions.length > 0
+    ? db.select().from(duplicateContentScans).where(sql`${sql.join(conditions, sql` AND `)}`).orderBy(desc(duplicateContentScans.similarityScore))
+    : db.select().from(duplicateContentScans).orderBy(desc(duplicateContentScans.similarityScore));
+  return query;
+}
+
+export async function updateDuplicateScanStatus(id: number, status: string) {
+  const db = await getDb();
+  if (!db) return null;
+  await db.update(duplicateContentScans).set({ status }).where(eq(duplicateContentScans.id, id));
+  return { success: true };
+}
+
+// ─── Batch 25: User Document Collections ───────────────────────────────────
+
+export async function getUserDocCollections(userOpenId: string) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(userDocCollections).where(eq(userDocCollections.userOpenId, userOpenId)).orderBy(desc(userDocCollections.updatedAt));
+}
+
+export async function createUserDocCollection(data: { userOpenId: string; name: string; description?: string; isPublic?: number }) {
+  const db = await getDb();
+  if (!db) return null;
+  await db.insert(userDocCollections).values({
+    userOpenId: data.userOpenId,
+    name: data.name,
+    description: data.description ?? null,
+    isPublic: data.isPublic ?? 0,
+  });
+  return { success: true };
+}
+
+export async function deleteUserDocCollection(id: number, userOpenId: string) {
+  const db = await getDb();
+  if (!db) return null;
+  await db.delete(userDocCollectionItems).where(eq(userDocCollectionItems.collectionId, id));
+  await db.delete(userDocCollections).where(sql`${userDocCollections.id} = ${id} AND ${userDocCollections.userOpenId} = ${userOpenId}`);
+  return { success: true };
+}
+
+export async function getUserDocCollectionItems(collectionId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select({
+    id: userDocCollectionItems.id,
+    documentId: userDocCollectionItems.documentId,
+    position: userDocCollectionItems.position,
+    addedAt: userDocCollectionItems.addedAt,
+    docTitle: documents.title,
+    docSlug: documents.slug,
+    docCategory: documents.category,
+  }).from(userDocCollectionItems)
+    .leftJoin(documents, eq(userDocCollectionItems.documentId, documents.id))
+    .where(eq(userDocCollectionItems.collectionId, collectionId))
+    .orderBy(asc(userDocCollectionItems.position));
+}
+
+export async function addDocToCollection(collectionId: number, documentId: number) {
+  const db = await getDb();
+  if (!db) return null;
+  const existing = await db.select().from(userDocCollectionItems).where(sql`${userDocCollectionItems.collectionId} = ${collectionId} AND ${userDocCollectionItems.documentId} = ${documentId}`).limit(1);
+  if (existing.length > 0) return { success: true, alreadyExists: true };
+  const maxPos = await db.select({ maxP: sql<number>`COALESCE(MAX(${userDocCollectionItems.position}), 0)` }).from(userDocCollectionItems).where(eq(userDocCollectionItems.collectionId, collectionId));
+  await db.insert(userDocCollectionItems).values({ collectionId, documentId, position: (maxPos[0]?.maxP ?? 0) + 1 });
+  return { success: true };
+}
+
+export async function removeDocFromCollection(collectionId: number, documentId: number) {
+  const db = await getDb();
+  if (!db) return null;
+  await db.delete(userDocCollectionItems).where(sql`${userDocCollectionItems.collectionId} = ${collectionId} AND ${userDocCollectionItems.documentId} = ${documentId}`);
+  return { success: true };
+}
+
+// ─── Batch 25: Performance Benchmarks ──────────────────────────────────────
+
+export async function getPerformanceBenchmarks() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(performanceBenchmarks).orderBy(desc(performanceBenchmarks.createdAt));
+}
+
+export async function savePerformanceBenchmark(data: { metricKey: string; metricLabel: string; baselineValue: number; currentValue: number; periodStart: Date; periodEnd: Date; trend: string }) {
+  const db = await getDb();
+  if (!db) return null;
+  // Upsert by metricKey
+  const existing = await db.select().from(performanceBenchmarks).where(eq(performanceBenchmarks.metricKey, data.metricKey)).limit(1);
+  if (existing.length > 0) {
+    await db.update(performanceBenchmarks).set({
+      baselineValue: data.baselineValue,
+      currentValue: data.currentValue,
+      periodStart: data.periodStart,
+      periodEnd: data.periodEnd,
+      trend: data.trend,
+    }).where(eq(performanceBenchmarks.metricKey, data.metricKey));
+  } else {
+    await db.insert(performanceBenchmarks).values(data);
+  }
+  return { success: true };
+}
+
+// ─── Batch 25: Knowledge Graph Data ────────────────────────────────────────
+
+export async function getKnowledgeGraphData() {
+  const db = await getDb();
+  if (!db) return { nodes: [], edges: [] };
+  // Get all documents as nodes
+  const docs = await db.select({ id: documents.id, title: documents.title, slug: documents.slug, category: documents.category }).from(documents).where(eq(documents.status, 'published'));
+  // Get cross-references as edges
+  const refs = await db.select().from(documentCrossReferences);
+  const nodes = docs.map(d => ({ id: d.id, label: d.title, slug: d.slug, group: d.category }));
+  const edges = refs.map(r => ({ source: r.sourceDocId, target: r.targetDocId, type: r.status }));
+  return { nodes, edges };
 }

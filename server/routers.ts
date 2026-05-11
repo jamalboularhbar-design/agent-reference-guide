@@ -115,6 +115,15 @@ import {
   getDocumentCrossReferences, addDocumentCrossReference, updateCrossReferenceStatus, getAllCrossReferences,
   getUserEngagementScorecards, getUserEngagementScorecard, upsertUserEngagementScorecard,
   getScheduledAnnouncements, createScheduledAnnouncement, updateScheduledAnnouncement, deleteScheduledAnnouncement,
+  getDashboardWidgetConfig, saveDashboardWidgetConfig,
+  rollbackDocumentVersion,
+  saveBrokenLinkScanResults, getBrokenLinkScanResults,
+  getSavedSearchFilters, createSavedSearchFilter, deleteSavedSearchFilter, incrementSavedFilterUsage,
+  getDocumentReadingEstimate,
+  saveDuplicateContentResults, getDuplicateContentResults, updateDuplicateScanStatus,
+  getUserDocCollections, createUserDocCollection, deleteUserDocCollection, getUserDocCollectionItems, addDocToCollection, removeDocFromCollection,
+  getPerformanceBenchmarks, savePerformanceBenchmark,
+  getKnowledgeGraphData,
 } from "./db";
 import { invokeLLM } from "./_core/llm";
 import { notifyOwner } from "./_core/notification";
@@ -2274,6 +2283,103 @@ export const appRouter = router({
       return updateScheduledAnnouncement(input.id, updates);
     }),
     delete: adminProcedure.input(z.object({ id: z.number() })).mutation(async ({ input }) => deleteScheduledAnnouncement(input.id)),
+  }),
+
+  // Batch 25: Dashboard Widget Config
+  dashboardWidgets: router({
+    get: protectedProcedure.query(async ({ ctx }) => getDashboardWidgetConfig(ctx.user.openId)),
+    save: protectedProcedure.input(z.object({
+      widgets: z.array(z.object({ widgetKey: z.string(), position: z.number(), visible: z.number(), width: z.string() })),
+    })).mutation(async ({ ctx, input }) => saveDashboardWidgetConfig(ctx.user.openId, input.widgets)),
+  }),
+
+  // Batch 25: Document Version Rollback
+  versionRollback: router({
+    rollback: adminProcedure.input(z.object({ slug: z.string(), versionId: z.number() })).mutation(async ({ ctx, input }) => rollbackDocumentVersion(input.slug, input.versionId, ctx.user.name || ctx.user.openId)),
+  }),
+
+  // Batch 25: Broken Link Scanner (external links)
+  brokenLinkScanner: router({
+    scan: adminProcedure.mutation(async () => {
+      const { documents: docs } = await getDocuments({ status: 'all', limit: 1000 });
+      const results: { documentId: number; documentTitle?: string; linkUrl: string; linkType: string; statusCode?: number; errorMessage?: string }[] = [];
+      for (const doc of docs) {
+        const urlRegex = /https?:\/\/[^\s)"'<>]+/g;
+        const content = (doc as any).content || '';
+        const urls = content.match(urlRegex) || [];
+        for (const url of urls.slice(0, 10)) {
+          try {
+            const resp = await fetch(url, { method: 'HEAD', signal: AbortSignal.timeout(5000) });
+            if (!resp.ok) results.push({ documentId: doc.id, documentTitle: doc.title, linkUrl: url, linkType: 'external', statusCode: resp.status });
+          } catch (e: any) {
+            results.push({ documentId: doc.id, documentTitle: doc.title, linkUrl: url, linkType: 'external', errorMessage: e.message?.slice(0, 200) });
+          }
+        }
+      }
+      return saveBrokenLinkScanResults(results);
+    }),
+    list: adminProcedure.input(z.object({ linkType: z.string().optional(), limit: z.number().optional() }).optional()).query(async ({ input }) => getBrokenLinkScanResults(input ?? undefined)),
+  }),
+
+  // Batch 25: Saved Search Filters
+  savedFiltersUser: router({
+    list: protectedProcedure.query(async ({ ctx }) => getSavedSearchFilters(ctx.user.openId)),
+    create: protectedProcedure.input(z.object({ name: z.string(), filterConfig: z.string() })).mutation(async ({ ctx, input }) => createSavedSearchFilter({ ...input, userOpenId: ctx.user.openId })),
+    delete: protectedProcedure.input(z.object({ id: z.number() })).mutation(async ({ ctx, input }) => deleteSavedSearchFilter(input.id, ctx.user.openId)),
+    use: protectedProcedure.input(z.object({ id: z.number() })).mutation(async ({ input }) => incrementSavedFilterUsage(input.id)),
+  }),
+
+  // Batch 25: Reading Time Estimator
+  readingEstimate: router({
+    get: publicProcedure.input(z.object({ slug: z.string() })).query(async ({ input }) => getDocumentReadingEstimate(input.slug)),
+  }),
+
+  // Batch 25: Duplicate Content Detector
+  duplicateDetector: router({
+    scan: adminProcedure.mutation(async () => {
+      const { documents: docs } = await getDocuments({ status: 'all', limit: 500 });
+      const results: { sourceDocId: number; sourceDocTitle?: string; targetDocId: number; targetDocTitle?: string; similarityScore: number }[] = [];
+      for (let i = 0; i < docs.length; i++) {
+        for (let j = i + 1; j < docs.length; j++) {
+          const a = docs[i], b = docs[j];
+          if (a.category === b.category && a.title && b.title) {
+            const wordsA = new Set(a.title.toLowerCase().split(/\s+/));
+            const wordsB = new Set(b.title.toLowerCase().split(/\s+/));
+            const intersection = Array.from(wordsA).filter(w => wordsB.has(w)).length;
+            const union = new Set(Array.from(wordsA).concat(Array.from(wordsB))).size;
+            const score = union > 0 ? intersection / union : 0;
+            if (score > 0.3) results.push({ sourceDocId: a.id, sourceDocTitle: a.title, targetDocId: b.id, targetDocTitle: b.title, similarityScore: Math.round(score * 100) / 100 });
+          }
+        }
+      }
+      return saveDuplicateContentResults(results);
+    }),
+    list: adminProcedure.input(z.object({ minScore: z.number().optional(), status: z.string().optional() }).optional()).query(async ({ input }) => getDuplicateContentResults(input ?? undefined)),
+    updateStatus: adminProcedure.input(z.object({ id: z.number(), status: z.string() })).mutation(async ({ input }) => updateDuplicateScanStatus(input.id, input.status)),
+  }),
+
+  // Batch 25: User Document Collections
+  userCollections: router({
+    list: protectedProcedure.query(async ({ ctx }) => getUserDocCollections(ctx.user.openId)),
+    create: protectedProcedure.input(z.object({ name: z.string(), description: z.string().optional(), isPublic: z.number().optional() })).mutation(async ({ ctx, input }) => createUserDocCollection({ ...input, userOpenId: ctx.user.openId })),
+    delete: protectedProcedure.input(z.object({ id: z.number() })).mutation(async ({ ctx, input }) => deleteUserDocCollection(input.id, ctx.user.openId)),
+    items: protectedProcedure.input(z.object({ collectionId: z.number() })).query(async ({ input }) => getUserDocCollectionItems(input.collectionId)),
+    addDoc: protectedProcedure.input(z.object({ collectionId: z.number(), documentId: z.number() })).mutation(async ({ input }) => addDocToCollection(input.collectionId, input.documentId)),
+    removeDoc: protectedProcedure.input(z.object({ collectionId: z.number(), documentId: z.number() })).mutation(async ({ input }) => removeDocFromCollection(input.collectionId, input.documentId)),
+  }),
+
+  // Batch 25: Performance Benchmarks
+  benchmarks: router({
+    list: adminProcedure.query(async () => getPerformanceBenchmarks()),
+    save: adminProcedure.input(z.object({
+      metricKey: z.string(), metricLabel: z.string(), baselineValue: z.number(), currentValue: z.number(),
+      periodStart: z.string(), periodEnd: z.string(), trend: z.string(),
+    })).mutation(async ({ input }) => savePerformanceBenchmark({ ...input, periodStart: new Date(input.periodStart), periodEnd: new Date(input.periodEnd) })),
+  }),
+
+  // Batch 25: Knowledge Graph
+  knowledgeGraph: router({
+    data: adminProcedure.query(async () => getKnowledgeGraphData()),
   }),
 });
 export type AppRouter = typeof appRouter;

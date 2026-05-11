@@ -111,6 +111,12 @@ import AdminCrossReferencesPage from "./pages/AdminCrossReferencesPage";
 import AdminEngagementScorecardsPage from "./pages/AdminEngagementScorecardsPage";
 import AdminAnnouncementSchedulerPage from "./pages/AdminAnnouncementSchedulerPage";
 import UserEngagementScorePage from "./pages/UserEngagementScorePage";
+import AdminDashboardWidgetConfigPage from "./pages/AdminDashboardWidgetConfigPage";
+import AdminBrokenLinkScannerPage from "./pages/AdminBrokenLinkScannerPage";
+import AdminDuplicateDetectorPage from "./pages/AdminDuplicateDetectorPage";
+import AdminKnowledgeGraphPage from "./pages/AdminKnowledgeGraphPage";
+import AdminPerformanceBenchmarksPage from "./pages/AdminPerformanceBenchmarksPage";
+import UserCollectionsPage from "./pages/UserCollectionsPage";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -218,6 +224,12 @@ function Router() {
       <Route path={"/admin/engagement-scorecards"} component={AdminEngagementScorecardsPage} />
       <Route path={"/admin/announcement-scheduler"} component={AdminAnnouncementSchedulerPage} />
       <Route path={"/my-engagement"} component={UserEngagementScorePage} />
+      <Route path={"/admin/widget-config"} component={AdminDashboardWidgetConfigPage} />
+      <Route path={"/admin/broken-link-scanner"} component={AdminBrokenLinkScannerPage} />
+      <Route path={"/admin/duplicate-detector"} component={AdminDuplicateDetectorPage} />
+      <Route path={"/admin/knowledge-graph"} component={AdminKnowledgeGraphPage} />
+      <Route path={"/admin/benchmarks"} component={AdminPerformanceBenchmarksPage} />
+      <Route path={"/my-collections"} component={UserCollectionsPage} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />

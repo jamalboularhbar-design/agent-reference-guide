@@ -1034,3 +1034,90 @@ export const scheduledAnnouncements = mysqlTable("scheduled_announcements", {
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 export type ScheduledAnnouncement = typeof scheduledAnnouncements.$inferSelect;
+
+// Dashboard widget configuration
+export const dashboardWidgetConfig = mysqlTable("dashboard_widget_config", {
+  id: int("id").autoincrement().primaryKey(),
+  userOpenId: varchar("userOpenId", { length: 255 }).notNull(),
+  widgetKey: varchar("widgetKey", { length: 100 }).notNull(),
+  position: int("position").notNull().default(0),
+  visible: tinyint("visible").notNull().default(1),
+  width: varchar("width", { length: 20 }).notNull().default("half"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type DashboardWidgetConfig = typeof dashboardWidgetConfig.$inferSelect;
+
+// Broken link scan results
+export const brokenLinkScans = mysqlTable("broken_link_scans", {
+  id: int("id").autoincrement().primaryKey(),
+  documentId: int("documentId").notNull(),
+  documentTitle: varchar("documentTitle", { length: 500 }),
+  linkUrl: text("linkUrl").notNull(),
+  linkType: varchar("linkType", { length: 50 }).notNull().default("external"),
+  statusCode: int("statusCode"),
+  errorMessage: varchar("errorMessage", { length: 500 }),
+  scannedAt: timestamp("scannedAt").defaultNow().notNull(),
+});
+export type BrokenLinkScan = typeof brokenLinkScans.$inferSelect;
+
+// Saved search filters
+export const savedSearchFilters = mysqlTable("saved_search_filters", {
+  id: int("id").autoincrement().primaryKey(),
+  userOpenId: varchar("userOpenId", { length: 255 }).notNull(),
+  name: varchar("name", { length: 255 }).notNull(),
+  filterConfig: text("filterConfig").notNull(),
+  usageCount: int("usageCount").notNull().default(0),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type SavedSearchFilter = typeof savedSearchFilters.$inferSelect;
+
+// Duplicate content detection results
+export const duplicateContentScans = mysqlTable("duplicate_content_scans", {
+  id: int("id").autoincrement().primaryKey(),
+  sourceDocId: int("sourceDocId").notNull(),
+  sourceDocTitle: varchar("sourceDocTitle", { length: 500 }),
+  targetDocId: int("targetDocId").notNull(),
+  targetDocTitle: varchar("targetDocTitle", { length: 500 }),
+  similarityScore: float("similarityScore").notNull(),
+  status: varchar("status", { length: 50 }).notNull().default("pending"),
+  scannedAt: timestamp("scannedAt").defaultNow().notNull(),
+});
+export type DuplicateContentScan = typeof duplicateContentScans.$inferSelect;
+
+// User document collections
+export const userDocCollections = mysqlTable("user_doc_collections", {
+  id: int("id").autoincrement().primaryKey(),
+  userOpenId: varchar("userOpenId", { length: 255 }).notNull(),
+  name: varchar("name", { length: 255 }).notNull(),
+  description: text("description"),
+  isPublic: tinyint("isPublic").notNull().default(0),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type UserDocCollection = typeof userDocCollections.$inferSelect;
+
+// Collection items
+export const userDocCollectionItems = mysqlTable("user_doc_collection_items", {
+  id: int("id").autoincrement().primaryKey(),
+  collectionId: int("collectionId").notNull(),
+  documentId: int("documentId").notNull(),
+  position: int("position").notNull().default(0),
+  addedAt: timestamp("addedAt").defaultNow().notNull(),
+});
+export type UserDocCollectionItem = typeof userDocCollectionItems.$inferSelect;
+
+// Performance benchmarks
+export const performanceBenchmarks = mysqlTable("performance_benchmarks", {
+  id: int("id").autoincrement().primaryKey(),
+  metricKey: varchar("metricKey", { length: 100 }).notNull(),
+  metricLabel: varchar("metricLabel", { length: 255 }).notNull(),
+  baselineValue: float("baselineValue").notNull(),
+  currentValue: float("currentValue").notNull(),
+  periodStart: timestamp("periodStart").notNull(),
+  periodEnd: timestamp("periodEnd").notNull(),
+  trend: varchar("trend", { length: 20 }).notNull().default("flat"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+export type PerformanceBenchmark = typeof performanceBenchmarks.$inferSelect;

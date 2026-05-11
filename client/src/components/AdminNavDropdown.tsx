@@ -8,7 +8,8 @@ import {
   BarChart2, LinkIcon, CalendarCheck, Tags as TagsIcon, HeartPulse,
   Workflow, FileSpreadsheet, Lightbulb, LayoutDashboard, Search, Bell,
   Building2, Code2, ArrowRightLeft, SmilePlus, Accessibility, FileBarChart,
-  History, Link2, Trophy, Megaphone
+  History, Link2, Trophy, Megaphone,
+  Share2, TrendingUp, Scan
 } from 'lucide-react';
 
 const adminLinks = [
@@ -78,6 +79,11 @@ const adminLinks = [
   { label: 'Cross-References', href: '/admin/cross-references', icon: Link2 },
   { label: 'Engagement Scorecards', href: '/admin/engagement-scorecards', icon: Trophy },
   { label: 'Announcement Scheduler', href: '/admin/announcement-scheduler', icon: Megaphone },
+  { label: 'Widget Config', href: '/admin/widget-config', icon: LayoutDashboard },
+  { label: 'Link Scanner', href: '/admin/broken-link-scanner', icon: Scan },
+  { label: 'Duplicate Detector+', href: '/admin/duplicate-detector', icon: Copy },
+  { label: 'Knowledge Graph', href: '/admin/knowledge-graph', icon: Share2 },
+  { label: 'Benchmarks', href: '/admin/benchmarks', icon: TrendingUp },
 ];
 
 export default function AdminNavDropdown() {

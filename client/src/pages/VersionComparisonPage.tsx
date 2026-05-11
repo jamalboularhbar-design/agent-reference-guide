@@ -1,15 +1,24 @@
 import { useState, useMemo } from 'react';
 import { trpc } from '@/lib/trpc';
+import { useAuth } from '@/_core/hooks/useAuth';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Button } from '@/components/ui/button';
 import { useRoute } from 'wouter';
-import { GitCompare } from 'lucide-react';
+import { GitCompare, RotateCcw, Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
 
 export default function VersionComparisonPage() {
   const [, params] = useRoute('/doc/:slug/compare');
   const slug = params?.slug || '';
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
   const [leftId, setLeftId] = useState<string>('');
   const [rightId, setRightId] = useState<string>('');
+  const rollbackMut = trpc.versionRollback.rollback.useMutation({
+    onSuccess: () => toast.success('Document rolled back successfully'),
+    onError: () => toast.error('Rollback failed'),
+  });
 
   const { data: versions } = trpc.documents.versions.useQuery({ slug }, { enabled: !!slug });
   const { data: leftVersion } = trpc.versionCompare.getVersion.useQuery(
@@ -77,6 +86,31 @@ export default function VersionComparisonPage() {
           </Select>
         </div>
       </div>
+
+      {isAdmin && leftId && (
+        <div className="flex gap-2 mb-4">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => { if (confirm(`Rollback document "${slug}" to version #${leftId}?`)) rollbackMut.mutate({ slug, versionId: Number(leftId) }); }}
+            disabled={rollbackMut.isPending}
+          >
+            {rollbackMut.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RotateCcw className="w-4 h-4 mr-2" />}
+            Rollback to v{leftId}
+          </Button>
+          {rightId && rightId !== leftId && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => { if (confirm(`Rollback document "${slug}" to version #${rightId}?`)) rollbackMut.mutate({ slug, versionId: Number(rightId) }); }}
+              disabled={rollbackMut.isPending}
+            >
+              {rollbackMut.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RotateCcw className="w-4 h-4 mr-2" />}
+              Rollback to v{rightId}
+            </Button>
+          )}
+        </div>
+      )}
 
       {leftId && rightId && leftId === rightId && (
         <p className="text-sm text-yellow-500 mb-4">Please select two different versions to compare.</p>

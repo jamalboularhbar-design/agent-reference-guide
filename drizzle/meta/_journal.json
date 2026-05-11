@@ -155,6 +155,13 @@
       "when": 1778526916192,
       "tag": "0021_mature_frank_castle",
       "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "5",
+      "when": 1778528833095,
+      "tag": "0022_luxuriant_kang",
+      "breakpoints": true
     }
   ]
 }
