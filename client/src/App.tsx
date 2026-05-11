@@ -79,6 +79,13 @@ import AdminSeoPage from "./pages/AdminSeoPage";
 import AdminNotificationCenterPage from "./pages/AdminNotificationCenterPage";
 import UserDashboardPage from "./pages/UserDashboardPage";
 import ZipExportPage from "./pages/ZipExportPage";
+import AdminRoleDelegationPage from "./pages/AdminRoleDelegationPage";
+import AdminSlaPage from "./pages/AdminSlaPage";
+import AdminWebhookEventsPage from "./pages/AdminWebhookEventsPage";
+import AdminAccessRequestsPage from "./pages/AdminAccessRequestsPage";
+import AdminBatchSummarizePage from "./pages/AdminBatchSummarizePage";
+import AdminSystemHealthPage from "./pages/AdminSystemHealthPage";
+import VersionComparisonPage from "./pages/VersionComparisonPage";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -154,6 +161,13 @@ function Router() {
       <Route path={"/admin/notification-center"} component={AdminNotificationCenterPage} />
       <Route path={"/my-dashboard"} component={UserDashboardPage} />
       <Route path={"/bulk-export"} component={ZipExportPage} />
+      <Route path={"/admin/role-delegation"} component={AdminRoleDelegationPage} />
+      <Route path={"/admin/sla"} component={AdminSlaPage} />
+      <Route path={"/admin/webhook-events"} component={AdminWebhookEventsPage} />
+      <Route path={"/admin/access-requests"} component={AdminAccessRequestsPage} />
+      <Route path={"/admin/batch-summarize"} component={AdminBatchSummarizePage} />
+      <Route path={"/admin/system-health"} component={AdminSystemHealthPage} />
+      <Route path={"/doc/:slug/compare"} component={VersionComparisonPage} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />

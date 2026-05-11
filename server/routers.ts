@@ -82,6 +82,14 @@ import {
   getDocumentsForZipExport,
   getAllDocumentTitlesAndSlugs,
   getUserPersonalStats,
+  getUserPermissions, grantPermission, revokePermission, getAllPermissions,
+  getSlaConfig, upsertSlaConfig, getDocsExceedingSla,
+  logWebhookEvent, getWebhookEventLogs, retryWebhookEvent,
+  createAccessRequest, getAccessRequests, reviewAccessRequest, getUserAccessRequests,
+  getDocumentVersionById,
+  getDocumentsWithoutSummary,
+  getOnboardingProgress, completeOnboardingTask, initOnboardingTasks,
+  getCachedCitation, saveCitation,
 } from "./db";
 import { invokeLLM } from "./_core/llm";
 import { notifyOwner } from "./_core/notification";
@@ -1777,6 +1785,103 @@ export const appRouter = router({
 
   userDashboard: router({
     stats: protectedProcedure.query(({ ctx }) => getUserPersonalStats(ctx.user.openId)),
+  }),
+
+  // ── Batch 20 ──
+
+  adminPermissions: router({
+    list: adminProcedure.query(() => getAllPermissions()),
+    userPerms: adminProcedure.input(z.object({ userOpenId: z.string() })).query(({ input }) => getUserPermissions(input.userOpenId)),
+    grant: adminProcedure.input(z.object({ userOpenId: z.string(), permission: z.string() })).mutation(({ input, ctx }) => grantPermission(input.userOpenId, input.permission, ctx.user.openId)),
+    revoke: adminProcedure.input(z.object({ id: z.number() })).mutation(({ input }) => revokePermission(input.id)),
+  }),
+
+  approvalSla: router({
+    getConfig: adminProcedure.query(() => getSlaConfig()),
+    updateConfig: adminProcedure.input(z.object({ maxHoursInReview: z.number(), alertEnabled: z.boolean() })).mutation(({ input }) => upsertSlaConfig(input.maxHoursInReview, input.alertEnabled)),
+    getOverdue: adminProcedure.query(async () => {
+      const config = await getSlaConfig();
+      if (!config) return [];
+      return getDocsExceedingSla(config.maxHoursInReview);
+    }),
+  }),
+
+  webhookEvents: router({
+    list: adminProcedure.input(z.object({ limit: z.number().default(50), offset: z.number().default(0) }).optional()).query(({ input }) => getWebhookEventLogs(input?.limit, input?.offset)),
+    retry: adminProcedure.input(z.object({ id: z.number() })).mutation(async ({ input }) => {
+      const event = await retryWebhookEvent(input.id);
+      return { success: !!event, event };
+    }),
+  }),
+
+  accessRequests: router({
+    create: protectedProcedure.input(z.object({ documentId: z.number(), reason: z.string().optional() })).mutation(({ input, ctx }) => createAccessRequest(input.documentId, ctx.user.openId, ctx.user.name || null, input.reason || null)),
+    listAll: adminProcedure.input(z.object({ status: z.string().optional() }).optional()).query(({ input }) => getAccessRequests(input?.status)),
+    review: adminProcedure.input(z.object({ id: z.number(), status: z.enum(['approved', 'denied']) })).mutation(({ input, ctx }) => reviewAccessRequest(input.id, input.status, ctx.user.openId)),
+    myRequests: protectedProcedure.query(({ ctx }) => getUserAccessRequests(ctx.user.openId)),
+  }),
+
+  versionCompare: router({
+    getVersion: publicProcedure.input(z.object({ versionId: z.number() })).query(({ input }) => getDocumentVersionById(input.versionId)),
+  }),
+
+  batchSummarize: router({
+    getUnsummarized: adminProcedure.input(z.object({ limit: z.number().default(20) }).optional()).query(({ input }) => getDocumentsWithoutSummary(input?.limit)),
+    summarize: adminProcedure.input(z.object({ slug: z.string(), title: z.string(), content: z.string() })).mutation(async ({ input }) => {
+      const response = await invokeLLM({
+        messages: [
+          { role: 'system', content: 'You are a technical writer. Generate a concise executive summary (2-3 sentences) of the following document.' },
+          { role: 'user', content: `Title: ${input.title}\n\nContent:\n${input.content?.substring(0, 4000) || ''}` },
+        ],
+      });
+      const summary = (response.choices?.[0]?.message?.content as string) || 'Summary generation failed.';
+      await saveAISummary(input.slug, summary);
+      return { slug: input.slug, summary };
+    }),
+  }),
+
+  onboarding: router({
+    get: protectedProcedure.query(async ({ ctx }) => {
+      await initOnboardingTasks(ctx.user.openId);
+      return getOnboardingProgress(ctx.user.openId);
+    }),
+    complete: protectedProcedure.input(z.object({ taskKey: z.string() })).mutation(({ input, ctx }) => completeOnboardingTask(ctx.user.openId, input.taskKey)),
+  }),
+
+  systemHealth: router({
+    status: adminProcedure.query(async () => {
+      const uptime = process.uptime();
+      const memUsage = process.memoryUsage();
+      return {
+        uptime: Math.floor(uptime),
+        memoryUsedMB: Math.round(memUsage.heapUsed / 1024 / 1024),
+        memoryTotalMB: Math.round(memUsage.heapTotal / 1024 / 1024),
+        nodeVersion: process.version,
+        platform: process.platform,
+        dbConnected: true,
+        timestamp: Date.now(),
+      };
+    }),
+  }),
+
+  citations: router({
+    get: publicProcedure.input(z.object({ documentId: z.number(), style: z.string() })).query(({ input }) => getCachedCitation(input.documentId, input.style)),
+    generate: publicProcedure.input(z.object({ documentId: z.number(), style: z.string(), title: z.string(), author: z.string().optional(), date: z.string().optional(), url: z.string().optional() })).mutation(async ({ input }) => {
+      const cached = await getCachedCitation(input.documentId, input.style);
+      if (cached) return cached;
+      const year = input.date ? new Date(input.date).getFullYear() : new Date().getFullYear();
+      const author = input.author || 'Agent Reference Guide';
+      let citation = '';
+      if (input.style === 'apa') {
+        citation = `${author}. (${year}). ${input.title}. Agent Reference Guide.${input.url ? ` Retrieved from ${input.url}` : ''}`;
+      } else if (input.style === 'mla') {
+        citation = `${author}. "${input.title}." Agent Reference Guide, ${year}.${input.url ? ` ${input.url}.` : ''}`;
+      } else if (input.style === 'chicago') {
+        citation = `${author}. "${input.title}." Agent Reference Guide. ${year}.${input.url ? ` ${input.url}.` : ''}`;
+      }
+      await saveCitation(input.documentId, input.style, citation);
+      return { id: 0, documentId: input.documentId, style: input.style, citation, createdAt: new Date() };
+    }),
   }),
 
 });

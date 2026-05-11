@@ -51,6 +51,12 @@ const adminLinks = [
   { label: 'Unified Dashboard', href: '/admin/unified', icon: LayoutDashboard },
   { label: 'SEO Editor', href: '/admin/seo', icon: Search },
   { label: 'Notification Center', href: '/admin/notification-center', icon: Bell },
+  { label: 'Role Delegation', href: '/admin/role-delegation', icon: Shield },
+  { label: 'Approval SLA', href: '/admin/sla', icon: Clock },
+  { label: 'Webhook Events', href: '/admin/webhook-events', icon: Webhook },
+  { label: 'Access Requests', href: '/admin/access-requests', icon: Users },
+  { label: 'Batch Summarize', href: '/admin/batch-summarize', icon: Lightbulb },
+  { label: 'System Health', href: '/admin/system-health', icon: Activity },
 ];
 
 export default function AdminNavDropdown() {

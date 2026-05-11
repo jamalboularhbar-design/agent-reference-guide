@@ -33,6 +33,7 @@ import ExportDocx from '@/components/ExportDocx';
 import { useTrackRecentView } from '@/components/RecentlyViewed';
 import CodeCopyButton from '@/components/CodeCopyButton';
 import DocumentFeedback from '@/components/DocumentFeedback';
+import CitationGenerator from '@/components/CitationGenerator';
 import DocumentNavigation from '@/components/DocumentNavigation';
 import QRCodeShare from '@/components/QRCodeShare';
 import SubscribeButton from '@/components/SubscribeButton';
@@ -637,6 +638,9 @@ export default function DocumentDetail() {
 
             {/* Version Comparison */}
             <DocumentComparisonView slug={document.slug} />
+
+            {/* Citation Generator */}
+            <CitationGenerator documentId={document.id} title={document.title} createdAt={document.createdAt ? new Date(document.createdAt).toISOString() : undefined} />
 
             {/* Document Feedback */}
             <DocumentFeedback slug={document.slug} />

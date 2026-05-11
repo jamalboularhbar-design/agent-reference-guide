@@ -1,6 +1,6 @@
 import { eq, like, or, sql, desc, asc, count, and } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, documents, documentRatings, readingLists, readingListItems, searchAnalytics, documentTags, documentComments, documentVersions, customCategories, downloadHistory, announcements, activityLog, documentAuditTrail, bookmarkNotes, shareLinks, scheduledPublish, inlineComments, brandingSettings, webhooks, recentlyViewed, documentFeedback, categoryOrdering, documentSubscriptions, subscriptionNotifications, userReadingPosition, searchHistory, aiSummaries, documentTranslations, userPreferences, readingStreakLeaderboard, glossaryTerms, documentDependencies, readingGoals, readingProgress, documentTemplates, savedFilters, documentQuizzes, reviewReminders, documentAnnotations, documentCollections, collectionItems, workflowStatuses, workflowTransitions, documentWorkflowStatus, archivalPolicies, archivedDocuments, contentGapSuggestions, duplicateContentPairs, activityFeed, documentSnapshots, readingCorrelations, quizResults, documentSeoMeta, systemNotificationLog } from "../drizzle/schema";
+import { InsertUser, users, documents, documentRatings, readingLists, readingListItems, searchAnalytics, documentTags, documentComments, documentVersions, customCategories, downloadHistory, announcements, activityLog, documentAuditTrail, bookmarkNotes, shareLinks, scheduledPublish, inlineComments, brandingSettings, webhooks, recentlyViewed, documentFeedback, categoryOrdering, documentSubscriptions, subscriptionNotifications, userReadingPosition, searchHistory, aiSummaries, documentTranslations, userPreferences, readingStreakLeaderboard, glossaryTerms, documentDependencies, readingGoals, readingProgress, documentTemplates, savedFilters, documentQuizzes, reviewReminders, documentAnnotations, documentCollections, collectionItems, workflowStatuses, workflowTransitions, documentWorkflowStatus, archivalPolicies, archivedDocuments, contentGapSuggestions, duplicateContentPairs, activityFeed, documentSnapshots, readingCorrelations, quizResults, documentSeoMeta, systemNotificationLog, adminPermissions, approvalSlaConfig, webhookEventLog, documentAccessRequests, onboardingProgress, documentCitations } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -3073,4 +3073,179 @@ export async function getUserPersonalStats(userOpenId: string) {
     currentStreak: streak[0]?.currentStreak || 0,
     longestStreak: streak[0]?.longestStreak || 0,
   };
+}
+
+// ── Batch 20 DB Helpers ──
+
+// 1. Admin role delegation
+export async function getUserPermissions(userOpenId: string) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(adminPermissions).where(eq(adminPermissions.userOpenId, userOpenId));
+}
+
+export async function grantPermission(userOpenId: string, permission: string, grantedBy: string) {
+  const db = await getDb();
+  if (!db) return;
+  await db.insert(adminPermissions).values({ userOpenId, permission, grantedBy });
+}
+
+export async function revokePermission(id: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.delete(adminPermissions).where(eq(adminPermissions.id, id));
+}
+
+export async function getAllPermissions() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(adminPermissions).orderBy(desc(adminPermissions.createdAt));
+}
+
+// 2. Document approval SLA tracking
+export async function getSlaConfig() {
+  const db = await getDb();
+  if (!db) return null;
+  const rows = await db.select().from(approvalSlaConfig).limit(1);
+  return rows[0] || null;
+}
+
+export async function upsertSlaConfig(maxHoursInReview: number, alertEnabled: boolean) {
+  const db = await getDb();
+  if (!db) return;
+  const existing = await db.select().from(approvalSlaConfig).limit(1);
+  if (existing.length > 0) {
+    await db.update(approvalSlaConfig).set({ maxHoursInReview, alertEnabled }).where(eq(approvalSlaConfig.id, existing[0].id));
+  } else {
+    await db.insert(approvalSlaConfig).values({ maxHoursInReview, alertEnabled });
+  }
+}
+
+export async function getDocsExceedingSla(maxHours: number) {
+  const db = await getDb();
+  if (!db) return [];
+  const cutoff = new Date(Date.now() - maxHours * 60 * 60 * 1000);
+  return db.select().from(documents).where(
+    and(eq(documents.status, "review"), sql`${documents.updatedAt} < ${cutoff}`)
+  );
+}
+
+// 3. Webhook event log
+export async function logWebhookEvent(data: { webhookId: number; event: string; payload: string; responseStatus?: number; responseBody?: string; success: boolean }) {
+  const db = await getDb();
+  if (!db) return;
+  await db.insert(webhookEventLog).values(data);
+}
+
+export async function getWebhookEventLogs(limit = 50, offset = 0) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(webhookEventLog).orderBy(desc(webhookEventLog.createdAt)).limit(limit).offset(offset);
+}
+
+export async function retryWebhookEvent(id: number) {
+  const db = await getDb();
+  if (!db) return null;
+  const rows = await db.select().from(webhookEventLog).where(eq(webhookEventLog.id, id));
+  if (!rows[0]) return null;
+  await db.update(webhookEventLog).set({ retriesLeft: sql`${webhookEventLog.retriesLeft} - 1` }).where(eq(webhookEventLog.id, id));
+  return rows[0];
+}
+
+// 4. Document access requests
+export async function createAccessRequest(documentId: number, requesterOpenId: string, requesterName: string | null, reason: string | null) {
+  const db = await getDb();
+  if (!db) return;
+  await db.insert(documentAccessRequests).values({ documentId, requesterOpenId, requesterName, reason });
+}
+
+export async function getAccessRequests(status?: string) {
+  const db = await getDb();
+  if (!db) return [];
+  if (status) {
+    return db.select().from(documentAccessRequests).where(eq(documentAccessRequests.status, status)).orderBy(desc(documentAccessRequests.createdAt));
+  }
+  return db.select().from(documentAccessRequests).orderBy(desc(documentAccessRequests.createdAt));
+}
+
+export async function reviewAccessRequest(id: number, status: string, reviewedBy: string) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(documentAccessRequests).set({ status, reviewedBy, reviewedAt: new Date() }).where(eq(documentAccessRequests.id, id));
+}
+
+export async function getUserAccessRequests(requesterOpenId: string) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(documentAccessRequests).where(eq(documentAccessRequests.requesterOpenId, requesterOpenId)).orderBy(desc(documentAccessRequests.createdAt));
+}
+
+// 5. Version comparison (uses existing documentVersions)
+export async function getDocumentVersionById(versionId: number) {
+  const db = await getDb();
+  if (!db) return null;
+  const rows = await db.select().from(documentVersions).where(eq(documentVersions.id, versionId));
+  return rows[0] || null;
+}
+
+// 6. Batch AI summarization (uses existing aiSummaries)
+export async function getDocumentsWithoutSummary(limit = 20) {
+  const db = await getDb();
+  if (!db) return [];
+  const summarized = db.select({ documentSlug: aiSummaries.documentSlug }).from(aiSummaries);
+  return db.select({ slug: documents.slug, title: documents.title, content: documents.content })
+    .from(documents)
+    .where(sql`${documents.slug} NOT IN (${summarized})`)
+    .limit(limit);
+}
+
+// 7. User onboarding checklist
+export async function getOnboardingProgress(userOpenId: string) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(onboardingProgress).where(eq(onboardingProgress.userOpenId, userOpenId));
+}
+
+export async function completeOnboardingTask(userOpenId: string, taskKey: string) {
+  const db = await getDb();
+  if (!db) return;
+  const existing = await db.select().from(onboardingProgress).where(and(eq(onboardingProgress.userOpenId, userOpenId), eq(onboardingProgress.taskKey, taskKey)));
+  if (existing.length > 0) {
+    await db.update(onboardingProgress).set({ completed: true, completedAt: new Date() }).where(eq(onboardingProgress.id, existing[0].id));
+  } else {
+    await db.insert(onboardingProgress).values({ userOpenId, taskKey, completed: true, completedAt: new Date() });
+  }
+}
+
+export async function initOnboardingTasks(userOpenId: string) {
+  const db = await getDb();
+  if (!db) return;
+  const tasks = ['read_5_docs', 'complete_quiz', 'bookmark_doc', 'create_reading_list', 'set_preferences', 'search_document'];
+  const existing = await db.select().from(onboardingProgress).where(eq(onboardingProgress.userOpenId, userOpenId));
+  const existingKeys = new Set(existing.map(e => e.taskKey));
+  const toInsert = tasks.filter(t => !existingKeys.has(t)).map(taskKey => ({ userOpenId, taskKey }));
+  if (toInsert.length > 0) {
+    await db.insert(onboardingProgress).values(toInsert);
+  }
+}
+
+// 8. Admin system health (no DB table needed - returns runtime info)
+
+// 9. Document citation generator
+export async function getCachedCitation(documentId: number, style: string) {
+  const db = await getDb();
+  if (!db) return null;
+  const rows = await db.select().from(documentCitations).where(and(eq(documentCitations.documentId, documentId), eq(documentCitations.style, style)));
+  return rows[0] || null;
+}
+
+export async function saveCitation(documentId: number, style: string, citation: string) {
+  const db = await getDb();
+  if (!db) return;
+  const existing = await getCachedCitation(documentId, style);
+  if (existing) {
+    await db.update(documentCitations).set({ citation }).where(eq(documentCitations.id, existing.id));
+  } else {
+    await db.insert(documentCitations).values({ documentId, style, citation });
+  }
 }

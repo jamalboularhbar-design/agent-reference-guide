@@ -1,4 +1,4 @@
-import { int, mediumtext, mysqlEnum, mysqlTable, text, timestamp, varchar } from "drizzle-orm/mysql-core";
+import { boolean, int, mediumtext, mysqlEnum, mysqlTable, text, timestamp, varchar } from "drizzle-orm/mysql-core";
 
 /**
  * Core user table backing auth flow.
@@ -658,3 +658,73 @@ export const systemNotificationLog = mysqlTable("system_notification_log", {
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 export type SystemNotificationLogEntry = typeof systemNotificationLog.$inferSelect;
+
+// ── Batch 20 ──
+
+// Admin role permissions (granular permissions per user)
+export const adminPermissions = mysqlTable("admin_permissions", {
+  id: int("id").autoincrement().primaryKey(),
+  userOpenId: varchar("userOpenId", { length: 64 }).notNull(),
+  permission: varchar("permission", { length: 100 }).notNull(), // e.g. 'content_editor', 'analytics_viewer', 'user_manager', 'full_admin'
+  grantedBy: varchar("grantedBy", { length: 64 }).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+export type AdminPermission = typeof adminPermissions.$inferSelect;
+
+// Document approval SLA tracking
+export const approvalSlaConfig = mysqlTable("approval_sla_config", {
+  id: int("id").autoincrement().primaryKey(),
+  maxHoursInReview: int("maxHoursInReview").default(48).notNull(),
+  alertEnabled: boolean("alertEnabled").default(true).notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type ApprovalSlaConfig = typeof approvalSlaConfig.$inferSelect;
+
+// Webhook event log
+export const webhookEventLog = mysqlTable("webhook_event_log", {
+  id: int("id").autoincrement().primaryKey(),
+  webhookId: int("webhookId").notNull(),
+  event: varchar("event", { length: 50 }).notNull(),
+  payload: text("payload"),
+  responseStatus: int("responseStatus"),
+  responseBody: text("responseBody"),
+  success: boolean("success").default(false).notNull(),
+  retriesLeft: int("retriesLeft").default(2).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+export type WebhookEventLogEntry = typeof webhookEventLog.$inferSelect;
+
+// Document access requests
+export const documentAccessRequests = mysqlTable("document_access_requests", {
+  id: int("id").autoincrement().primaryKey(),
+  documentId: int("documentId").notNull(),
+  requesterOpenId: varchar("requesterOpenId", { length: 64 }).notNull(),
+  requesterName: varchar("requesterName", { length: 255 }),
+  reason: text("reason"),
+  status: varchar("status", { length: 20 }).default("pending").notNull(), // pending, approved, denied
+  reviewedBy: varchar("reviewedBy", { length: 64 }),
+  reviewedAt: timestamp("reviewedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+export type DocumentAccessRequest = typeof documentAccessRequests.$inferSelect;
+
+// User onboarding checklist progress
+export const onboardingProgress = mysqlTable("onboarding_progress", {
+  id: int("id").autoincrement().primaryKey(),
+  userOpenId: varchar("userOpenId", { length: 64 }).notNull(),
+  taskKey: varchar("taskKey", { length: 100 }).notNull(), // e.g. 'read_5_docs', 'complete_quiz', 'bookmark_doc', 'create_list', 'set_preferences'
+  completed: boolean("completed").default(false).notNull(),
+  completedAt: timestamp("completedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+export type OnboardingProgressEntry = typeof onboardingProgress.$inferSelect;
+
+// Document citations
+export const documentCitations = mysqlTable("document_citations", {
+  id: int("id").autoincrement().primaryKey(),
+  documentId: int("documentId").notNull(),
+  style: varchar("style", { length: 20 }).notNull(), // apa, mla, chicago
+  citation: text("citation").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+export type DocumentCitation = typeof documentCitations.$inferSelect;

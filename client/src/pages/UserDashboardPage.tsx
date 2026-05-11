@@ -1,5 +1,6 @@
 import { trpc } from '@/lib/trpc';
 import { useAuth } from '@/_core/hooks/useAuth';
+import OnboardingChecklist from '@/components/OnboardingChecklist';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { User, BookOpen, Star, Brain, Flame, Trophy, Loader2 } from 'lucide-react';
 import { getLoginUrl } from '@/const';
@@ -28,6 +29,11 @@ export default function UserDashboardPage() {
           <h1 className="text-2xl font-bold">My Dashboard</h1>
           <p className="text-sm text-muted-foreground">Welcome back, {user?.name || 'User'}</p>
         </div>
+      </div>
+
+      {/* Onboarding Checklist for new users */}
+      <div className="mb-6">
+        <OnboardingChecklist />
       </div>
 
       {isLoading ? (
