@@ -72,6 +72,7 @@ const adminLinks = [
   { label: 'Retention Policies', href: '/admin/retention', icon: Shield },
   { label: 'Accessibility Checker', href: '/admin/accessibility', icon: Accessibility },
   { label: 'Custom Reports', href: '/admin/custom-reports', icon: FileBarChart },
+  { label: 'Compliance Reports', href: '/admin/compliance-reports', icon: Shield },
 ];
 
 export default function AdminNavDropdown() {

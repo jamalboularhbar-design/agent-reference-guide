@@ -102,6 +102,9 @@ import AdminRetentionPoliciesPage from "./pages/AdminRetentionPoliciesPage";
 import AdminAccessibilityCheckerPage from "./pages/AdminAccessibilityCheckerPage";
 import AdminCustomReportsPage from "./pages/AdminCustomReportsPage";
 import ReadingPathPage from "./pages/ReadingPathPage";
+import NotificationCenterPage from "./pages/NotificationCenterPage";
+import TemplateMarketplacePage from "./pages/TemplateMarketplacePage";
+import AdminComplianceReportPage from "./pages/AdminComplianceReportPage";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -200,6 +203,9 @@ function Router() {
       <Route path={"/admin/accessibility"} component={AdminAccessibilityCheckerPage} />
       <Route path={"/admin/custom-reports"} component={AdminCustomReportsPage} />
       <Route path={"/reading-path"} component={ReadingPathPage} />
+      <Route path={"/notifications"} component={NotificationCenterPage} />
+      <Route path={"/templates/marketplace"} component={TemplateMarketplacePage} />
+      <Route path={"/admin/compliance-reports"} component={AdminComplianceReportPage} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />

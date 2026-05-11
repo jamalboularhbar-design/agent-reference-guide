@@ -895,3 +895,58 @@ export const customReports = mysqlTable("custom_reports", {
   updatedAt: timestamp("updatedAt").defaultNow().notNull(),
 });
 export type CustomReport = typeof customReports.$inferSelect;
+
+// ===== Batch 23: Push notifications =====
+export const pushNotifications = mysqlTable("push_notifications", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: varchar("userId", { length: 255 }).notNull(),
+  type: varchar("type", { length: 100 }).notNull(), // review_assigned, sla_breach, workspace_invite, doc_published, mention
+  title: varchar("title", { length: 500 }).notNull(),
+  message: text("message"),
+  link: varchar("link", { length: 500 }),
+  isRead: tinyint("isRead").default(0).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+export type PushNotification = typeof pushNotifications.$inferSelect;
+
+// ===== Batch 23: Template marketplace =====
+export const templateMarketplace = mysqlTable("template_marketplace", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  description: text("description"),
+  content: mediumtext("content").notNull(),
+  category: varchar("category", { length: 100 }),
+  authorId: varchar("authorId", { length: 255 }).notNull(),
+  authorName: varchar("authorName", { length: 255 }),
+  workspaceId: int("workspaceId"),
+  usageCount: int("usageCount").default(0).notNull(),
+  avgRating: float("avgRating").default(0),
+  totalRatings: int("totalRatings").default(0).notNull(),
+  isPublic: tinyint("isPublic").default(1).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+});
+export type TemplateMarketplaceItem = typeof templateMarketplace.$inferSelect;
+
+export const templateRatings = mysqlTable("template_ratings", {
+  id: int("id").autoincrement().primaryKey(),
+  templateId: int("templateId").notNull(),
+  userId: varchar("userId", { length: 255 }).notNull(),
+  rating: int("rating").notNull(), // 1-5
+  review: text("review"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+export type TemplateRating = typeof templateRatings.$inferSelect;
+
+// ===== Batch 23: Audit compliance reports =====
+export const complianceReports = mysqlTable("compliance_reports", {
+  id: int("id").autoincrement().primaryKey(),
+  title: varchar("title", { length: 255 }).notNull(),
+  dateFrom: timestamp("dateFrom").notNull(),
+  dateTo: timestamp("dateTo").notNull(),
+  generatedBy: varchar("generatedBy", { length: 255 }).notNull(),
+  reportData: mediumtext("reportData"), // JSON: aggregated compliance data
+  status: varchar("status", { length: 50 }).default("generated").notNull(), // generating, generated, failed
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+export type ComplianceReport = typeof complianceReports.$inferSelect;

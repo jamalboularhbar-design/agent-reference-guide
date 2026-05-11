@@ -1,6 +1,6 @@
 import { eq, like, or, sql, desc, asc, count, and } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, documents, documentRatings, readingLists, readingListItems, searchAnalytics, documentTags, documentComments, documentVersions, customCategories, downloadHistory, announcements, activityLog, documentAuditTrail, bookmarkNotes, shareLinks, scheduledPublish, inlineComments, brandingSettings, webhooks, recentlyViewed, documentFeedback, categoryOrdering, documentSubscriptions, subscriptionNotifications, userReadingPosition, searchHistory, aiSummaries, documentTranslations, userPreferences, readingStreakLeaderboard, glossaryTerms, documentDependencies, readingGoals, readingProgress, documentTemplates, savedFilters, documentQuizzes, reviewReminders, documentAnnotations, documentCollections, collectionItems, workflowStatuses, workflowTransitions, documentWorkflowStatus, archivalPolicies, archivedDocuments, contentGapSuggestions, duplicateContentPairs, activityFeed, documentSnapshots, readingCorrelations, quizResults, documentSeoMeta, systemNotificationLog, adminPermissions, approvalSlaConfig, webhookEventLog, documentAccessRequests, onboardingProgress, documentCitations, readingSessions, documentQualityAudits, emailDigestConfig, documentMedia, workspaces, workspaceMembers, reviewSchedules, coAuthorActivity, migrationJobs, sentimentScores, retentionPolicies, accessibilityChecks, customReports } from "../drizzle/schema";
+import { InsertUser, users, documents, documentRatings, readingLists, readingListItems, searchAnalytics, documentTags, documentComments, documentVersions, customCategories, downloadHistory, announcements, activityLog, documentAuditTrail, bookmarkNotes, shareLinks, scheduledPublish, inlineComments, brandingSettings, webhooks, recentlyViewed, documentFeedback, categoryOrdering, documentSubscriptions, subscriptionNotifications, userReadingPosition, searchHistory, aiSummaries, documentTranslations, userPreferences, readingStreakLeaderboard, glossaryTerms, documentDependencies, readingGoals, readingProgress, documentTemplates, savedFilters, documentQuizzes, reviewReminders, documentAnnotations, documentCollections, collectionItems, workflowStatuses, workflowTransitions, documentWorkflowStatus, archivalPolicies, archivedDocuments, contentGapSuggestions, duplicateContentPairs, activityFeed, documentSnapshots, readingCorrelations, quizResults, documentSeoMeta, systemNotificationLog, adminPermissions, approvalSlaConfig, webhookEventLog, documentAccessRequests, onboardingProgress, documentCitations, readingSessions, documentQualityAudits, emailDigestConfig, documentMedia, workspaces, workspaceMembers, reviewSchedules, coAuthorActivity, migrationJobs, sentimentScores, retentionPolicies, accessibilityChecks, customReports, pushNotifications, templateMarketplace, templateRatings, complianceReports } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -3959,4 +3959,137 @@ export async function executeCustomReport(config: string) {
   }
   
   return results;
+}
+
+// ===== Batch 23: Push Notifications =====
+export async function getPushNotifications(userId: string, limit = 50) {
+  const db = await getDb();
+  if (!db) return [] as any;
+  return db.select().from(pushNotifications).where(eq(pushNotifications.userId, userId)).orderBy(desc(pushNotifications.createdAt)).limit(limit);
+}
+
+export async function getUnreadPushCount(userId: string) {
+  const db = await getDb();
+  if (!db) return 0;
+  const result = await db.select({ c: count() }).from(pushNotifications).where(and(eq(pushNotifications.userId, userId), eq(pushNotifications.isRead, 0)));
+  return result[0]?.c || 0;
+}
+
+export async function createPushNotification(data: { userId: string; type: string; title: string; message?: string; link?: string }) {
+  const db = await getDb();
+  if (!db) return [] as any;
+  await db.insert(pushNotifications).values(data);
+  return { success: true };
+}
+
+export async function markPushNotificationRead(id: number) {
+  const db = await getDb();
+  if (!db) return [] as any;
+  await db.update(pushNotifications).set({ isRead: 1 }).where(eq(pushNotifications.id, id));
+  return { success: true };
+}
+
+export async function markAllPushRead(userId: string) {
+  const db = await getDb();
+  if (!db) return [] as any;
+  await db.update(pushNotifications).set({ isRead: 1 }).where(eq(pushNotifications.userId, userId));
+  return { success: true };
+}
+
+export async function deletePushNotification(id: number) {
+  const db = await getDb();
+  if (!db) return [] as any;
+  await db.delete(pushNotifications).where(eq(pushNotifications.id, id));
+  return { success: true };
+}
+
+// ===== Batch 23: Template Marketplace =====
+export async function listMarketplaceTemplates(category?: string) {
+  const db = await getDb();
+  if (!db) return [] as any;
+  if (category) {
+    return db.select().from(templateMarketplace).where(and(eq(templateMarketplace.isPublic, 1), eq(templateMarketplace.category, category))).orderBy(desc(templateMarketplace.usageCount));
+  }
+  return db.select().from(templateMarketplace).where(eq(templateMarketplace.isPublic, 1)).orderBy(desc(templateMarketplace.usageCount));
+}
+
+export async function getMarketplaceTemplate(id: number) {
+  const db = await getDb();
+  if (!db) return null;
+  const result = await db.select().from(templateMarketplace).where(eq(templateMarketplace.id, id)).limit(1);
+  return result[0] || null;
+}
+
+export async function submitMarketplaceTemplate(data: { name: string; description?: string; content: string; category?: string; authorId: string; authorName?: string; workspaceId?: number }) {
+  const db = await getDb();
+  if (!db) return [] as any;
+  await db.insert(templateMarketplace).values(data);
+  return { success: true };
+}
+
+export async function rateTemplate(data: { templateId: number; userId: string; rating: number; review?: string }) {
+  const db = await getDb();
+  if (!db) return [] as any;
+  await db.insert(templateRatings).values(data);
+  // Update average rating
+  const ratings = await db.select().from(templateRatings).where(eq(templateRatings.templateId, data.templateId));
+  const avg = ratings.reduce((sum, r) => sum + r.rating, 0) / ratings.length;
+  await db.update(templateMarketplace).set({ avgRating: avg, totalRatings: ratings.length }).where(eq(templateMarketplace.id, data.templateId));
+  return { success: true };
+}
+
+export async function getTemplateRatings(templateId: number) {
+  const db = await getDb();
+  if (!db) return [] as any;
+  return db.select().from(templateRatings).where(eq(templateRatings.templateId, templateId)).orderBy(desc(templateRatings.createdAt));
+}
+
+export async function incrementMarketplaceTemplateUsage(id: number) {
+  const db = await getDb();
+  if (!db) return [] as any;
+  await db.execute(sql`UPDATE template_marketplace SET usageCount = usageCount + 1 WHERE id = ${id}`);
+  return { success: true };
+}
+
+// ===== Batch 23: Audit Compliance Reports =====
+export async function listComplianceReports() {
+  const db = await getDb();
+  if (!db) return [] as any;
+  return db.select().from(complianceReports).orderBy(desc(complianceReports.createdAt)).limit(50);
+}
+
+export async function generateComplianceReport(data: { title: string; dateFrom: Date; dateTo: Date; generatedBy: string }) {
+  const db = await getDb();
+  if (!db) return [] as any;
+  
+  // Gather compliance data
+  const accessRequests = await db.execute(sql`SELECT COUNT(*) as total, SUM(CASE WHEN status = 'approved' THEN 1 ELSE 0 END) as approved, SUM(CASE WHEN status = 'denied' THEN 1 ELSE 0 END) as denied FROM document_access_requests WHERE createdAt BETWEEN ${data.dateFrom} AND ${data.dateTo}`);
+  const retentionExecs = await db.execute(sql`SELECT COUNT(*) as total FROM retention_policies WHERE lastRunAt BETWEEN ${data.dateFrom} AND ${data.dateTo}`);
+  const accessibilityScans = await db.execute(sql`SELECT COUNT(*) as total, SUM(CASE WHEN isResolved = 1 THEN 1 ELSE 0 END) as resolved FROM accessibility_checks WHERE checkedAt BETWEEN ${data.dateFrom} AND ${data.dateTo}`);
+  const auditEvents = await db.execute(sql`SELECT COUNT(*) as total FROM document_audit_trail WHERE createdAt BETWEEN ${data.dateFrom} AND ${data.dateTo}`);
+  
+  const reportData = JSON.stringify({
+    accessRequests: (accessRequests as any)?.[0]?.[0] || {},
+    retentionExecutions: (retentionExecs as any)?.[0]?.[0] || {},
+    accessibilityScans: (accessibilityScans as any)?.[0]?.[0] || {},
+    auditEvents: (auditEvents as any)?.[0]?.[0] || {},
+    generatedAt: new Date().toISOString(),
+  });
+  
+  await db.insert(complianceReports).values({ ...data, reportData, status: "generated" });
+  return { success: true, reportData };
+}
+
+export async function getComplianceReport(id: number) {
+  const db = await getDb();
+  if (!db) return null;
+  const result = await db.select().from(complianceReports).where(eq(complianceReports.id, id)).limit(1);
+  return result[0] || null;
+}
+
+export async function deleteComplianceReport(id: number) {
+  const db = await getDb();
+  if (!db) return [] as any;
+  await db.delete(complianceReports).where(eq(complianceReports.id, id));
+  return { success: true };
 }

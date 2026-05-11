@@ -106,6 +106,9 @@ import {
   listRetentionPolicies, upsertRetentionPolicy, deleteRetentionPolicy,
   runAccessibilityCheck, getAccessibilityIssues, getAllAccessibilityIssues, resolveAccessibilityIssue,
   listCustomReports, createCustomReport, updateCustomReport, deleteCustomReport, executeCustomReport,
+  getPushNotifications, getUnreadPushCount, createPushNotification, markPushNotificationRead, markAllPushRead, deletePushNotification,
+  listMarketplaceTemplates, getMarketplaceTemplate, submitMarketplaceTemplate, rateTemplate, getTemplateRatings, incrementMarketplaceTemplateUsage,
+  listComplianceReports, generateComplianceReport, getComplianceReport, deleteComplianceReport,
 } from "./db";
 import { invokeLLM } from "./_core/llm";
 import { notifyOwner } from "./_core/notification";
@@ -2202,6 +2205,34 @@ export const appRouter = router({
         }
         return { result, responseTime: Date.now() - start };
       }),
+  }),
+
+  // ===== Batch 23: Push Notifications =====
+  pushNotifications: router({
+    list: protectedProcedure.query(async ({ ctx }) => getPushNotifications(ctx.user.openId)),
+    unreadCount: protectedProcedure.query(async ({ ctx }) => getUnreadPushCount(ctx.user.openId)),
+    create: adminProcedure.input(z.object({ userId: z.string(), type: z.string(), title: z.string(), message: z.string().optional(), link: z.string().optional() })).mutation(async ({ input }) => createPushNotification(input)),
+    markRead: protectedProcedure.input(z.object({ id: z.number() })).mutation(async ({ input }) => markPushNotificationRead(input.id)),
+    markAllRead: protectedProcedure.mutation(async ({ ctx }) => markAllPushRead(ctx.user.openId)),
+    delete: protectedProcedure.input(z.object({ id: z.number() })).mutation(async ({ input }) => deletePushNotification(input.id)),
+  }),
+
+  // ===== Batch 23: Template Marketplace =====
+  templateMarketplace: router({
+    list: publicProcedure.input(z.object({ category: z.string().optional() }).optional()).query(async ({ input }) => listMarketplaceTemplates(input?.category)),
+    get: publicProcedure.input(z.object({ id: z.number() })).query(async ({ input }) => getMarketplaceTemplate(input.id)),
+    submit: protectedProcedure.input(z.object({ name: z.string(), description: z.string().optional(), content: z.string(), category: z.string().optional(), workspaceId: z.number().optional() })).mutation(async ({ ctx, input }) => submitMarketplaceTemplate({ ...input, authorId: ctx.user.openId, authorName: ctx.user.name || undefined })),
+    rate: protectedProcedure.input(z.object({ templateId: z.number(), rating: z.number().min(1).max(5), review: z.string().optional() })).mutation(async ({ ctx, input }) => rateTemplate({ ...input, userId: ctx.user.openId })),
+    ratings: publicProcedure.input(z.object({ templateId: z.number() })).query(async ({ input }) => getTemplateRatings(input.templateId)),
+    use: protectedProcedure.input(z.object({ id: z.number() })).mutation(async ({ input }) => incrementMarketplaceTemplateUsage(input.id)),
+  }),
+
+  // ===== Batch 23: Audit Compliance Reports =====
+  complianceReports: router({
+    list: adminProcedure.query(async () => listComplianceReports()),
+    generate: adminProcedure.input(z.object({ title: z.string(), dateFrom: z.string(), dateTo: z.string() })).mutation(async ({ ctx, input }) => generateComplianceReport({ title: input.title, dateFrom: new Date(input.dateFrom), dateTo: new Date(input.dateTo), generatedBy: ctx.user.openId })),
+    get: adminProcedure.input(z.object({ id: z.number() })).query(async ({ input }) => getComplianceReport(input.id)),
+    delete: adminProcedure.input(z.object({ id: z.number() })).mutation(async ({ input }) => deleteComplianceReport(input.id)),
   }),
 
 });

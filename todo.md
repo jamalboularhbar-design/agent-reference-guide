@@ -253,3 +253,6 @@
 - [x] Admin data retention policy manager (configure retention rules per category with auto-purge scheduling)
 - [x] Document accessibility checker (scan content for accessibility issues: alt text, heading hierarchy, contrast)
 - [x] Admin custom report builder (drag-and-drop report designer combining any metrics into exportable custom reports)
+- [x] Real-time push notification center (WebSocket-based live notifications for review assignments, SLA breaches, workspace invites)
+- [x] Document template marketplace (users submit, rate, and share templates across workspaces with usage analytics)
+- [x] Admin audit compliance report (downloadable PDF report of access requests, retention executions, accessibility scans for date range)
