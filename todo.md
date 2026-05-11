@@ -256,3 +256,5 @@
 - [x] Real-time push notification center (WebSocket-based live notifications for review assignments, SLA breaches, workspace invites)
 - [x] Document template marketplace (users submit, rate, and share templates across workspaces with usage analytics)
 - [x] Admin audit compliance report (downloadable PDF report of access requests, retention executions, accessibility scans for date range)
+- [x] Fix: SQL GROUP BY error on download_history DATE(createdAt) in advanced analytics
+- [x] Fix: SQL GROUP BY error on activity_log DATE(createdAt) in advanced analytics

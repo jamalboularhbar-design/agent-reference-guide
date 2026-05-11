@@ -1026,7 +1026,7 @@ export async function getViewsOverTime(days = 30) {
     views: count(),
   })
     .from(activityLog)
-    .where(sql`${activityLog.action} = 'view' AND ${activityLog.createdAt} >= DATE_SUB(NOW(), INTERVAL ${days} DAY)`)
+    .where(sql`${activityLog.action} = 'view' AND ${activityLog.createdAt} >= DATE_SUB(NOW(), INTERVAL ${sql.raw(String(days))} DAY)`)
     .groupBy(sql`DATE(${activityLog.createdAt})`)
     .orderBy(sql`DATE(${activityLog.createdAt})`);
 }
@@ -1057,7 +1057,7 @@ export async function getDownloadTrends(days = 30) {
     downloads: count(),
   })
     .from(downloadHistory)
-    .where(sql`${downloadHistory.createdAt} >= DATE_SUB(NOW(), INTERVAL ${days} DAY)`)
+    .where(sql`${downloadHistory.createdAt} >= DATE_SUB(NOW(), INTERVAL ${sql.raw(String(days))} DAY)`)
     .groupBy(sql`DATE(${downloadHistory.createdAt})`)
     .orderBy(sql`DATE(${downloadHistory.createdAt})`);
 }
@@ -2150,7 +2150,7 @@ export async function getReadingHeatmap(days = 30) {
     count: count(),
   })
     .from(activityLog)
-    .where(sql`${activityLog.action} = 'view' AND ${activityLog.createdAt} >= DATE_SUB(NOW(), INTERVAL ${days} DAY)`)
+    .where(sql`${activityLog.action} = 'view' AND ${activityLog.createdAt} >= DATE_SUB(NOW(), INTERVAL ${sql.raw(String(days))} DAY)`)
     .groupBy(sql`HOUR(${activityLog.createdAt})`, sql`DAYOFWEEK(${activityLog.createdAt})`)
     .orderBy(sql`DAYOFWEEK(${activityLog.createdAt})`, sql`HOUR(${activityLog.createdAt})`);
 }
@@ -2796,7 +2796,7 @@ export async function getStaleDocumentsForArchival(daysThreshold: number) {
     FROM documents d
     LEFT JOIN archived_documents a ON a.documentId = d.id
     WHERE a.id IS NULL
-      AND d.updatedAt < DATE_SUB(NOW(), INTERVAL ${daysThreshold} DAY)
+      AND d.updatedAt < DATE_SUB(NOW(), INTERVAL ${sql.raw(String(daysThreshold))} DAY)
     ORDER BY d.updatedAt ASC
     LIMIT 100
   `);
@@ -3263,7 +3263,7 @@ export async function getReadingActivityOverTime(days = 30) {
     reads: count(),
   })
     .from(recentlyViewed)
-    .where(sql`${recentlyViewed.viewedAt} >= DATE_SUB(NOW(), INTERVAL ${days} DAY)`)
+    .where(sql`${recentlyViewed.viewedAt} >= DATE_SUB(NOW(), INTERVAL ${sql.raw(String(days))} DAY)`)
     .groupBy(sql`DATE(${recentlyViewed.viewedAt})`)
     .orderBy(sql`DATE(${recentlyViewed.viewedAt})`);
 }
@@ -3279,7 +3279,7 @@ export async function getEngagementOverTime(days = 30) {
     total: count(),
   })
     .from(documentRatings)
-    .where(sql`${documentRatings.createdAt} >= DATE_SUB(NOW(), INTERVAL ${days} DAY)`)
+    .where(sql`${documentRatings.createdAt} >= DATE_SUB(NOW(), INTERVAL ${sql.raw(String(days))} DAY)`)
     .groupBy(sql`DATE(${documentRatings.createdAt})`)
     .orderBy(sql`DATE(${documentRatings.createdAt})`);
 }
@@ -3294,7 +3294,7 @@ export async function getActivityBreakdown(days = 30) {
     count: count(),
   })
     .from(activityLog)
-    .where(sql`${activityLog.createdAt} >= DATE_SUB(NOW(), INTERVAL ${days} DAY)`)
+    .where(sql`${activityLog.createdAt} >= DATE_SUB(NOW(), INTERVAL ${sql.raw(String(days))} DAY)`)
     .groupBy(sql`DATE(${activityLog.createdAt})`, activityLog.action)
     .orderBy(sql`DATE(${activityLog.createdAt})`);
 }
@@ -3328,7 +3328,7 @@ export async function getContentGrowthOverTime(days = 90) {
     cumulativeTotal: sql<number>`(SELECT COUNT(*) FROM documents d2 WHERE DATE(d2.createdAt) <= DATE(${documents.createdAt}))`,
   })
     .from(documents)
-    .where(sql`${documents.createdAt} >= DATE_SUB(NOW(), INTERVAL ${days} DAY)`)
+    .where(sql`${documents.createdAt} >= DATE_SUB(NOW(), INTERVAL ${sql.raw(String(days))} DAY)`)
     .groupBy(sql`DATE(${documents.createdAt})`)
     .orderBy(sql`DATE(${documents.createdAt})`);
 }
@@ -3376,7 +3376,7 @@ export async function getHourlyActivityHeatmap(days = 30) {
     count: count(),
   })
     .from(activityLog)
-    .where(sql`${activityLog.createdAt} >= DATE_SUB(NOW(), INTERVAL ${days} DAY)`)
+    .where(sql`${activityLog.createdAt} >= DATE_SUB(NOW(), INTERVAL ${sql.raw(String(days))} DAY)`)
     .groupBy(sql`DAYOFWEEK(${activityLog.createdAt})`, sql`HOUR(${activityLog.createdAt})`)
     .orderBy(sql`DAYOFWEEK(${activityLog.createdAt})`, sql`HOUR(${activityLog.createdAt})`);
 }
@@ -3390,22 +3390,22 @@ export async function getComparativePeriodAnalytics(days = 30) {
   if (!db) return null;
   // Current period
   const [currentViews] = await db.select({ total: count() }).from(activityLog)
-    .where(sql`${activityLog.action} = 'view' AND ${activityLog.createdAt} >= DATE_SUB(NOW(), INTERVAL ${days} DAY)`);
+    .where(sql`${activityLog.action} = 'view' AND ${activityLog.createdAt} >= DATE_SUB(NOW(), INTERVAL ${sql.raw(String(days))} DAY)`);
   const [currentDownloads] = await db.select({ total: count() }).from(downloadHistory)
-    .where(sql`${downloadHistory.createdAt} >= DATE_SUB(NOW(), INTERVAL ${days} DAY)`);
+    .where(sql`${downloadHistory.createdAt} >= DATE_SUB(NOW(), INTERVAL ${sql.raw(String(days))} DAY)`);
   const [currentRatings] = await db.select({ total: count() }).from(documentRatings)
-    .where(sql`${documentRatings.createdAt} >= DATE_SUB(NOW(), INTERVAL ${days} DAY)`);
+    .where(sql`${documentRatings.createdAt} >= DATE_SUB(NOW(), INTERVAL ${sql.raw(String(days))} DAY)`);
   const [currentReaders] = await db.select({ total: sql<number>`COUNT(DISTINCT ${recentlyViewed.visitorId})` }).from(recentlyViewed)
-    .where(sql`${recentlyViewed.viewedAt} >= DATE_SUB(NOW(), INTERVAL ${days} DAY)`);
+    .where(sql`${recentlyViewed.viewedAt} >= DATE_SUB(NOW(), INTERVAL ${sql.raw(String(days))} DAY)`);
   // Previous period
   const [prevViews] = await db.select({ total: count() }).from(activityLog)
-    .where(sql`${activityLog.action} = 'view' AND ${activityLog.createdAt} >= DATE_SUB(NOW(), INTERVAL ${days * 2} DAY) AND ${activityLog.createdAt} < DATE_SUB(NOW(), INTERVAL ${days} DAY)`);
+    .where(sql`${activityLog.action} = 'view' AND ${activityLog.createdAt} >= DATE_SUB(NOW(), INTERVAL ${sql.raw(String(days * 2))} DAY) AND ${activityLog.createdAt} < DATE_SUB(NOW(), INTERVAL ${sql.raw(String(days))} DAY)`);
   const [prevDownloads] = await db.select({ total: count() }).from(downloadHistory)
-    .where(sql`${downloadHistory.createdAt} >= DATE_SUB(NOW(), INTERVAL ${days * 2} DAY) AND ${downloadHistory.createdAt} < DATE_SUB(NOW(), INTERVAL ${days} DAY)`);
+    .where(sql`${downloadHistory.createdAt} >= DATE_SUB(NOW(), INTERVAL ${sql.raw(String(days * 2))} DAY) AND ${downloadHistory.createdAt} < DATE_SUB(NOW(), INTERVAL ${sql.raw(String(days))} DAY)`);
   const [prevRatings] = await db.select({ total: count() }).from(documentRatings)
-    .where(sql`${documentRatings.createdAt} >= DATE_SUB(NOW(), INTERVAL ${days * 2} DAY) AND ${documentRatings.createdAt} < DATE_SUB(NOW(), INTERVAL ${days} DAY)`);
+    .where(sql`${documentRatings.createdAt} >= DATE_SUB(NOW(), INTERVAL ${sql.raw(String(days * 2))} DAY) AND ${documentRatings.createdAt} < DATE_SUB(NOW(), INTERVAL ${sql.raw(String(days))} DAY)`);
   const [prevReaders] = await db.select({ total: sql<number>`COUNT(DISTINCT ${recentlyViewed.visitorId})` }).from(recentlyViewed)
-    .where(sql`${recentlyViewed.viewedAt} >= DATE_SUB(NOW(), INTERVAL ${days * 2} DAY) AND ${recentlyViewed.viewedAt} < DATE_SUB(NOW(), INTERVAL ${days} DAY)`);
+    .where(sql`${recentlyViewed.viewedAt} >= DATE_SUB(NOW(), INTERVAL ${sql.raw(String(days * 2))} DAY) AND ${recentlyViewed.viewedAt} < DATE_SUB(NOW(), INTERVAL ${sql.raw(String(days))} DAY)`);
   return {
     current: { views: currentViews?.total || 0, downloads: currentDownloads?.total || 0, ratings: currentRatings?.total || 0, readers: currentReaders?.total || 0 },
     previous: { views: prevViews?.total || 0, downloads: prevDownloads?.total || 0, ratings: prevRatings?.total || 0, readers: prevReaders?.total || 0 },
@@ -3489,12 +3489,12 @@ export async function getReadingSessionAnalytics(days = 30) {
     completionRate: sql<number>`ROUND(AVG(${readingSessions.completed}) * 100)`,
     uniqueReaders: sql<number>`COUNT(DISTINCT ${readingSessions.visitorId})`,
   }).from(readingSessions)
-    .where(sql`${readingSessions.startedAt} >= DATE_SUB(NOW(), INTERVAL ${days} DAY)`);
+    .where(sql`${readingSessions.startedAt} >= DATE_SUB(NOW(), INTERVAL ${sql.raw(String(days))} DAY)`);
   
   const sessionsOverTimeRaw = await db.execute(sql`
     SELECT DATE(startedAt) as date, COUNT(*) as sessions, ROUND(AVG(durationSeconds)) as avgDuration
     FROM reading_sessions
-    WHERE startedAt >= DATE_SUB(NOW(), INTERVAL ${days} DAY)
+    WHERE startedAt >= DATE_SUB(NOW(), INTERVAL ${sql.raw(String(days))} DAY)
     GROUP BY DATE(startedAt)
     ORDER BY date
   `);
