@@ -278,3 +278,4 @@
 - [x] User document collections (create named collections/playlists of documents for organized reference)
 - [x] Admin performance benchmark page (compare current period metrics against historical baselines with trend arrows)
 - [x] Document quick-action toolbar (floating toolbar on document detail with bookmark, share, print, cite, rate shortcuts)
+- [x] Fix AdminEditor "Rendered more hooks than during the previous render" error (hooks called conditionally)

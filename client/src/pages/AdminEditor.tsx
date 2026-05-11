@@ -82,6 +82,7 @@ export default function AdminEditor() {
   const batchTagMutation = trpc.documents.batchAddTag.useMutation({
     onSuccess: (data) => { refetch(); setSelectedSlugs(new Set()); setBatchAction('none'); setBatchTag(''); toast.success(`Tagged ${data.added} documents`); },
   });
+  const scheduleMutation = trpc.scheduledPublish.schedule.useMutation();
 
   const categories = useMemo(() => {
     const base = categoriesData ?? [];
@@ -91,12 +92,11 @@ export default function AdminEditor() {
     return [...base, ...extras];
   }, [categoriesData, customCatsData]);
   const documents = useMemo(() => documentsData?.documents ?? [], [documentsData]);
-  const trpcUtils = trpc.useUtils();
 
   const handleEditClick = async (slug: string) => {
     setLoadingSlug(slug);
     try {
-      const doc = await trpcUtils.documents.getBySlug.fetch({ slug });
+      const doc = await utils.documents.getBySlug.fetch({ slug });
       if (doc) {
         setEditingDoc({
           slug,
@@ -195,7 +195,6 @@ export default function AdminEditor() {
     }
   };
 
-  const scheduleMutation = trpc.scheduledPublish.schedule.useMutation();
   const isSaving = createMutation.isPending || updateMutation.isPending;
   const selectedArray = Array.from(selectedSlugs);
 
@@ -267,9 +266,9 @@ export default function AdminEditor() {
               // Bulk export selected documents as combined markdown
               try {
                 const docs = await Promise.all(
-                  selectedArray.map(s => trpcUtils.documents.getBySlug.fetch({ slug: s }))
+                  selectedArray.map(s => utils.documents.getBySlug.fetch({ slug: s }))
                 );
-                const combined = docs.filter(Boolean).map(d => `# ${d!.title}\n\n${d!.content || ''}`).join('\n\n---\n\n');
+                const combined = docs.filter(Boolean).map((d: any) => `# ${d!.title}\n\n${d!.content || ''}`).join('\n\n---\n\n');
                 const blob = new Blob([combined], { type: 'text/markdown' });
                 const url = URL.createObjectURL(blob);
                 const a = window.document.createElement('a');
