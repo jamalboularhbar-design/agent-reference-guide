@@ -6,7 +6,7 @@ import {
   Columns3, Clock, MessageSquare, GripVertical, Copy, Download,
   Shield, FileJson, Activity, FolderInput, Merge, Image, Calendar,
   BarChart2, LinkIcon, CalendarCheck, Tags as TagsIcon, HeartPulse,
-  Workflow, FileSpreadsheet, Lightbulb
+  Workflow, FileSpreadsheet, Lightbulb, LayoutDashboard, Search, Bell
 } from 'lucide-react';
 
 const adminLinks = [
@@ -48,6 +48,9 @@ const adminLinks = [
   { label: 'Archival Policy', href: '/admin/archival', icon: Archive },
   { label: 'Content Gap Analysis', href: '/admin/content-gap', icon: Lightbulb },
   { label: 'Duplicate Detector', href: '/admin/duplicates', icon: Copy },
+  { label: 'Unified Dashboard', href: '/admin/unified', icon: LayoutDashboard },
+  { label: 'SEO Editor', href: '/admin/seo', icon: Search },
+  { label: 'Notification Center', href: '/admin/notification-center', icon: Bell },
 ];
 
 export default function AdminNavDropdown() {

@@ -1,4 +1,4 @@
-import { Sparkles, List, BookOpen, FileText, Tag, Columns, Book, Target, Code, Bookmark, Sun, Moon, Clock, Library, Bell, Network, Trophy, Settings, FileDown } from 'lucide-react';
+import { Sparkles, List, BookOpen, FileText, Tag, Columns, Book, Target, Code, Bookmark, Sun, Moon, Clock, Library, Bell, Network, Trophy, Settings, FileDown, User, Package } from 'lucide-react';
 import { trpc } from '@/lib/trpc';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useLocation } from 'wouter';
@@ -27,7 +27,7 @@ function NotificationBell({ navigate }: { navigate: (path: string) => void }) {
 export default function Header() {
   const { theme, toggleTheme, switchable } = useTheme();
   const [, navigate] = useLocation();
-  const { user } = useAuth();
+  const { user, isAuthenticated } = useAuth();
 
   return (
     <header className="border-b border-border/50 bg-gradient-to-b from-card/80 to-card/40 backdrop-blur-md sticky top-0 z-50" role="banner">
@@ -150,6 +150,15 @@ export default function Header() {
             <FileDown className="w-4 h-4" />
           </button>
           <NotificationBell navigate={navigate} />
+          {isAuthenticated && (
+            <button
+              onClick={() => navigate('/my-dashboard')}
+              className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-card/80 border border-border/50 transition-colors active:bg-card/60"
+              title="My Dashboard"
+            >
+              <User className="w-4 h-4" />
+            </button>
+          )}
           {user?.role === 'admin' && <AdminNavDropdown />}
           {switchable && toggleTheme && (
             <button

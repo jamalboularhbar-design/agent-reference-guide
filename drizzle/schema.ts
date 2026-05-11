@@ -597,3 +597,64 @@ export const activityFeed = mysqlTable("activity_feed", {
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 export type ActivityFeedEntry = typeof activityFeed.$inferSelect;
+
+// ─── Batch 19 ──────────────────────────────────────────────────────────────
+
+// Document versioned snapshots (named immutable copies)
+export const documentSnapshots = mysqlTable("document_snapshots", {
+  id: int("id").autoincrement().primaryKey(),
+  documentId: int("documentId").notNull(),
+  name: varchar("name", { length: 255 }).notNull(),
+  title: varchar("title", { length: 500 }).notNull(),
+  content: text("content").notNull(),
+  createdBy: varchar("createdBy", { length: 64 }).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+export type DocumentSnapshot = typeof documentSnapshots.$inferSelect;
+
+// Smart recommendations (collaborative filtering: users who read X also read Y)
+export const readingCorrelations = mysqlTable("reading_correlations", {
+  id: int("id").autoincrement().primaryKey(),
+  documentIdA: int("documentIdA").notNull(),
+  documentIdB: int("documentIdB").notNull(),
+  score: int("score").default(1).notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+// Document quiz results per user (comprehension score tracking)
+export const quizResults = mysqlTable("quiz_results", {
+  id: int("id").autoincrement().primaryKey(),
+  userOpenId: varchar("userOpenId", { length: 64 }).notNull(),
+  documentId: int("documentId").notNull(),
+  totalQuestions: int("totalQuestions").notNull(),
+  correctAnswers: int("correctAnswers").notNull(),
+  score: int("score").notNull(),
+  takenAt: timestamp("takenAt").defaultNow().notNull(),
+});
+export type QuizResult = typeof quizResults.$inferSelect;
+
+// SEO metadata per document
+export const documentSeoMeta = mysqlTable("document_seo_meta", {
+  id: int("id").autoincrement().primaryKey(),
+  documentId: int("documentId").notNull(),
+  metaTitle: varchar("metaTitle", { length: 255 }),
+  metaDescription: text("metaDescription"),
+  ogTitle: varchar("ogTitle", { length: 255 }),
+  ogDescription: text("ogDescription"),
+  ogImage: varchar("ogImage", { length: 500 }),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type DocumentSeoMeta = typeof documentSeoMeta.$inferSelect;
+
+// System notification log (centralized notification tracking)
+export const systemNotificationLog = mysqlTable("system_notification_log", {
+  id: int("id").autoincrement().primaryKey(),
+  recipientOpenId: varchar("recipientOpenId", { length: 64 }),
+  title: varchar("title", { length: 255 }).notNull(),
+  content: text("content"),
+  channel: varchar("channel", { length: 50 }).default("in_app").notNull(),
+  status: varchar("status", { length: 20 }).default("sent").notNull(),
+  retries: int("retries").default(0).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+export type SystemNotificationLogEntry = typeof systemNotificationLog.$inferSelect;

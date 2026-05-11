@@ -1,6 +1,6 @@
 import { eq, like, or, sql, desc, asc, count, and } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, documents, documentRatings, readingLists, readingListItems, searchAnalytics, documentTags, documentComments, documentVersions, customCategories, downloadHistory, announcements, activityLog, documentAuditTrail, bookmarkNotes, shareLinks, scheduledPublish, inlineComments, brandingSettings, webhooks, recentlyViewed, documentFeedback, categoryOrdering, documentSubscriptions, subscriptionNotifications, userReadingPosition, searchHistory, aiSummaries, documentTranslations, userPreferences, readingStreakLeaderboard, glossaryTerms, documentDependencies, readingGoals, readingProgress, documentTemplates, savedFilters, documentQuizzes, reviewReminders, documentAnnotations, documentCollections, collectionItems, workflowStatuses, workflowTransitions, documentWorkflowStatus, archivalPolicies, archivedDocuments, contentGapSuggestions, duplicateContentPairs, activityFeed } from "../drizzle/schema";
+import { InsertUser, users, documents, documentRatings, readingLists, readingListItems, searchAnalytics, documentTags, documentComments, documentVersions, customCategories, downloadHistory, announcements, activityLog, documentAuditTrail, bookmarkNotes, shareLinks, scheduledPublish, inlineComments, brandingSettings, webhooks, recentlyViewed, documentFeedback, categoryOrdering, documentSubscriptions, subscriptionNotifications, userReadingPosition, searchHistory, aiSummaries, documentTranslations, userPreferences, readingStreakLeaderboard, glossaryTerms, documentDependencies, readingGoals, readingProgress, documentTemplates, savedFilters, documentQuizzes, reviewReminders, documentAnnotations, documentCollections, collectionItems, workflowStatuses, workflowTransitions, documentWorkflowStatus, archivalPolicies, archivedDocuments, contentGapSuggestions, duplicateContentPairs, activityFeed, documentSnapshots, readingCorrelations, quizResults, documentSeoMeta, systemNotificationLog } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -2920,4 +2920,157 @@ export function generateEmbedCode(slug: string, baseUrl: string) {
   const iframeCode = `<iframe src="${baseUrl}/embed/${slug}" width="100%" height="600" frameborder="0" style="border: 1px solid #e5e7eb; border-radius: 8px;"></iframe>`;
   const linkCode = `<a href="${baseUrl}/documents/${slug}" target="_blank" rel="noopener noreferrer">View Document</a>`;
   return { iframe: iframeCode, link: linkCode };
+}
+
+// ─── Batch 19 DB Helpers ─────────────────────────────────────────────────
+
+// Document Snapshots
+export async function createDocumentSnapshot(data: { documentId: number; name: string; title: string; content: string; createdBy: string }) {
+  const db = await getDb(); if (!db) return null;
+  await db.insert(documentSnapshots).values(data);
+  return { success: true };
+}
+
+export async function getDocumentSnapshots(documentId: number) {
+  const db = await getDb(); if (!db) return [];
+  return db.select().from(documentSnapshots).where(eq(documentSnapshots.documentId, documentId)).orderBy(desc(documentSnapshots.createdAt));
+}
+
+export async function getSnapshotById(id: number) {
+  const db = await getDb(); if (!db) return null;
+  const rows = await db.select().from(documentSnapshots).where(eq(documentSnapshots.id, id));
+  return rows[0] || null;
+}
+
+// Smart Recommendations (collaborative filtering)
+export async function recordReadingCorrelation(docIdA: number, docIdB: number) {
+  const db = await getDb(); if (!db) return;
+  const [a, b] = docIdA < docIdB ? [docIdA, docIdB] : [docIdB, docIdA];
+  const existing = await db.select().from(readingCorrelations).where(and(eq(readingCorrelations.documentIdA, a), eq(readingCorrelations.documentIdB, b)));
+  if (existing.length > 0) {
+    await db.update(readingCorrelations).set({ score: sql`${readingCorrelations.score} + 1` }).where(eq(readingCorrelations.id, existing[0].id));
+  } else {
+    await db.insert(readingCorrelations).values({ documentIdA: a, documentIdB: b, score: 1 });
+  }
+}
+
+export async function getSmartRecommendations(documentId: number, limit = 5) {
+  const db = await getDb(); if (!db) return [];
+  const correlations = await db.select().from(readingCorrelations)
+    .where(or(eq(readingCorrelations.documentIdA, documentId), eq(readingCorrelations.documentIdB, documentId)))
+    .orderBy(desc(readingCorrelations.score)).limit(limit);
+  const relatedIds = correlations.map(c => c.documentIdA === documentId ? c.documentIdB : c.documentIdA);
+  if (relatedIds.length === 0) return [];
+  const docs = await db.select({ id: documents.id, title: documents.title, slug: documents.slug, category: documents.category })
+    .from(documents).where(sql`${documents.id} IN (${sql.join(relatedIds.map(id => sql`${id}`), sql`, `)})`);
+  return docs.map(d => ({ ...d, score: correlations.find(c => c.documentIdA === d.id || c.documentIdB === d.id)?.score || 0 }));
+}
+
+// Quiz Results (comprehension tracking)
+export async function saveQuizResult(data: { userOpenId: string; documentId: number; totalQuestions: number; correctAnswers: number; score: number }) {
+  const db = await getDb(); if (!db) return null;
+  await db.insert(quizResults).values(data);
+  return { success: true };
+}
+
+export async function getUserQuizResults(userOpenId: string) {
+  const db = await getDb(); if (!db) return [];
+  return db.select().from(quizResults).where(eq(quizResults.userOpenId, userOpenId)).orderBy(desc(quizResults.takenAt));
+}
+
+export async function getDocumentQuizScore(userOpenId: string, documentId: number) {
+  const db = await getDb(); if (!db) return null;
+  const rows = await db.select().from(quizResults)
+    .where(and(eq(quizResults.userOpenId, userOpenId), eq(quizResults.documentId, documentId)))
+    .orderBy(desc(quizResults.takenAt)).limit(1);
+  return rows[0] || null;
+}
+
+// SEO Metadata
+export async function getDocumentSeoMeta(documentId: number) {
+  const db = await getDb(); if (!db) return null;
+  const rows = await db.select().from(documentSeoMeta).where(eq(documentSeoMeta.documentId, documentId));
+  return rows[0] || null;
+}
+
+export async function upsertDocumentSeoMeta(documentId: number, data: { metaTitle?: string; metaDescription?: string; ogTitle?: string; ogDescription?: string; ogImage?: string }) {
+  const db = await getDb(); if (!db) return null;
+  const existing = await db.select().from(documentSeoMeta).where(eq(documentSeoMeta.documentId, documentId));
+  if (existing.length > 0) {
+    await db.update(documentSeoMeta).set(data).where(eq(documentSeoMeta.documentId, documentId));
+  } else {
+    await db.insert(documentSeoMeta).values({ documentId, ...data });
+  }
+  return { success: true };
+}
+
+// System Notification Log
+export async function logSystemNotification(data: { recipientOpenId?: string; title: string; content?: string; channel?: string; status?: string }) {
+  const db = await getDb(); if (!db) return null;
+  await db.insert(systemNotificationLog).values(data);
+  return { success: true };
+}
+
+export async function getSystemNotificationLog(limit = 50) {
+  const db = await getDb(); if (!db) return [];
+  return db.select().from(systemNotificationLog).orderBy(desc(systemNotificationLog.createdAt)).limit(limit);
+}
+
+export async function retrySystemNotification(id: number) {
+  const db = await getDb(); if (!db) return null;
+  await db.update(systemNotificationLog).set({ retries: sql`${systemNotificationLog.retries} + 1`, status: 'retrying' }).where(eq(systemNotificationLog.id, id));
+  return { success: true };
+}
+
+// Admin Dashboard Stats (unified overview)
+export async function getAdminDashboardStats() {
+  const db = await getDb(); if (!db) return null;
+  const [docCount] = await db.select({ total: count() }).from(documents);
+  const [userCount] = await db.select({ total: count() }).from(users);
+  const [ratingCount] = await db.select({ total: count() }).from(documentRatings);
+  const [commentCount] = await db.select({ total: count() }).from(documentComments);
+  const [feedbackCount] = await db.select({ total: count() }).from(documentFeedback);
+  const recentDocs = await db.select({ id: documents.id, title: documents.title, slug: documents.slug, status: documents.status, updatedAt: documents.updatedAt }).from(documents).orderBy(desc(documents.updatedAt)).limit(5);
+  const recentActivity = await db.select().from(activityLog).orderBy(desc(activityLog.createdAt)).limit(10);
+  return {
+    totalDocuments: docCount?.total || 0,
+    totalUsers: userCount?.total || 0,
+    totalRatings: ratingCount?.total || 0,
+    totalComments: commentCount?.total || 0,
+    totalFeedback: feedbackCount?.total || 0,
+    recentDocuments: recentDocs,
+    recentActivity,
+  };
+}
+
+// Bulk ZIP export helper (get docs by category)
+export async function getDocumentsForZipExport(slugs: string[]) {
+  const db = await getDb(); if (!db) return [];
+  if (slugs.length === 0) return [];
+  return db.select({ id: documents.id, title: documents.title, slug: documents.slug, content: documents.content, category: documents.category })
+    .from(documents).where(sql`${documents.slug} IN (${sql.join(slugs.map(s => sql`${s}`), sql`, `)})`);
+}
+
+// Cross-references: find document titles mentioned in content
+export async function getAllDocumentTitlesAndSlugs() {
+  const db = await getDb(); if (!db) return [];
+  return db.select({ id: documents.id, title: documents.title, slug: documents.slug }).from(documents);
+}
+
+// User personal stats
+export async function getUserPersonalStats(userOpenId: string) {
+  const db = await getDb(); if (!db) return null;
+  const [readCount] = await db.select({ total: count() }).from(recentlyViewed).where(eq(recentlyViewed.visitorId, userOpenId));
+  const [bookmarkCount] = await db.select({ total: count() }).from(readingLists).where(eq(readingLists.visitorId, userOpenId));
+  const quizzes = await db.select().from(quizResults).where(eq(quizResults.userOpenId, userOpenId));
+  const avgScore = quizzes.length > 0 ? Math.round(quizzes.reduce((sum, q) => sum + q.score, 0) / quizzes.length) : 0;
+  const streak = await db.select().from(readingStreakLeaderboard).where(eq(readingStreakLeaderboard.userOpenId, userOpenId));
+  return {
+    totalDocsRead: readCount?.total || 0,
+    totalBookmarks: bookmarkCount?.total || 0,
+    quizzesTaken: quizzes.length,
+    averageQuizScore: avgScore,
+    currentStreak: streak[0]?.currentStreak || 0,
+    longestStreak: streak[0]?.longestStreak || 0,
+  };
 }

@@ -74,6 +74,11 @@ import AdminArchivalPage from "./pages/AdminArchivalPage";
 import AdminContentGapPage from "./pages/AdminContentGapPage";
 import AdminDuplicatesPage from "./pages/AdminDuplicatesPage";
 import MultiPdfExportPage from "./pages/MultiPdfExportPage";
+import AdminUnifiedDashboardPage from "./pages/AdminUnifiedDashboardPage";
+import AdminSeoPage from "./pages/AdminSeoPage";
+import AdminNotificationCenterPage from "./pages/AdminNotificationCenterPage";
+import UserDashboardPage from "./pages/UserDashboardPage";
+import ZipExportPage from "./pages/ZipExportPage";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -144,6 +149,11 @@ function Router() {
       <Route path={"/admin/content-gap"} component={AdminContentGapPage} />
       <Route path={"/admin/duplicates"} component={AdminDuplicatesPage} />
       <Route path={"/export"} component={MultiPdfExportPage} />
+      <Route path={"/admin/unified"} component={AdminUnifiedDashboardPage} />
+      <Route path={"/admin/seo"} component={AdminSeoPage} />
+      <Route path={"/admin/notification-center"} component={AdminNotificationCenterPage} />
+      <Route path={"/my-dashboard"} component={UserDashboardPage} />
+      <Route path={"/bulk-export"} component={ZipExportPage} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />

@@ -73,6 +73,15 @@ import {
   addActivityFeedEntry, getActivityFeed,
   quickEditDocument,
   generateEmbedCode,
+  createDocumentSnapshot, getDocumentSnapshots, getSnapshotById,
+  recordReadingCorrelation, getSmartRecommendations,
+  saveQuizResult, getUserQuizResults, getDocumentQuizScore,
+  getDocumentSeoMeta, upsertDocumentSeoMeta,
+  logSystemNotification, getSystemNotificationLog, retrySystemNotification,
+  getAdminDashboardStats,
+  getDocumentsForZipExport,
+  getAllDocumentTitlesAndSlugs,
+  getUserPersonalStats,
 } from "./db";
 import { invokeLLM } from "./_core/llm";
 import { notifyOwner } from "./_core/notification";
@@ -1705,5 +1714,70 @@ export const appRouter = router({
         return sections;
       }),
   }),
+
+  // ─── Batch 19 ──────────────────────────────────────────────────────
+
+  snapshots: router({
+    list: publicProcedure.input(z.object({ documentId: z.number() })).query(({ input }) => getDocumentSnapshots(input.documentId)),
+    get: publicProcedure.input(z.object({ id: z.number() })).query(({ input }) => getSnapshotById(input.id)),
+    create: adminProcedure.input(z.object({ documentId: z.number(), name: z.string(), title: z.string(), content: z.string() })).mutation(({ input, ctx }) =>
+      createDocumentSnapshot({ ...input, createdBy: ctx.user.openId })),
+  }),
+
+  recommendations: router({
+    get: publicProcedure.input(z.object({ documentId: z.number(), limit: z.number().optional() })).query(({ input }) =>
+      getSmartRecommendations(input.documentId, input.limit)),
+    record: protectedProcedure.input(z.object({ docIdA: z.number(), docIdB: z.number() })).mutation(({ input }) =>
+      recordReadingCorrelation(input.docIdA, input.docIdB)),
+  }),
+
+  quizResults: router({
+    save: protectedProcedure.input(z.object({ documentId: z.number(), totalQuestions: z.number(), correctAnswers: z.number(), score: z.number() })).mutation(({ input, ctx }) =>
+      saveQuizResult({ ...input, userOpenId: ctx.user.openId })),
+    myResults: protectedProcedure.query(({ ctx }) => getUserQuizResults(ctx.user.openId)),
+    forDocument: protectedProcedure.input(z.object({ documentId: z.number() })).query(({ input, ctx }) =>
+      getDocumentQuizScore(ctx.user.openId, input.documentId)),
+  }),
+
+  seoMeta: router({
+    get: publicProcedure.input(z.object({ documentId: z.number() })).query(({ input }) => getDocumentSeoMeta(input.documentId)),
+    upsert: adminProcedure.input(z.object({
+      documentId: z.number(),
+      metaTitle: z.string().optional(),
+      metaDescription: z.string().optional(),
+      ogTitle: z.string().optional(),
+      ogDescription: z.string().optional(),
+      ogImage: z.string().optional(),
+    })).mutation(({ input }) => {
+      const { documentId, ...data } = input;
+      return upsertDocumentSeoMeta(documentId, data);
+    }),
+  }),
+
+  notificationLog: router({
+    list: adminProcedure.input(z.object({ limit: z.number().optional() }).optional()).query(({ input }) =>
+      getSystemNotificationLog(input?.limit)),
+    retry: adminProcedure.input(z.object({ id: z.number() })).mutation(({ input }) => retrySystemNotification(input.id)),
+    log: adminProcedure.input(z.object({ recipientOpenId: z.string().optional(), title: z.string(), content: z.string().optional(), channel: z.string().optional() })).mutation(({ input }) =>
+      logSystemNotification(input)),
+  }),
+
+  adminDashboard: router({
+    stats: adminProcedure.query(() => getAdminDashboardStats()),
+  }),
+
+  zipExport: router({
+    getDocContents: publicProcedure.input(z.object({ slugs: z.array(z.string()) })).query(({ input }) =>
+      getDocumentsForZipExport(input.slugs)),
+  }),
+
+  crossReferences: router({
+    allTitles: publicProcedure.query(() => getAllDocumentTitlesAndSlugs()),
+  }),
+
+  userDashboard: router({
+    stats: protectedProcedure.query(({ ctx }) => getUserPersonalStats(ctx.user.openId)),
+  }),
+
 });
 export type AppRouter = typeof appRouter;

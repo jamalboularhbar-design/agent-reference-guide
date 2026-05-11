@@ -46,6 +46,8 @@ import DocumentAnnotations from '@/components/DocumentAnnotations';
 import RelatedByTags from '@/components/RelatedByTags';
 import TextToSpeech from '@/components/TextToSpeech';
 import QuickEditInline from '@/components/QuickEditInline';
+import SmartRecommendations from '@/components/SmartRecommendations';
+import DocumentSnapshots from '@/components/DocumentSnapshots';
 
 // Reading time calculation - uses configurable WPM from branding settings
 function getReadingTime(wordCount: number, wpm = 200): string {
@@ -605,6 +607,8 @@ export default function DocumentDetail() {
             <DocumentQuiz documentId={document.id} content={document.content || ''} />
             <DocumentAnnotations documentId={document.id} />
             <RelatedByTags slug={document.slug} />
+            <SmartRecommendations documentId={document.id} />
+            <DocumentSnapshots documentId={document.id} currentTitle={document.title} currentContent={document.content || ''} />
 
             {/* AI-Suggested Related Documents */}
             <AISuggestions slug={document.slug} />
