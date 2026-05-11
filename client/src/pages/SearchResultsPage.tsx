@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ArrowLeft, Search, Clock, Filter, X, Tag } from 'lucide-react';
+import SavedSearchFilters from '@/components/SavedSearchFilters';
 
 export default function SearchResultsPage() {
   const [location, setLocation] = useLocation();
@@ -110,6 +111,33 @@ export default function SearchResultsPage() {
             <Filter className="w-4 h-4 mr-1" />
             Filters
           </Button>
+        </div>
+
+        {/* Saved Search Filters */}
+        <div className="max-w-6xl mx-auto px-4 py-2 border-t border-border/30">
+          <SavedSearchFilters
+            currentFilterConfig={JSON.stringify({
+              category: selectedCategory,
+              tags: selectedTags,
+              sort,
+              minReadingTime,
+              maxReadingTime,
+              locale,
+              useRelevance,
+            })}
+            onApplyFilter={(config) => {
+              try {
+                const parsed = JSON.parse(config);
+                if (parsed.category !== undefined) setSelectedCategory(parsed.category || '');
+                if (parsed.tags !== undefined) setSelectedTags(parsed.tags || []);
+                if (parsed.sort !== undefined) setSort(parsed.sort || 'alpha');
+                if (parsed.minReadingTime !== undefined) setMinReadingTime(parsed.minReadingTime || undefined);
+                if (parsed.maxReadingTime !== undefined) setMaxReadingTime(parsed.maxReadingTime || undefined);
+                if (parsed.locale !== undefined) setLocale(parsed.locale || '');
+                if (parsed.useRelevance !== undefined) setUseRelevance(parsed.useRelevance);
+              } catch (e) { /* ignore parse errors */ }
+            }}
+          />
         </div>
 
         {/* Faceted Filters */}

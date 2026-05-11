@@ -279,3 +279,6 @@
 - [x] Admin performance benchmark page (compare current period metrics against historical baselines with trend arrows)
 - [x] Document quick-action toolbar (floating toolbar on document detail with bookmark, share, print, cite, rate shortcuts)
 - [x] Fix AdminEditor "Rendered more hooks than during the previous render" error (hooks called conditionally)
+- [x] Wire SavedSearchFilters component into SearchResultsPage for one-click filter reuse
+- [x] Add "Add to Collection" button on DocumentDetail page for quick collection management
+- [x] Integrate ReadingTimeEstimate component into DocumentDetail page near document title

@@ -53,6 +53,8 @@ import TextToSpeech from '@/components/TextToSpeech';
 import QuickEditInline from '@/components/QuickEditInline';
 import SmartRecommendations from '@/components/SmartRecommendations';
 import DocumentSnapshots from '@/components/DocumentSnapshots';
+import AddToCollectionButton from '@/components/AddToCollectionButton';
+import ReadingTimeEstimate from '@/components/ReadingTimeEstimate';
 
 // Reading time calculation - uses configurable WPM from branding settings
 function getReadingTime(wordCount: number, wpm = 200): string {
@@ -516,6 +518,12 @@ export default function DocumentDetail() {
                     <span>{new Date(document.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}</span>
                   </div>
                 )}
+              </div>
+
+              {/* Reading Time Estimate + Add to Collection */}
+              <div className="flex flex-wrap items-center gap-3 mt-3">
+                <ReadingTimeEstimate slug={document.slug} />
+                <AddToCollectionButton documentId={document.id} documentTitle={document.title} />
               </div>
 
               {/* Rating and AI Summary */}
