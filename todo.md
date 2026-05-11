@@ -282,3 +282,4 @@
 - [x] Wire SavedSearchFilters component into SearchResultsPage for one-click filter reuse
 - [x] Add "Add to Collection" button on DocumentDetail page for quick collection management
 - [x] Integrate ReadingTimeEstimate component into DocumentDetail page near document title
+- [x] Fix tRPC "Unexpected token '<', <!doctype" error (Vite catch-all serving HTML for API routes during HMR restarts)

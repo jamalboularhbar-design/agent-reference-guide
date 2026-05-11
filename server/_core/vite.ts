@@ -24,6 +24,11 @@ export async function setupVite(app: Express, server: Server) {
   app.use("*", async (req, res, next) => {
     const url = req.originalUrl;
 
+    // Never serve HTML for API or storage routes - let them 404 properly as JSON
+    if (url.startsWith("/api/") || url.startsWith("/manus-storage/")) {
+      return next();
+    }
+
     try {
       const clientTemplate = path.resolve(
         import.meta.dirname,
@@ -60,8 +65,12 @@ export function serveStatic(app: Express) {
 
   app.use(express.static(distPath));
 
-  // fall through to index.html if the file doesn't exist
-  app.use("*", (_req, res) => {
+  // fall through to index.html if the file doesn't exist (skip API routes)
+  app.use("*", (_req, res, next) => {
+    const url = _req.originalUrl;
+    if (url.startsWith("/api/") || url.startsWith("/manus-storage/")) {
+      return next();
+    }
     res.sendFile(path.resolve(distPath, "index.html"));
   });
 }
