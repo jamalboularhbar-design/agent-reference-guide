@@ -296,16 +296,16 @@
 - [x] Product Hunt "Coming Soon" preparation guide
 - [x] Stripe integration for self-serve Starter tier payments
 - [x] Product Hunt launch day checklist
-- [ ] Wire Stripe integration for self-serve Starter tier payments
+- [x] Wire Stripe integration for self-serve Starter tier payments
 - [x] Upgrade demo video placeholder with animated product walkthrough
 - [x] Add domain setup guidance page and OpsCanvas branding updates
 - [x] Build complete OpsCanvas management system in Notion
 - [x] Check opscanvas.io domain availability (taken by existing company — pivoted to ARG Builder)
-- [ ] Rebrand landing page from OpsCanvas to ARG Builder (parent AI company vision)
-- [ ] Set up argbuilder.io custom domain for the Manus-hosted app
-- [ ] Prepare LinkedIn posts for immediate publishing (Week 1: 3 posts) under ARG Builder brand
-- [ ] Research and populate cold outreach target list with real mid-market companies for NY/SF
-- [ ] Update Notion management system with ARG Builder branding
+- [x] Rebrand landing page from OpsCanvas to ARG Builder (parent AI company vision)
+- [x] Set up argbuilder.io custom domain for the Manus-hosted app (guidance provided — user action in Settings → Domains)
+- [x] Prepare LinkedIn posts for immediate publishing (Week 1: 3 posts) under ARG Builder brand
+- [x] Research and populate cold outreach target list with real mid-market companies for NY/SF
+- [x] Update Notion management system with ARG Builder branding
 
 ## Rebrand: OpsCanvas → ARG Builder
 
@@ -317,3 +317,17 @@
 - [x] Replace all "Agent Reference Guide" text across OnboardingTour, ExportDocx, exportPdf, EmbedDocument, AdminBrandingPage, PublicStatsPage, routers.ts, pdfExport.ts, Home.tsx
 - [x] TypeScript check: 0 errors
 - [x] All 299 tests passing
+
+## Stripe Integration
+
+- [x] Add Stripe feature via webdev_add_feature
+- [x] Define products and prices in server/products.ts (Starter/Professional/Enterprise tiers)
+- [x] Add stripe_customer_id and stripe_subscription_id to users table
+- [x] Create checkout session tRPC endpoint
+- [x] Create Stripe webhook handler at /api/stripe/webhook
+- [x] Create payment/subscription status tRPC endpoints
+- [x] Build pricing page UI with checkout buttons on /product landing page
+- [x] Build payment success/cancel pages (billing page with success state)
+- [x] Build subscription management page (/billing)
+- [x] Write vitest tests for Stripe endpoints (8 tests passing)
+- [x] Save checkpoint

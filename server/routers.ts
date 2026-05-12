@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { COOKIE_NAME } from "@shared/const";
+import { stripeRouter } from "./stripeRouter";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, protectedProcedure, router, adminProcedure } from "./_core/trpc";
@@ -2402,5 +2403,8 @@ export const appRouter = router({
       return { success: true };
     }),
   }),
+
+  // Stripe billing
+  stripe: stripeRouter,
 });
 export type AppRouter = typeof appRouter;

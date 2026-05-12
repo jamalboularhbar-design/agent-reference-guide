@@ -31,6 +31,18 @@ const VERTICALS = [
 export default function LandingPage() {
   const { user } = useAuth({ redirectOnUnauthenticated: false });
   const submitLead = trpc.leads.submit.useMutation();
+  const { data: stripeConfig } = trpc.stripe.isConfigured.useQuery();
+  const createCheckout = trpc.stripe.createCheckoutSession.useMutation({
+    onSuccess: (data) => {
+      if (data.checkoutUrl) {
+        window.open(data.checkoutUrl, '_blank');
+        toast.info('Redirecting to checkout...');
+      }
+    },
+    onError: (err) => {
+      toast.error(err.message);
+    },
+  });
 
   const [form, setForm] = useState({
     fullName: '', email: '', company: '', jobTitle: '', teamSize: '', message: '',
@@ -397,11 +409,26 @@ export default function LandingPage() {
                   <span className="text-gray-400 text-sm">{plan.period}</span>
                 </div>
                 <p className="text-sm text-gray-400 mb-6">{plan.desc}</p>
-                <a href="#contact">
-                  <Button className={`w-full mb-6 ${plan.highlight ? 'bg-teal-500 hover:bg-teal-400 text-black' : 'bg-white/5 hover:bg-white/10 text-white border border-white/10'}`}>
-                    {plan.cta}
+                <div>
+                  <Button
+                    className={`w-full mb-6 ${plan.highlight ? 'bg-teal-500 hover:bg-teal-400 text-black' : 'bg-white/5 hover:bg-white/10 text-white border border-white/10'}`}
+                    onClick={() => {
+                      if (plan.name === 'Enterprise') {
+                        document.getElementById('contact')?.scrollIntoView({ behavior: 'smooth' });
+                      } else if (stripeConfig?.configured && user) {
+                        createCheckout.mutate({
+                          tierId: plan.name.toLowerCase() as 'starter' | 'professional',
+                          billingPeriod: 'monthly',
+                        });
+                      } else {
+                        document.getElementById('contact')?.scrollIntoView({ behavior: 'smooth' });
+                      }
+                    }}
+                    disabled={createCheckout.isPending}
+                  >
+                    {createCheckout.isPending ? 'Processing...' : plan.cta}
                   </Button>
-                </a>
+                </div>
                 <ul className="space-y-3">
                   {plan.features.map((f) => (
                     <li key={f} className="flex items-center gap-2 text-sm text-gray-300">

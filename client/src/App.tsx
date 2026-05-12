@@ -120,6 +120,7 @@ import UserCollectionsPage from "./pages/UserCollectionsPage";
 import LandingPage from "./pages/LandingPage";
 import AdminLeadsPage from "./pages/AdminLeadsPage";
 import ROICalculatorPage from "./pages/ROICalculatorPage";
+import BillingPage from "./pages/BillingPage";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -236,6 +237,7 @@ function Router() {
       <Route path="/product" component={LandingPage} />
       <Route path="/admin/leads" component={AdminLeadsPage} />
       <Route path="/roi" component={ROICalculatorPage} />
+      <Route path="/billing" component={BillingPage} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />

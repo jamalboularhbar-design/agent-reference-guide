@@ -169,6 +169,13 @@
       "when": 1778534829767,
       "tag": "0023_common_texas_twister",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "5",
+      "when": 1778549415097,
+      "tag": "0024_orange_hellfire_club",
+      "breakpoints": true
     }
   ]
 }
