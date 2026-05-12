@@ -299,4 +299,21 @@
 - [ ] Wire Stripe integration for self-serve Starter tier payments
 - [x] Upgrade demo video placeholder with animated product walkthrough
 - [x] Add domain setup guidance page and OpsCanvas branding updates
-- [ ] Build complete OpsCanvas management system in Notion
+- [x] Build complete OpsCanvas management system in Notion
+- [x] Check opscanvas.io domain availability (taken by existing company — pivoted to ARG Builder)
+- [ ] Rebrand landing page from OpsCanvas to ARG Builder (parent AI company vision)
+- [ ] Set up argbuilder.io custom domain for the Manus-hosted app
+- [ ] Prepare LinkedIn posts for immediate publishing (Week 1: 3 posts) under ARG Builder brand
+- [ ] Research and populate cold outreach target list with real mid-market companies for NY/SF
+- [ ] Update Notion management system with ARG Builder branding
+
+## Rebrand: OpsCanvas → ARG Builder
+
+- [x] Rewrite LandingPage.tsx with ARG Builder parent company branding (6 verticals, platform vision)
+- [x] Replace all OpsCanvas references in ROICalculatorPage.tsx with ARG Builder
+- [x] Replace OpsCanvas reference in AdminLeadsPage.tsx
+- [x] Update client/index.html title from "Agent Reference Guide" to "ARG Builder"
+- [x] Update theme-color meta tag to teal (#14b8a6)
+- [x] Replace all "Agent Reference Guide" text across OnboardingTour, ExportDocx, exportPdf, EmbedDocument, AdminBrandingPage, PublicStatsPage, routers.ts, pdfExport.ts, Home.tsx
+- [x] TypeScript check: 0 errors
+- [x] All 299 tests passing

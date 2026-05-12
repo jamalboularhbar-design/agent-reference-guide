@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Paintbrush, Save, Loader2 } from 'lucide-react';
 
 const BRANDING_KEYS = [
-  { key: 'site_title', label: 'Site Title', placeholder: 'Agent Reference Guide', type: 'text' },
+  { key: 'site_title', label: 'Site Title', placeholder: 'ARG Builder', type: 'text' },
   { key: 'tagline', label: 'Tagline', placeholder: 'Operational processes & best practices', type: 'text' },
   { key: 'accent_color', label: 'Accent Color', placeholder: '#e8783a', type: 'color' },
   { key: 'logo_url', label: 'Logo URL', placeholder: '/logo.svg', type: 'text' },

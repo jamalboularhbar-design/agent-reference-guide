@@ -174,7 +174,7 @@ function generateHTML(persona: string, content: string): string {
       </div>
       
       <div class="footer">
-        <p>Agent Reference Guide - Confidential Operational Document</p>
+        <p>ARG Builder - Confidential Operational Document</p>
         <p>© ${new Date().getFullYear()} All Rights Reserved</p>
       </div>
     </body>

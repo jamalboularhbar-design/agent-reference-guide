@@ -10,7 +10,7 @@ interface TourStep {
 
 const TOUR_STEPS: TourStep[] = [
   {
-    title: 'Welcome to the Agent Reference Guide!',
+    title: 'Welcome to the ARG Builder!',
     description: 'This is your comprehensive operational guide for Riad & Routes. Let us show you around the key features.',
     target: null,
   },

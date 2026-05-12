@@ -164,7 +164,7 @@ export default function Home() {
             <p className="text-xs sm:text-sm font-semibold text-accent">Dual Persona System</p>
           </div>
           <h1 className="font-display text-3xl sm:text-5xl md:text-7xl mb-4 sm:mb-6 text-foreground leading-tight">
-            Agent Reference Guide
+            ARG Builder
           </h1>
           <p className="text-base sm:text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto mb-6 sm:mb-8 leading-relaxed px-2">
             A comprehensive interactive guide for managing operational processes across Riad & Routes and your creative design studio. Seamlessly switch between personas and explore detailed process frameworks.

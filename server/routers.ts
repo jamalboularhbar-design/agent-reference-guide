@@ -1909,14 +1909,14 @@ export const appRouter = router({
       const cached = await getCachedCitation(input.documentId, input.style);
       if (cached) return cached;
       const year = input.date ? new Date(input.date).getFullYear() : new Date().getFullYear();
-      const author = input.author || 'Agent Reference Guide';
+      const author = input.author || 'ARG Builder';
       let citation = '';
       if (input.style === 'apa') {
-        citation = `${author}. (${year}). ${input.title}. Agent Reference Guide.${input.url ? ` Retrieved from ${input.url}` : ''}`;
+        citation = `${author}. (${year}). ${input.title}. ARG Builder.${input.url ? ` Retrieved from ${input.url}` : ''}`;
       } else if (input.style === 'mla') {
-        citation = `${author}. "${input.title}." Agent Reference Guide, ${year}.${input.url ? ` ${input.url}.` : ''}`;
+        citation = `${author}. "${input.title}." ARG Builder, ${year}.${input.url ? ` ${input.url}.` : ''}`;
       } else if (input.style === 'chicago') {
-        citation = `${author}. "${input.title}." Agent Reference Guide. ${year}.${input.url ? ` ${input.url}.` : ''}`;
+        citation = `${author}. "${input.title}." ARG Builder. ${year}.${input.url ? ` ${input.url}.` : ''}`;
       }
       await saveCitation(input.documentId, input.style, citation);
       return { id: 0, documentId: input.documentId, style: input.style, citation, createdAt: new Date() };

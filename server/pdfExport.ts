@@ -114,7 +114,7 @@ function markdownToHtml(title: string, category: string, content: string): strin
     ${htmlContent}
   </div>
   <div class="footer">
-    Agent Reference Guide &middot; Operational Document Library
+    ARG Builder &middot; Operational Document Library
   </div>
 </body>
 </html>`;

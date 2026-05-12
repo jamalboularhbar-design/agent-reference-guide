@@ -5,7 +5,9 @@ import { Link } from 'wouter';
 import {
   BookOpen, Brain, BarChart3, Shield, Users, Zap,
   CheckCircle2, ArrowRight, Star, ChevronRight, Sparkles,
-  Network, Clock, Search, FileText, Lock, Globe
+  Network, Clock, Search, FileText, Lock, Globe,
+  Building2, Hotel, Stethoscope, ShoppingBag, Factory, Briefcase,
+  Layers, Rocket
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,6 +18,15 @@ const KNOWLEDGE_GRAPH_IMG = '/manus-storage/feature-knowledge-graph_ed196875.png
 const ANALYTICS_IMG = '/manus-storage/feature-analytics_315c687f.png';
 const AI_ASSISTANT_IMG = '/manus-storage/feature-ai-assistant_1c6d801e.png';
 const LOGO_IMG = '/manus-storage/logo-icon_7cc98e89.png';
+
+const VERTICALS = [
+  { icon: Hotel, name: 'Hospitality', desc: 'Hotels, resorts, and restaurant groups', color: 'text-amber-400' },
+  { icon: Stethoscope, name: 'Healthcare', desc: 'Clinics, hospitals, and care networks', color: 'text-rose-400' },
+  { icon: Briefcase, name: 'Professional Services', desc: 'Consulting, legal, and accounting firms', color: 'text-blue-400' },
+  { icon: ShoppingBag, name: 'Retail & E-Commerce', desc: 'Multi-location retail and DTC brands', color: 'text-purple-400' },
+  { icon: Factory, name: 'Manufacturing', desc: 'Production, quality, and supply chain', color: 'text-orange-400' },
+  { icon: Building2, name: 'SaaS & Technology', desc: 'Product, engineering, and CS teams', color: 'text-cyan-400' },
+];
 
 export default function LandingPage() {
   const { user } = useAuth({ redirectOnUnauthenticated: false });
@@ -47,12 +58,13 @@ export default function LandingPage() {
       <nav className="fixed top-0 left-0 right-0 z-50 bg-[#0B1120]/80 backdrop-blur-xl border-b border-white/5">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <img src={LOGO_IMG} alt="OpsCanvas" className="w-8 h-8 rounded-lg" />
-            <span className="text-xl font-bold tracking-tight">OpsCanvas</span>
+            <img src={LOGO_IMG} alt="ARG Builder" className="w-8 h-8 rounded-lg" />
+            <span className="text-xl font-bold tracking-tight">ARG Builder</span>
           </div>
           <div className="hidden md:flex items-center gap-8 text-sm text-gray-400">
-            <a href="#features" className="hover:text-white transition-colors">Features</a>
-            <a href="#how-it-works" className="hover:text-white transition-colors">How It Works</a>
+            <a href="#vision" className="hover:text-white transition-colors">Vision</a>
+            <a href="#platform" className="hover:text-white transition-colors">Platform</a>
+            <a href="#verticals" className="hover:text-white transition-colors">Verticals</a>
             <a href="#pricing" className="hover:text-white transition-colors">Pricing</a>
             <Link href="/roi" className="hover:text-white transition-colors">ROI Calculator</Link>
             <a href="#contact" className="hover:text-white transition-colors">Contact</a>
@@ -82,16 +94,16 @@ export default function LandingPage() {
           <div className="text-center mb-12">
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-teal-500/10 border border-teal-500/20 mb-8">
               <Sparkles className="w-4 h-4 text-teal-400" />
-              <span className="text-sm font-medium text-teal-300">AI-Powered Operations Intelligence</span>
+              <span className="text-sm font-medium text-teal-300">AI-Powered Operational Intelligence for Every Vertical</span>
             </div>
             <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold leading-[1.1] mb-6 tracking-tight">
-              Your team's knowledge,<br />
+              We build the AI that<br />
               <span className="bg-gradient-to-r from-teal-400 via-cyan-400 to-teal-300 bg-clip-text text-transparent">
-                always within reach
+                runs your operations
               </span>
             </h1>
             <p className="text-lg sm:text-xl text-gray-400 max-w-3xl mx-auto mb-10 leading-relaxed">
-              OpsCanvas is the AI-powered operational knowledge platform that turns scattered SOPs, playbooks, and guides into a living, searchable intelligence layer your entire team can trust.
+              ARG Builder creates AI-powered operational intelligence platforms tailored to your industry. We turn scattered SOPs, playbooks, and tribal knowledge into living systems your entire team can trust — from hospitality to healthcare, SaaS to manufacturing.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <a href="#contact">
@@ -99,9 +111,9 @@ export default function LandingPage() {
                   Request Early Access <ArrowRight className="w-5 h-5 ml-2" />
                 </Button>
               </a>
-              <a href="#features">
+              <a href="#platform">
                 <Button size="lg" variant="outline" className="border-white/20 text-white hover:bg-white/5 px-8 py-6 text-lg">
-                  See Features
+                  See the Platform
                 </Button>
               </a>
             </div>
@@ -110,102 +122,28 @@ export default function LandingPage() {
           <div className="relative mt-16 mx-auto max-w-5xl">
             <div className="absolute -inset-4 bg-gradient-to-r from-teal-500/20 via-cyan-500/10 to-purple-500/20 rounded-2xl blur-3xl" />
             <div className="relative rounded-xl overflow-hidden border border-white/10 shadow-2xl">
-              <img src={HERO_IMG} alt="OpsCanvas Dashboard" className="w-full object-contain" />
+              <img src={HERO_IMG} alt="ARG Builder Platform" className="w-full object-contain" />
             </div>
           </div>
         </div>
       </section>
 
-      {/* Demo Video Section */}
-      <section className="py-20 px-4 bg-gradient-to-b from-transparent to-white/[0.02]">
+      {/* Vision Section */}
+      <section id="vision" className="py-24 px-4 bg-gradient-to-b from-transparent to-white/[0.02]">
         <div className="max-w-5xl mx-auto text-center">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-teal-500/10 border border-teal-500/20 text-teal-400 text-xs font-medium mb-6">
-            <Sparkles className="w-3 h-3" /> Product Walkthrough
+            <Rocket className="w-3 h-3" /> The Big Vision
           </div>
-          <h2 className="text-2xl sm:text-3xl font-bold mb-4">See OpsCanvas in Action</h2>
-          <p className="text-gray-400 mb-10 max-w-2xl mx-auto">Explore the key capabilities that make OpsCanvas the operational intelligence platform scaling teams trust</p>
-          
-          {/* Interactive Feature Showcase */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-            {[
-              { img: KNOWLEDGE_GRAPH_IMG, title: 'Knowledge Graph', desc: 'Visualize how every SOP, playbook, and guide connects. Find documentation gaps instantly.', icon: Network },
-              { img: ANALYTICS_IMG, title: 'Reading Analytics', desc: 'Know who\'s reading your SOPs — not just page views. Prove compliance with real data.', icon: BarChart3 },
-              { img: AI_ASSISTANT_IMG, title: 'AI Governance', desc: 'Auto-detect stale content, duplicates, and broken links. No more manual audits.', icon: Brain },
-            ].map((feature, i) => (
-              <div key={i} className="group relative rounded-xl overflow-hidden border border-white/10 bg-[#0F1A2E] cursor-pointer" onClick={() => toast.info('Full demo video coming soon! Request a live walkthrough instead.', { action: { label: 'Request Demo', onClick: () => { const el = document.getElementById('contact'); el?.scrollIntoView({ behavior: 'smooth' }); } } })}>
-                <div className="aspect-[4/3] relative overflow-hidden">
-                  <img src={feature.img} alt={feature.title} className="w-full h-full object-cover opacity-60 group-hover:opacity-80 group-hover:scale-105" style={{ transition: 'opacity 0.3s, transform 0.3s' }} />
-                  <div className="absolute inset-0 bg-gradient-to-t from-[#0F1A2E] via-transparent to-transparent" />
-                  <div className="absolute top-3 right-3 w-8 h-8 rounded-full bg-teal-500/20 border border-teal-400/50 flex items-center justify-center">
-                    <svg className="w-3.5 h-3.5 text-teal-400 ml-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-                  </div>
-                </div>
-                <div className="p-4 text-left">
-                  <div className="flex items-center gap-2 mb-2">
-                    <feature.icon className="w-4 h-4 text-teal-400" />
-                    <h3 className="font-semibold text-sm">{feature.title}</h3>
-                  </div>
-                  <p className="text-xs text-gray-400 leading-relaxed">{feature.desc}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* Stats bar */}
-          <div className="flex flex-wrap justify-center gap-8 mb-10 py-4 px-6 rounded-xl bg-white/[0.03] border border-white/5">
-            {[
-              { value: '288', label: 'Features Shipped' },
-              { value: '92', label: 'Database Tables' },
-              { value: '299', label: 'Tests Passing' },
-              { value: '0', label: 'TypeScript Errors' },
-            ].map((stat, i) => (
-              <div key={i} className="text-center">
-                <div className="text-xl font-bold text-teal-400">{stat.value}</div>
-                <div className="text-xs text-gray-500">{stat.label}</div>
-              </div>
-            ))}
-          </div>
-
-          <div className="flex justify-center gap-4">
-            <Link href="/roi">
-              <Button variant="outline" className="border-white/20 text-white hover:bg-white/5">
-                Try ROI Calculator
-              </Button>
-            </Link>
-            <a href="#contact">
-              <Button className="bg-teal-500 hover:bg-teal-400 text-black font-semibold">
-                Request Live Demo <ArrowRight className="w-4 h-4 ml-2" />
-              </Button>
-            </a>
-          </div>
-        </div>
-      </section>
-
-      {/* Social Proof Bar */}
-      <section className="py-12 border-y border-white/5 bg-white/[0.02]">
-        <div className="max-w-7xl mx-auto px-4">
-          <p className="text-center text-sm text-gray-500 mb-8 uppercase tracking-widest">Trusted by operations teams at</p>
-          <div className="flex flex-wrap justify-center items-center gap-x-12 gap-y-6 text-gray-500">
-            {['Hospitality Groups', 'SaaS Companies', 'Consulting Firms', 'Creative Agencies', 'Franchise Networks'].map((name) => (
-              <div key={name} className="flex items-center gap-2 text-lg font-semibold opacity-40">
-                <Globe className="w-5 h-5" />
-                {name}
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Problem Statement */}
-      <section className="py-24 px-4">
-        <div className="max-w-4xl mx-auto text-center">
           <h2 className="text-3xl sm:text-4xl font-bold mb-6">
-            Your operational knowledge is <span className="text-red-400">scattered, outdated, and hard to find</span>
+            One engine. Every vertical.<br />
+            <span className="text-teal-400">Infinite operational intelligence.</span>
           </h2>
-          <p className="text-lg text-gray-400 mb-12 leading-relaxed">
-            SOPs live in Google Docs. Playbooks are buried in Notion. Onboarding guides are PDFs from 2022. When a new hire asks "how do we handle X?" — nobody knows where to look. OpsCanvas fixes this.
+          <p className="text-lg text-gray-400 max-w-3xl mx-auto mb-12 leading-relaxed">
+            Mid-market companies across every industry share the same problem: operational knowledge is scattered, outdated, and impossible to find. Enterprise tools are too expensive and complex. Generic wikis don't understand your workflows. ARG Builder fills this gap with AI-native platforms purpose-built for each vertical.
           </p>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+
+          {/* Problem Stats */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
             {[
               { stat: '67%', label: 'of employees say they can\'t find the information they need to do their job', source: 'McKinsey' },
               { stat: '9.3h', label: 'per week wasted searching for information across disconnected tools', source: 'IDC Research' },
@@ -218,18 +156,62 @@ export default function LandingPage() {
               </div>
             ))}
           </div>
+
+          {/* Platform Stats */}
+          <div className="flex flex-wrap justify-center gap-8 py-4 px-6 rounded-xl bg-white/[0.03] border border-white/5">
+            {[
+              { value: '288', label: 'Features Shipped' },
+              { value: '92', label: 'Database Tables' },
+              { value: '299', label: 'Tests Passing' },
+              { value: '6', label: 'Verticals Ready' },
+            ].map((stat, i) => (
+              <div key={i} className="text-center">
+                <div className="text-xl font-bold text-teal-400">{stat.value}</div>
+                <div className="text-xs text-gray-500">{stat.label}</div>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 
-      {/* Features Section */}
-      <section id="features" className="py-24 px-4 bg-gradient-to-b from-transparent via-teal-500/[0.03] to-transparent">
+      {/* Verticals Section */}
+      <section id="verticals" className="py-24 px-4 border-y border-white/5">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-teal-500/10 border border-teal-500/20 mb-4">
-              <span className="text-xs font-medium text-teal-300">PLATFORM FEATURES</span>
+              <span className="text-xs font-medium text-teal-300">INDUSTRY VERTICALS</span>
             </div>
-            <h2 className="text-3xl sm:text-5xl font-bold mb-4">Everything your ops team needs</h2>
-            <p className="text-lg text-gray-400 max-w-2xl mx-auto">From AI-powered search to knowledge graphs, OpsCanvas gives your team superpowers.</p>
+            <h2 className="text-3xl sm:text-4xl font-bold mb-4">Built for your industry, not against it</h2>
+            <p className="text-lg text-gray-400 max-w-2xl mx-auto">
+              Each ARG Builder deployment is tailored to your vertical with industry-specific templates, workflows, compliance frameworks, and AI models that understand your domain.
+            </p>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {VERTICALS.map((v, i) => (
+              <div key={i} className="p-6 rounded-xl bg-white/[0.03] border border-white/5 hover:border-teal-500/20 transition-colors group">
+                <v.icon className={`w-10 h-10 ${v.color} mb-4 group-hover:scale-110 transition-transform`} />
+                <h3 className="text-lg font-semibold mb-2">{v.name}</h3>
+                <p className="text-sm text-gray-400 leading-relaxed">{v.desc}</p>
+                <div className="mt-4 flex items-center gap-1 text-xs text-teal-400 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <span>Learn more</span>
+                  <ChevronRight className="w-3 h-3" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Platform Features Section */}
+      <section id="platform" className="py-24 px-4 bg-gradient-to-b from-transparent via-teal-500/[0.03] to-transparent">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-16">
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-teal-500/10 border border-teal-500/20 mb-4">
+              <Layers className="w-3 h-3 text-teal-300" />
+              <span className="text-xs font-medium text-teal-300">THE ARG BUILDER ENGINE</span>
+            </div>
+            <h2 className="text-3xl sm:text-5xl font-bold mb-4">The platform powering it all</h2>
+            <p className="text-lg text-gray-400 max-w-2xl mx-auto">Every vertical deployment is built on the same battle-tested engine — AI-powered search, knowledge graphs, analytics, and governance tools that adapt to your domain.</p>
           </div>
 
           {/* Feature 1: Knowledge Graph */}
@@ -267,7 +249,7 @@ export default function LandingPage() {
             <div className="order-1 lg:order-2">
               <div className="flex items-center gap-2 mb-4">
                 <BarChart3 className="w-5 h-5 text-cyan-400" />
-                <span className="text-sm font-semibold text-cyan-400 uppercase tracking-wider">Reading Analytics</span>
+                <span className="text-sm font-semibold text-cyan-400 uppercase tracking-wider">Operational Analytics</span>
               </div>
               <h3 className="text-2xl sm:text-3xl font-bold mb-4">Know what your team actually reads</h3>
               <p className="text-gray-400 mb-6 leading-relaxed">
@@ -284,12 +266,12 @@ export default function LandingPage() {
             </div>
           </div>
 
-          {/* Feature 3: AI Assistant */}
+          {/* Feature 3: AI Governance */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
             <div>
               <div className="flex items-center gap-2 mb-4">
                 <Brain className="w-5 h-5 text-purple-400" />
-                <span className="text-sm font-semibold text-purple-400 uppercase tracking-wider">AI Content Assistant</span>
+                <span className="text-sm font-semibold text-purple-400 uppercase tracking-wider">AI Content Governance</span>
               </div>
               <h3 className="text-2xl sm:text-3xl font-bold mb-4">AI that understands your operations</h3>
               <p className="text-gray-400 mb-6 leading-relaxed">
@@ -306,18 +288,18 @@ export default function LandingPage() {
             </div>
             <div className="relative">
               <div className="absolute -inset-4 bg-gradient-to-r from-purple-500/10 to-pink-500/10 rounded-2xl blur-2xl" />
-              <img src={AI_ASSISTANT_IMG} alt="AI Assistant" className="relative rounded-xl border border-white/10 shadow-xl w-full object-contain" />
+              <img src={AI_ASSISTANT_IMG} alt="AI Governance" className="relative rounded-xl border border-white/10 shadow-xl w-full object-contain" />
             </div>
           </div>
         </div>
       </section>
 
-      {/* Feature Grid */}
+      {/* Capability Grid */}
       <section className="py-24 px-4">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-3xl sm:text-4xl font-bold mb-4">And so much more</h2>
-            <p className="text-gray-400">Every feature your operations team has been asking for.</p>
+            <p className="text-gray-400">Every feature your operations team has been asking for — built into the core engine.</p>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {[
@@ -346,19 +328,20 @@ export default function LandingPage() {
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-3xl sm:text-4xl font-bold mb-4">Up and running in days, not months</h2>
-            <p className="text-gray-400 max-w-2xl mx-auto">OpsCanvas is designed for fast deployment. Import your existing docs, configure your workflows, and start seeing value immediately.</p>
+            <p className="text-gray-400 max-w-2xl mx-auto">ARG Builder is designed for fast deployment. Import your existing docs, configure your workflows, and start seeing value immediately.</p>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
             {[
-              { step: '01', title: 'Import & Organize', desc: 'Bulk import from Google Docs, Notion, Confluence, or plain files. AI auto-categorizes and tags everything.' },
-              { step: '02', title: 'Configure & Customize', desc: 'Set up personas, workflows, permissions, and branding. Make it yours in minutes, not weeks.' },
-              { step: '03', title: 'Launch & Measure', desc: 'Invite your team. Track adoption with real-time analytics. AI surfaces what needs attention.' },
+              { step: '01', title: 'Choose Your Vertical', desc: 'Select your industry. We configure templates, workflows, and AI models for your domain.' },
+              { step: '02', title: 'Import & Organize', desc: 'Bulk import from Google Docs, Notion, Confluence, or plain files. AI auto-categorizes everything.' },
+              { step: '03', title: 'Configure & Brand', desc: 'Set up personas, permissions, and branding. Make it yours in minutes, not weeks.' },
+              { step: '04', title: 'Launch & Measure', desc: 'Invite your team. Track adoption with real-time analytics. AI surfaces what needs attention.' },
             ].map((item, i) => (
               <div key={i} className="relative">
                 <div className="text-6xl font-bold text-teal-500/10 mb-4">{item.step}</div>
                 <h3 className="text-xl font-semibold mb-3">{item.title}</h3>
-                <p className="text-gray-400 leading-relaxed">{item.desc}</p>
-                {i < 2 && <ChevronRight className="hidden md:block absolute top-8 -right-4 w-8 h-8 text-teal-500/20" />}
+                <p className="text-gray-400 leading-relaxed text-sm">{item.desc}</p>
+                {i < 3 && <ChevronRight className="hidden md:block absolute top-8 -right-4 w-8 h-8 text-teal-500/20" />}
               </div>
             ))}
           </div>
@@ -370,7 +353,7 @@ export default function LandingPage() {
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-3xl sm:text-4xl font-bold mb-4">Simple, transparent pricing</h2>
-            <p className="text-gray-400">Start with a pilot. Scale when you're ready.</p>
+            <p className="text-gray-400">Start with a pilot. Scale when you're ready. Every plan includes your vertical configuration.</p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {[
@@ -388,7 +371,7 @@ export default function LandingPage() {
                 price: '$24',
                 period: '/seat/month',
                 desc: 'For growing operations teams',
-                features: ['Up to 200 users', 'Unlimited documents', 'AI content assistant', 'Knowledge graph', 'Advanced analytics', 'Workflow automation', 'Priority support'],
+                features: ['Up to 200 users', 'Unlimited documents', 'AI content governance', 'Knowledge graph', 'Advanced analytics', 'Workflow automation', 'Priority support'],
                 cta: 'Request Demo',
                 highlight: true,
               },
@@ -397,7 +380,7 @@ export default function LandingPage() {
                 price: 'Custom',
                 period: '',
                 desc: 'For organizations at scale',
-                features: ['Unlimited users', 'SSO / SAML', 'Custom integrations', 'Dedicated success manager', 'SLA guarantees', 'On-premise option', 'Custom training'],
+                features: ['Unlimited users', 'SSO / SAML', 'Custom integrations', 'Dedicated success manager', 'SLA guarantees', 'On-premise option', 'Custom AI training'],
                 cta: 'Contact Sales',
                 highlight: false,
               },
@@ -443,7 +426,7 @@ export default function LandingPage() {
             <p className="text-gray-400">
               {submitted
                 ? 'We\'ll reach out within 24 hours to schedule your personalized demo.'
-                : 'Get a personalized demo and see how OpsCanvas can work for your team.'}
+                : 'Get a personalized demo tailored to your industry and see how ARG Builder can work for your team.'}
             </p>
           </div>
 
@@ -493,22 +476,24 @@ export default function LandingPage() {
                 </div>
               </div>
               <div>
-                <label className="block text-sm text-gray-400 mb-1.5">Team Size</label>
+                <label className="block text-sm text-gray-400 mb-1.5">Industry</label>
                 <select
                   value={form.teamSize}
                   onChange={(e) => setForm({ ...form, teamSize: e.target.value })}
                   className="w-full rounded-md bg-white/5 border border-white/10 text-white px-3 py-2 text-sm"
                 >
-                  <option value="" className="bg-gray-900">Select team size</option>
-                  <option value="1-10" className="bg-gray-900">1-10 employees</option>
-                  <option value="11-50" className="bg-gray-900">11-50 employees</option>
-                  <option value="51-200" className="bg-gray-900">51-200 employees</option>
-                  <option value="201-1000" className="bg-gray-900">201-1,000 employees</option>
-                  <option value="1000+" className="bg-gray-900">1,000+ employees</option>
+                  <option value="" className="bg-gray-900">Select your industry</option>
+                  <option value="hospitality" className="bg-gray-900">Hospitality & Travel</option>
+                  <option value="healthcare" className="bg-gray-900">Healthcare</option>
+                  <option value="professional-services" className="bg-gray-900">Professional Services</option>
+                  <option value="retail" className="bg-gray-900">Retail & E-Commerce</option>
+                  <option value="manufacturing" className="bg-gray-900">Manufacturing</option>
+                  <option value="saas" className="bg-gray-900">SaaS & Technology</option>
+                  <option value="other" className="bg-gray-900">Other</option>
                 </select>
               </div>
               <div>
-                <label className="block text-sm text-gray-400 mb-1.5">What's your biggest knowledge management challenge?</label>
+                <label className="block text-sm text-gray-400 mb-1.5">What's your biggest operational challenge?</label>
                 <textarea
                   value={form.message}
                   onChange={(e) => setForm({ ...form, message: e.target.value })}
@@ -554,39 +539,39 @@ export default function LandingPage() {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-10 mb-10">
             <div className="md:col-span-2">
               <div className="flex items-center gap-3 mb-4">
-                <img src={LOGO_IMG} alt="OpsCanvas" className="w-8 h-8 rounded-lg" />
-                <span className="text-xl font-bold">OpsCanvas</span>
+                <img src={LOGO_IMG} alt="ARG Builder" className="w-8 h-8 rounded-lg" />
+                <span className="text-xl font-bold">ARG Builder</span>
               </div>
               <p className="text-sm text-gray-400 leading-relaxed mb-4 max-w-md">
-                AI-powered operational knowledge platform that turns scattered SOPs, playbooks, and guides into a living intelligence layer your entire team can trust.
+                AI-powered operational intelligence platforms tailored to every industry vertical. We build the systems that run your operations — from hospitality to healthcare, SaaS to manufacturing.
               </p>
-              <p className="text-xs text-gray-600">A product by Riad & Routes</p>
+              <p className="text-xs text-gray-600">argbuilder.io</p>
             </div>
             <div>
-              <h4 className="font-semibold text-sm mb-4 text-gray-300">Product</h4>
+              <h4 className="font-semibold text-sm mb-4 text-gray-300">Platform</h4>
               <div className="flex flex-col gap-2 text-sm text-gray-500">
-                <a href="#features" className="hover:text-white transition-colors">Features</a>
+                <a href="#platform" className="hover:text-white transition-colors">Features</a>
+                <a href="#verticals" className="hover:text-white transition-colors">Verticals</a>
                 <a href="#pricing" className="hover:text-white transition-colors">Pricing</a>
                 <Link href="/roi" className="hover:text-white transition-colors">ROI Calculator</Link>
-                <a href="#contact" className="hover:text-white transition-colors">Request Demo</a>
               </div>
             </div>
             <div>
-              <h4 className="font-semibold text-sm mb-4 text-gray-300">Resources</h4>
+              <h4 className="font-semibold text-sm mb-4 text-gray-300">Company</h4>
               <div className="flex flex-col gap-2 text-sm text-gray-500">
-                <a href="#how-it-works" className="hover:text-white transition-colors">How It Works</a>
+                <a href="#vision" className="hover:text-white transition-colors">Our Vision</a>
+                <a href="#contact" className="hover:text-white transition-colors">Request Demo</a>
                 <Link href="/" className="hover:text-white transition-colors">Reference Guide</Link>
-                <span className="text-gray-600 cursor-default">Documentation (Coming Soon)</span>
-                <span className="text-gray-600 cursor-default">API Reference (Coming Soon)</span>
+                <span className="text-gray-600 cursor-default">Careers (Coming Soon)</span>
               </div>
             </div>
           </div>
           <div className="pt-8 border-t border-white/5 flex flex-col md:flex-row items-center justify-between gap-4">
             <p className="text-sm text-gray-600">
-              &copy; {new Date().getFullYear()} OpsCanvas. All rights reserved.
+              &copy; {new Date().getFullYear()} ARG Builder. All rights reserved.
             </p>
             <div className="flex items-center gap-6 text-xs text-gray-600">
-              <span>hello@opscanvas.io</span>
+              <span>hello@argbuilder.io</span>
               <span>·</span>
               <span>New York · San Francisco</span>
             </div>
