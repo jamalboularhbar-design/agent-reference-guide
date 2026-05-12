@@ -296,3 +296,7 @@
 - [x] Product Hunt "Coming Soon" preparation guide
 - [x] Stripe integration for self-serve Starter tier payments
 - [x] Product Hunt launch day checklist
+- [ ] Wire Stripe integration for self-serve Starter tier payments
+- [x] Upgrade demo video placeholder with animated product walkthrough
+- [x] Add domain setup guidance page and OpsCanvas branding updates
+- [ ] Build complete OpsCanvas management system in Notion

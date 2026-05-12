@@ -54,6 +54,7 @@ export default function LandingPage() {
             <a href="#features" className="hover:text-white transition-colors">Features</a>
             <a href="#how-it-works" className="hover:text-white transition-colors">How It Works</a>
             <a href="#pricing" className="hover:text-white transition-colors">Pricing</a>
+            <Link href="/roi" className="hover:text-white transition-colors">ROI Calculator</Link>
             <a href="#contact" className="hover:text-white transition-colors">Contact</a>
           </div>
           <div className="flex items-center gap-3">
@@ -116,21 +117,56 @@ export default function LandingPage() {
       </section>
 
       {/* Demo Video Section */}
-      <section className="py-16 px-4 bg-gradient-to-b from-transparent to-white/[0.02]">
-        <div className="max-w-4xl mx-auto text-center">
-          <h2 className="text-2xl sm:text-3xl font-bold mb-4">See OpsCanvas in Action</h2>
-          <p className="text-gray-400 mb-8">Watch a 2-minute walkthrough of the platform</p>
-          <div className="relative mx-auto max-w-3xl aspect-video rounded-xl overflow-hidden border border-white/10 bg-[#0F1A2E] flex items-center justify-center group cursor-pointer" onClick={() => toast.info('Demo video coming soon! Request a live demo instead.', { action: { label: 'Request Demo', onClick: () => { const el = document.getElementById('contact'); el?.scrollIntoView({ behavior: 'smooth' }); } } })}>
-            <div className="absolute inset-0 bg-gradient-to-br from-teal-500/5 to-cyan-500/5" />
-            <img src={HERO_IMG} alt="OpsCanvas Demo" className="absolute inset-0 w-full h-full object-cover opacity-30" />
-            <div className="relative flex flex-col items-center gap-4">
-              <div className="w-20 h-20 rounded-full bg-teal-500/20 border-2 border-teal-400 flex items-center justify-center group-hover:bg-teal-500/30 transition-colors">
-                <svg className="w-8 h-8 text-teal-400 ml-1" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-              </div>
-              <span className="text-sm text-gray-400">Click to play demo</span>
-            </div>
+      <section className="py-20 px-4 bg-gradient-to-b from-transparent to-white/[0.02]">
+        <div className="max-w-5xl mx-auto text-center">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-teal-500/10 border border-teal-500/20 text-teal-400 text-xs font-medium mb-6">
+            <Sparkles className="w-3 h-3" /> Product Walkthrough
           </div>
-          <div className="mt-6 flex justify-center gap-4">
+          <h2 className="text-2xl sm:text-3xl font-bold mb-4">See OpsCanvas in Action</h2>
+          <p className="text-gray-400 mb-10 max-w-2xl mx-auto">Explore the key capabilities that make OpsCanvas the operational intelligence platform scaling teams trust</p>
+          
+          {/* Interactive Feature Showcase */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+            {[
+              { img: KNOWLEDGE_GRAPH_IMG, title: 'Knowledge Graph', desc: 'Visualize how every SOP, playbook, and guide connects. Find documentation gaps instantly.', icon: Network },
+              { img: ANALYTICS_IMG, title: 'Reading Analytics', desc: 'Know who\'s reading your SOPs — not just page views. Prove compliance with real data.', icon: BarChart3 },
+              { img: AI_ASSISTANT_IMG, title: 'AI Governance', desc: 'Auto-detect stale content, duplicates, and broken links. No more manual audits.', icon: Brain },
+            ].map((feature, i) => (
+              <div key={i} className="group relative rounded-xl overflow-hidden border border-white/10 bg-[#0F1A2E] cursor-pointer" onClick={() => toast.info('Full demo video coming soon! Request a live walkthrough instead.', { action: { label: 'Request Demo', onClick: () => { const el = document.getElementById('contact'); el?.scrollIntoView({ behavior: 'smooth' }); } } })}>
+                <div className="aspect-[4/3] relative overflow-hidden">
+                  <img src={feature.img} alt={feature.title} className="w-full h-full object-cover opacity-60 group-hover:opacity-80 group-hover:scale-105" style={{ transition: 'opacity 0.3s, transform 0.3s' }} />
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#0F1A2E] via-transparent to-transparent" />
+                  <div className="absolute top-3 right-3 w-8 h-8 rounded-full bg-teal-500/20 border border-teal-400/50 flex items-center justify-center">
+                    <svg className="w-3.5 h-3.5 text-teal-400 ml-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                  </div>
+                </div>
+                <div className="p-4 text-left">
+                  <div className="flex items-center gap-2 mb-2">
+                    <feature.icon className="w-4 h-4 text-teal-400" />
+                    <h3 className="font-semibold text-sm">{feature.title}</h3>
+                  </div>
+                  <p className="text-xs text-gray-400 leading-relaxed">{feature.desc}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Stats bar */}
+          <div className="flex flex-wrap justify-center gap-8 mb-10 py-4 px-6 rounded-xl bg-white/[0.03] border border-white/5">
+            {[
+              { value: '288', label: 'Features Shipped' },
+              { value: '92', label: 'Database Tables' },
+              { value: '299', label: 'Tests Passing' },
+              { value: '0', label: 'TypeScript Errors' },
+            ].map((stat, i) => (
+              <div key={i} className="text-center">
+                <div className="text-xl font-bold text-teal-400">{stat.value}</div>
+                <div className="text-xs text-gray-500">{stat.label}</div>
+              </div>
+            ))}
+          </div>
+
+          <div className="flex justify-center gap-4">
             <Link href="/roi">
               <Button variant="outline" className="border-white/20 text-white hover:bg-white/5">
                 Try ROI Calculator
@@ -513,22 +549,47 @@ export default function LandingPage() {
       </section>
 
       {/* Footer */}
-      <footer className="py-12 px-4 border-t border-white/5">
+      <footer className="py-16 px-4 border-t border-white/5">
         <div className="max-w-7xl mx-auto">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-            <div className="flex items-center gap-3">
-              <img src={LOGO_IMG} alt="OpsCanvas" className="w-6 h-6 rounded" />
-              <span className="font-semibold">OpsCanvas</span>
-              <span className="text-gray-500 text-sm">by Riad & Routes</span>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-10 mb-10">
+            <div className="md:col-span-2">
+              <div className="flex items-center gap-3 mb-4">
+                <img src={LOGO_IMG} alt="OpsCanvas" className="w-8 h-8 rounded-lg" />
+                <span className="text-xl font-bold">OpsCanvas</span>
+              </div>
+              <p className="text-sm text-gray-400 leading-relaxed mb-4 max-w-md">
+                AI-powered operational knowledge platform that turns scattered SOPs, playbooks, and guides into a living intelligence layer your entire team can trust.
+              </p>
+              <p className="text-xs text-gray-600">A product by Riad & Routes</p>
             </div>
-            <div className="flex items-center gap-6 text-sm text-gray-500">
-              <a href="#features" className="hover:text-white transition-colors">Features</a>
-              <a href="#pricing" className="hover:text-white transition-colors">Pricing</a>
-              <a href="#contact" className="hover:text-white transition-colors">Contact</a>
+            <div>
+              <h4 className="font-semibold text-sm mb-4 text-gray-300">Product</h4>
+              <div className="flex flex-col gap-2 text-sm text-gray-500">
+                <a href="#features" className="hover:text-white transition-colors">Features</a>
+                <a href="#pricing" className="hover:text-white transition-colors">Pricing</a>
+                <Link href="/roi" className="hover:text-white transition-colors">ROI Calculator</Link>
+                <a href="#contact" className="hover:text-white transition-colors">Request Demo</a>
+              </div>
             </div>
+            <div>
+              <h4 className="font-semibold text-sm mb-4 text-gray-300">Resources</h4>
+              <div className="flex flex-col gap-2 text-sm text-gray-500">
+                <a href="#how-it-works" className="hover:text-white transition-colors">How It Works</a>
+                <Link href="/" className="hover:text-white transition-colors">Reference Guide</Link>
+                <span className="text-gray-600 cursor-default">Documentation (Coming Soon)</span>
+                <span className="text-gray-600 cursor-default">API Reference (Coming Soon)</span>
+              </div>
+            </div>
+          </div>
+          <div className="pt-8 border-t border-white/5 flex flex-col md:flex-row items-center justify-between gap-4">
             <p className="text-sm text-gray-600">
               &copy; {new Date().getFullYear()} OpsCanvas. All rights reserved.
             </p>
+            <div className="flex items-center gap-6 text-xs text-gray-600">
+              <span>hello@opscanvas.io</span>
+              <span>·</span>
+              <span>New York · San Francisco</span>
+            </div>
           </div>
         </div>
       </footer>
