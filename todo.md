@@ -369,7 +369,7 @@
 ## Follow-up Actions (May 19, 2026)
 - [x] Create OG social sharing image (1200x630px) and add to meta tags
 - [x] Fix sitemap accessibility for Google Search Console (robots.txt issue is platform-level on .manus.space; custom domain serves correct file)
-- [ ] Reminder: Stripe API keys needed in Settings → Payment (user action required)
+- [x] Reminder: Stripe API keys needed in Settings → Payment (user action required — communicated to user)
 - [x] Add analytics tracking (privacy-friendly) — Umami already integrated via VITE_ANALYTICS env vars
 - [x] Create Loom demo recording script (docs/loom-demo-script.md)
 - [x] Product Hunt launch preparation (docs/product-hunt-launch-guide.md)
@@ -377,3 +377,9 @@
 - [x] Add hreflang tags for future multi-language support (xhtml:link in sitemap)
 - [x] Email capture automation guide (docs/email-capture-crm-guide.md)
 - [x] Run Lighthouse audit and fix accessibility issues (labels, aria-labels added)
+
+## Close CRM Integration
+- [x] Add CLOSE_CRM_API_KEY secret
+- [x] Implement Close CRM lead creation on demo form submission
+- [x] Write test for Close CRM integration (4 tests passing, lead created: lead_UDEsBPKx600qU0NF9b1JZeBLxzvVkG4m4K3nw197VZe)
+- [x] Save checkpoint

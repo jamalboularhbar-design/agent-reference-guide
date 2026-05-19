@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { COOKIE_NAME } from "@shared/const";
 import { stripeRouter } from "./stripeRouter";
+import { createCloseLead } from "./closeCrm";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, protectedProcedure, router, adminProcedure } from "./_core/trpc";
@@ -2395,6 +2396,12 @@ export const appRouter = router({
       message: z.string().optional(),
     })).mutation(async ({ input }) => {
       const id = await createLead(input);
+
+      // Push to Close CRM (non-blocking)
+      createCloseLead(input).catch((err) =>
+        console.error("[Close CRM] Background lead creation failed:", err)
+      );
+
       return { success: true, id };
     }),
     list: adminProcedure.input(z.object({ status: z.string().optional() }).optional()).query(async ({ input }) => getLeads(input?.status)),
