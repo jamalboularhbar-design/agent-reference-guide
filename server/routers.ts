@@ -1,7 +1,9 @@
 import { z } from "zod";
+import { TRPCError } from "@trpc/server";
 import { COOKIE_NAME } from "@shared/const";
 import { stripeRouter } from "./stripeRouter";
 import { createCloseLead } from "./closeCrm";
+import { leadSubmitLimiter, loginLimiter } from "./rateLimiter";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, protectedProcedure, router, adminProcedure } from "./_core/trpc";
@@ -2394,7 +2396,17 @@ export const appRouter = router({
       teamSize: z.string().optional(),
       source: z.string().optional(),
       message: z.string().optional(),
-    })).mutation(async ({ input }) => {
+    })).mutation(async ({ input, ctx }) => {
+      // Rate limit: 3 submissions per IP per hour
+      const ip = (ctx.req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() || ctx.req.ip || 'unknown';
+      const { allowed, resetMs } = leadSubmitLimiter.check(ip);
+      if (!allowed) {
+        throw new TRPCError({
+          code: 'TOO_MANY_REQUESTS',
+          message: `Too many submissions. Please try again in ${Math.ceil(resetMs / 60000)} minutes.`,
+        });
+      }
+
       const id = await createLead(input);
 
       // Push to Close CRM (non-blocking)

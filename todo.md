@@ -393,3 +393,11 @@
 - [x] Diagnose and fix the login issue (ADMIN_PASSWORD env var was not loading; fixed by setting correct secrets)
 - [x] Add inline field-level validation to demo request form (name required, email format, work email check)
 - [x] Add confirmation email for demo request submissions (owner notification on new lead via notifyOwner)
+
+## Security & UX Improvements (May 19 batch 2)
+- [x] Add server-side rate limiting to demo form (3 requests per IP per hour)
+- [x] Add rate limiting to login (5 attempts per IP per 15 minutes)
+- [x] Add rate limiting to password reset (3 requests per IP per hour)
+- [x] Implement forgot password / password reset flow with secure token + owner notification
+- [x] Add configurable session timeout with "Remember me" option (24h default / 1 year with remember me)
+- [x] Add password change endpoint (/api/auth/change-password)
