@@ -371,20 +371,22 @@ export default function LandingPage() {
             {[
               {
                 name: 'Starter',
-                price: '$12',
-                period: '/seat/month',
-                desc: 'For small teams getting organized',
-                features: ['Up to 25 users', '500 documents', 'Full-text search', 'Basic analytics', 'Email support'],
+                price: '$299',
+                period: '/month',
+                desc: 'For small teams and departments',
+                subtext: 'Up to 25 users included',
+                features: ['Up to 25 users', 'AI-powered document generation', 'Full-text search', 'Basic analytics', '3 custom workflows', 'Knowledge graph (read-only)', '14-day free trial'],
                 cta: 'Start Free Trial',
                 highlight: false,
               },
               {
                 name: 'Professional',
-                price: '$24',
-                period: '/seat/month',
-                desc: 'For growing operations teams',
-                features: ['Up to 200 users', 'Unlimited documents', 'AI content governance', 'Knowledge graph', 'Advanced analytics', 'Workflow automation', 'Priority support'],
-                cta: 'Request Demo',
+                price: '$15',
+                period: '/user/month',
+                desc: 'For growing mid-market teams',
+                subtext: '25-seat minimum · $12/user billed annually',
+                features: ['Everything in Starter', 'Interactive knowledge graph', 'Duplicate detection', 'Approval workflows', 'Advanced analytics', 'SSO / SAML', 'Custom branding', 'Priority support'],
+                cta: 'Start Free Trial',
                 highlight: true,
               },
               {
@@ -392,7 +394,8 @@ export default function LandingPage() {
                 price: 'Custom',
                 period: '',
                 desc: 'For organizations at scale',
-                features: ['Unlimited users', 'SSO / SAML', 'Custom integrations', 'Dedicated success manager', 'SLA guarantees', 'On-premise option', 'Custom AI training'],
+                subtext: 'Starting at $2,500/month',
+                features: ['Everything in Professional', 'Custom AI model training', 'On-premise deployment', 'Custom integrations & API', 'Compliance (SOC 2, HIPAA)', 'Multi-workspace', '24/7 white-glove support', 'Quarterly business reviews'],
                 cta: 'Contact Sales',
                 highlight: false,
               },
@@ -408,7 +411,9 @@ export default function LandingPage() {
                   <span className="text-4xl font-bold">{plan.price}</span>
                   <span className="text-gray-400 text-sm">{plan.period}</span>
                 </div>
-                <p className="text-sm text-gray-400 mb-6">{plan.desc}</p>
+                <p className="text-sm text-gray-400 mb-1">{plan.desc}</p>
+                {(plan as any).subtext && <p className="text-xs text-gray-500 mb-6">{(plan as any).subtext}</p>}
+                {!(plan as any).subtext && <div className="mb-6" />}
                 <div>
                   <Button
                     className={`w-full mb-6 ${plan.highlight ? 'bg-teal-500 hover:bg-teal-400 text-black' : 'bg-white/5 hover:bg-white/10 text-white border border-white/10'}`}

@@ -331,3 +331,12 @@
 - [x] Build subscription management page (/billing)
 - [x] Write vitest tests for Stripe endpoints (8 tests passing)
 - [x] Save checkpoint
+
+## Pricing Alignment (Hybrid Model)
+
+- [x] Update server/products.ts with hybrid pricing ($299 flat Starter, $15/seat Pro, Custom Enterprise)
+- [x] Update LandingPage.tsx pricing section to match new model
+- [x] Update ROI calculator pricing assumption ($15/user/month)
+- [x] Update launch collateral (GTM-Strategy.md, One-Pager, Pitch Deck, Stripe Guide, all launch-package files)
+- [x] Run TypeScript check and tests (307 passing, 0 errors)
+- [x] Save checkpoint

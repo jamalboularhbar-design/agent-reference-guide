@@ -49,7 +49,7 @@ describe("Stripe Router", () => {
       expect(result.tiers[1].name).toBe("Professional");
       expect(result.tiers[2].name).toBe("Enterprise");
       expect(result.implementation).toBeDefined();
-      expect(result.implementation.standard.price).toBe(2500000);
+      expect(result.implementation.standard.price).toBe(500000);
     });
 
     it("returns products even for unauthenticated users", async () => {

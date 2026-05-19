@@ -1,61 +1,80 @@
 /**
  * ARG Builder Pricing Products
- * 
- * These are the product definitions used for Stripe Checkout.
- * Price IDs will be created in Stripe Dashboard and referenced here.
- * Until real Stripe Price IDs are configured, these serve as the 
- * canonical product catalog for the application.
+ *
+ * Hybrid pricing model:
+ * - Starter: Flat $299/month (up to 25 users) — PLG self-serve entry
+ * - Professional: $15/user/month (25-user minimum) — mid-market per-seat scaling
+ * - Enterprise: Custom (starting $2,500/month) — sales-led, large orgs
+ *
+ * Annual discount: 20% off (Starter $239/mo, Professional $12/user/mo)
+ *
+ * Competitive positioning:
+ * - 40% below Guru ($25/seat)
+ * - More value than Trainual ($249/mo for 10 seats)
+ * - AI features included (Confluence/Notion charge extra)
  */
 
 export interface ProductTier {
   id: string;
   name: string;
   description: string;
-  monthlyPrice: number; // in cents
-  annualPrice: number; // in cents (per month, billed annually)
+  pricingModel: "flat" | "per_seat" | "custom";
+  monthlyPrice: number; // in cents (flat price or per-seat price)
+  annualPrice: number; // in cents (per month equivalent, billed annually)
+  includedSeats: number; // seats included in the base price
+  minSeats: number; // minimum seats required
   features: string[];
   targetTeamSize: string;
-  stripePriceIdMonthly: string | null; // Set after creating in Stripe Dashboard
-  stripePriceIdAnnual: string | null; // Set after creating in Stripe Dashboard
+  stripePriceIdMonthly: string | null;
+  stripePriceIdAnnual: string | null;
 }
 
 export const PRODUCTS: Record<string, ProductTier> = {
   starter: {
     id: "starter",
     name: "Starter",
-    description: "For growing teams that need structured operational knowledge",
-    monthlyPrice: 200000, // $2,000/month
-    annualPrice: 170000, // $1,700/month billed annually (15% off)
+    description: "For small teams and departments getting organized",
+    pricingModel: "flat",
+    monthlyPrice: 29900, // $299/month flat
+    annualPrice: 23900, // $239/month billed annually (20% off)
+    includedSeats: 25,
+    minSeats: 1,
     features: [
-      "Up to 200 employees",
+      "Up to 25 users",
       "AI-powered document generation",
-      "Knowledge graph visualization",
       "Full-text search with relevance scoring",
-      "5 custom workflows",
       "Basic analytics dashboard",
+      "3 custom workflows",
+      "Knowledge graph (read-only)",
       "Email support",
+      "14-day free trial",
     ],
-    targetTeamSize: "50–200 employees",
+    targetTeamSize: "1–25 employees",
     stripePriceIdMonthly: process.env.STRIPE_PRICE_STARTER_MONTHLY || null,
     stripePriceIdAnnual: process.env.STRIPE_PRICE_STARTER_ANNUAL || null,
   },
   professional: {
     id: "professional",
     name: "Professional",
-    description: "For scaling organizations with complex operational needs",
-    monthlyPrice: 500000, // $5,000/month
-    annualPrice: 425000, // $4,250/month billed annually (15% off)
+    description: "For growing mid-market operations teams",
+    pricingModel: "per_seat",
+    monthlyPrice: 1500, // $15/user/month
+    annualPrice: 1200, // $12/user/month billed annually (20% off)
+    includedSeats: 25,
+    minSeats: 25,
     features: [
-      "Up to 1,000 employees",
+      "Unlimited users (25 minimum)",
       "Everything in Starter",
-      "Multi-workspace support",
-      "Advanced AI summarization & translation",
-      "Unlimited custom workflows",
+      "Interactive knowledge graph",
+      "Duplicate content detection",
+      "Approval workflows",
       "Advanced analytics & reporting",
-      "Priority support + dedicated CSM",
       "SSO / SAML integration",
+      "Custom branding",
+      "Priority support",
+      "Dedicated CSM (100+ seats)",
     ],
-    targetTeamSize: "200–1,000 employees",
+    targetTeamSize: "25–500 employees",
     stripePriceIdMonthly: process.env.STRIPE_PRICE_PRO_MONTHLY || null,
     stripePriceIdAnnual: process.env.STRIPE_PRICE_PRO_ANNUAL || null,
   },
@@ -63,19 +82,24 @@ export const PRODUCTS: Record<string, ProductTier> = {
     id: "enterprise",
     name: "Enterprise",
     description: "For large organizations requiring full operational intelligence",
-    monthlyPrice: 1000000, // $10,000/month
-    annualPrice: 850000, // $8,500/month billed annually (15% off)
+    pricingModel: "custom",
+    monthlyPrice: 250000, // Starting at $2,500/month (display only)
+    annualPrice: 250000, // Custom — negotiated
+    includedSeats: 0, // Unlimited
+    minSeats: 100,
     features: [
-      "Unlimited employees",
+      "Unlimited users",
       "Everything in Professional",
       "Custom AI model training",
       "On-premise deployment option",
       "Custom integrations & API access",
       "Compliance reporting (SOC 2, HIPAA)",
+      "Multi-workspace support",
       "24/7 white-glove support",
       "Quarterly business reviews",
+      "Dedicated implementation team",
     ],
-    targetTeamSize: "1,000+ employees",
+    targetTeamSize: "500+ employees",
     stripePriceIdMonthly: process.env.STRIPE_PRICE_ENTERPRISE_MONTHLY || null,
     stripePriceIdAnnual: process.env.STRIPE_PRICE_ENTERPRISE_ANNUAL || null,
   },
@@ -84,14 +108,16 @@ export const PRODUCTS: Record<string, ProductTier> = {
 export const IMPLEMENTATION_FEES = {
   standard: {
     name: "Standard Implementation",
-    price: 2500000, // $25,000 one-time
-    description: "Full AI-powered operational audit and system build (12–19 hours delivery)",
+    price: 500000, // $5,000 one-time
+    description:
+      "AI-powered operational audit, system configuration, and team onboarding (1–2 weeks)",
     stripePriceId: process.env.STRIPE_PRICE_IMPL_STANDARD || null,
   },
   custom: {
     name: "Custom Implementation",
-    price: 5000000, // $50,000–$100,000
-    description: "Complex multi-department deployment with custom integrations",
+    price: 1500000, // $15,000–$50,000 (starting price)
+    description:
+      "Multi-department deployment with custom integrations, data migration, and dedicated project manager",
     stripePriceId: process.env.STRIPE_PRICE_IMPL_CUSTOM || null,
   },
 };
@@ -108,4 +134,28 @@ export function getProduct(tierId: string): ProductTier | undefined {
  */
 export function getAllProducts(): ProductTier[] {
   return Object.values(PRODUCTS);
+}
+
+/**
+ * Calculate monthly cost for a given tier and seat count
+ */
+export function calculateMonthlyCost(
+  tierId: string,
+  seats: number,
+  annual: boolean = false
+): number | null {
+  const product = PRODUCTS[tierId];
+  if (!product) return null;
+
+  const price = annual ? product.annualPrice : product.monthlyPrice;
+
+  switch (product.pricingModel) {
+    case "flat":
+      return price;
+    case "per_seat":
+      const effectiveSeats = Math.max(seats, product.minSeats);
+      return price * effectiveSeats;
+    case "custom":
+      return null; // Contact sales
+  }
 }

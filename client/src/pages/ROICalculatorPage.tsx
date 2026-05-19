@@ -35,8 +35,10 @@ export default function ROICalculatorPage() {
     const hoursSaved = annualWastedHours * reductionRate;
     const costSaved = annualWastedCost * reductionRate;
 
-    // ARG Builder pricing: $15/user/month for Professional
-    const opsCanvasCost = teamSize * 15 * 12;
+    // ARG Builder hybrid pricing: $299/mo flat for ≤25 users, $15/user/month for 25+
+    const opsCanvasCost = teamSize <= 25
+      ? 299 * 12 // Starter: $299/month flat
+      : teamSize * 15 * 12; // Professional: $15/user/month
     const currentToolAnnualCost = teamSize * currentToolCost * 12;
 
     const netSavings = costSaved - opsCanvasCost + currentToolAnnualCost;
