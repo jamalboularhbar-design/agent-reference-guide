@@ -1,7 +1,7 @@
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useState, useMemo } from 'react';
 import { trpc } from '@/lib/trpc';
 import { useAuth } from '@/_core/hooks/useAuth';
-import { ArrowLeft, Share2, Loader2 } from 'lucide-react';
+import { ArrowLeft, Share2, Loader2, Search, Filter, X } from 'lucide-react';
 import { useLocation } from 'wouter';
 
 const COLORS: Record<string, string> = {
@@ -24,16 +24,73 @@ export default function AdminKnowledgeGraphPage() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const { data, isLoading } = trpc.knowledgeGraph.data.useQuery(undefined, { enabled: isAdmin });
 
+  // Search & filter state
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [hoveredNode, setHoveredNode] = useState<number | string | null>(null);
+
+  // Extract categories from data
+  const categories = useMemo(() => {
+    if (!data) return [];
+    return Array.from(new Set(data.nodes.map((n: any) => n.group).filter(Boolean))) as string[];
+  }, [data]);
+
+  // Filter nodes based on search and category
+  const filteredData = useMemo(() => {
+    if (!data) return null;
+    let filteredNodes = data.nodes;
+    let filteredEdges = data.edges;
+
+    // Filter by category
+    if (selectedCategory !== 'all') {
+      filteredNodes = filteredNodes.filter((n: any) => n.group === selectedCategory);
+    }
+
+    // Filter by search query
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      filteredNodes = filteredNodes.filter((n: any) =>
+        (n.label || '').toLowerCase().includes(q) ||
+        (n.group || '').toLowerCase().includes(q)
+      );
+    }
+
+    // Only keep edges between visible nodes
+    const nodeIds = new Set(filteredNodes.map((n: any) => n.id));
+    filteredEdges = filteredEdges.filter((e: any) => nodeIds.has(e.source) && nodeIds.has(e.target));
+
+    return { nodes: filteredNodes, edges: filteredEdges };
+  }, [data, searchQuery, selectedCategory]);
+
+  // Highlighted nodes (search match highlighting)
+  const highlightedNodeIds = useMemo(() => {
+    if (!searchQuery.trim() || !data) return new Set<string>();
+    const q = searchQuery.toLowerCase();
+    return new Set(
+      data.nodes
+        .filter((n: any) => (n.label || '').toLowerCase().includes(q))
+        .map((n: any) => n.id)
+    );
+  }, [data, searchQuery]);
+
   useEffect(() => {
-    if (!data || !canvasRef.current) return;
+    if (!filteredData || !canvasRef.current) return;
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
     const W = canvas.width = canvas.parentElement?.clientWidth || 900;
     const H = canvas.height = 600;
-    const { nodes, edges } = data;
-    if (nodes.length === 0) return;
+    const { nodes, edges } = filteredData;
+    if (nodes.length === 0) {
+      ctx.fillStyle = '#0f0f0f';
+      ctx.fillRect(0, 0, W, H);
+      ctx.fillStyle = 'rgba(255,255,255,0.5)';
+      ctx.font = '14px Inter, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('No matching documents found', W / 2, H / 2);
+      return;
+    }
 
     // Simple force-directed layout
     const positions = nodes.map((_: any, i: number) => ({
@@ -91,12 +148,14 @@ export default function AdminKnowledgeGraphPage() {
     ctx.fillRect(0, 0, W, H);
 
     // Edges
-    ctx.strokeStyle = 'rgba(255,255,255,0.12)';
-    ctx.lineWidth = 1;
     for (const edge of edges) {
       const si = nodeMap.get(edge.source);
       const ti = nodeMap.get(edge.target);
       if (si === undefined || ti === undefined) continue;
+      const sourceHighlighted = highlightedNodeIds.has(edge.source);
+      const targetHighlighted = highlightedNodeIds.has(edge.target);
+      ctx.strokeStyle = (sourceHighlighted || targetHighlighted) ? 'rgba(232,160,78,0.4)' : 'rgba(255,255,255,0.12)';
+      ctx.lineWidth = (sourceHighlighted || targetHighlighted) ? 1.5 : 1;
       ctx.beginPath();
       ctx.moveTo(positions[si].x, positions[si].y);
       ctx.lineTo(positions[ti].x, positions[ti].y);
@@ -108,28 +167,39 @@ export default function AdminKnowledgeGraphPage() {
       const node = nodes[i];
       const pos = positions[i];
       const color = getColor(node.group);
+      const isHighlighted = highlightedNodeIds.size > 0 && highlightedNodeIds.has(node.id);
+      const isHovered = hoveredNode === node.id;
+      const radius = isHighlighted ? 9 : isHovered ? 8 : 6;
+
       ctx.beginPath();
-      ctx.arc(pos.x, pos.y, 6, 0, Math.PI * 2);
+      ctx.arc(pos.x, pos.y, radius, 0, Math.PI * 2);
       ctx.fillStyle = color;
       ctx.fill();
-      ctx.strokeStyle = 'rgba(255,255,255,0.3)';
-      ctx.lineWidth = 1;
+
+      if (isHighlighted || isHovered) {
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 2;
+      } else {
+        ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+        ctx.lineWidth = 1;
+      }
       ctx.stroke();
 
       // Label
-      ctx.fillStyle = 'rgba(255,255,255,0.8)';
-      ctx.font = '10px Inter, sans-serif';
+      const opacity = highlightedNodeIds.size > 0 ? (isHighlighted ? 1 : 0.3) : 0.8;
+      ctx.fillStyle = `rgba(255,255,255,${opacity})`;
+      ctx.font = isHighlighted ? 'bold 11px Inter, sans-serif' : '10px Inter, sans-serif';
       ctx.textAlign = 'center';
       const label = (node.label || '').length > 20 ? (node.label || '').slice(0, 18) + '…' : (node.label || '');
-      ctx.fillText(label, pos.x, pos.y + 16);
+      ctx.fillText(label, pos.x, pos.y + radius + 12);
     }
 
     // Legend
-    const categories = Array.from(new Set(nodes.map((n: any) => n.group).filter(Boolean)));
+    const legendCategories = Array.from(new Set(nodes.map((n: any) => n.group).filter(Boolean)));
     let ly = 20;
     ctx.font = '11px Inter, sans-serif';
     ctx.textAlign = 'left';
-    for (const cat of categories) {
+    for (const cat of legendCategories) {
       ctx.fillStyle = getColor(cat as string);
       ctx.beginPath();
       ctx.arc(20, ly, 5, 0, Math.PI * 2);
@@ -138,7 +208,7 @@ export default function AdminKnowledgeGraphPage() {
       ctx.fillText(cat as string, 32, ly + 4);
       ly += 18;
     }
-  }, [data]);
+  }, [filteredData, highlightedNodeIds, hoveredNode]);
 
   if (!isAdmin) return <div className="p-8 text-center text-muted-foreground">Admin access required</div>;
 
@@ -153,23 +223,93 @@ export default function AdminKnowledgeGraphPage() {
           <h1 className="text-lg font-bold text-foreground">Knowledge Graph</h1>
         </div>
       </header>
-      <div className="container py-8">
+
+      <div className="container py-6">
+        {/* Search & Filter Controls */}
+        <div className="flex flex-col sm:flex-row gap-3 mb-6">
+          {/* Search Input */}
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <input
+              type="text"
+              placeholder="Search documents by name..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-10 pr-10 py-2 bg-card border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent/50"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+
+          {/* Category Filter */}
+          <div className="flex items-center gap-2">
+            <Filter className="w-4 h-4 text-muted-foreground" />
+            <select
+              value={selectedCategory}
+              onChange={(e) => setSelectedCategory(e.target.value)}
+              className="bg-card border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-accent/50"
+            >
+              <option value="all">All Categories</option>
+              {categories.map((cat) => (
+                <option key={cat} value={cat}>{cat}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Reset button */}
+          {(searchQuery || selectedCategory !== 'all') && (
+            <button
+              onClick={() => { setSearchQuery(''); setSelectedCategory('all'); }}
+              className="px-3 py-2 text-sm text-accent hover:text-accent/80 border border-accent/30 rounded-lg transition-colors"
+            >
+              Reset Filters
+            </button>
+          )}
+        </div>
+
+        {/* Stats bar */}
+        {filteredData && (
+          <div className="flex gap-4 text-sm text-muted-foreground mb-4">
+            <span>{filteredData.nodes.length} documents</span>
+            <span>{filteredData.edges.length} connections</span>
+            {searchQuery && highlightedNodeIds.size > 0 && (
+              <span className="text-accent">{highlightedNodeIds.size} matches highlighted</span>
+            )}
+            {data && filteredData.nodes.length < data.nodes.length && (
+              <span className="text-yellow-400/80">
+                Showing {filteredData.nodes.length} of {data.nodes.length} total
+              </span>
+            )}
+          </div>
+        )}
+
         {isLoading ? (
           <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-accent" /></div>
-        ) : data && data.nodes.length > 0 ? (
+        ) : filteredData && filteredData.nodes.length > 0 ? (
           <div className="rounded-xl border border-border/50 overflow-hidden">
             <canvas ref={canvasRef} className="w-full" style={{ height: 600 }} />
+          </div>
+        ) : filteredData && filteredData.nodes.length === 0 ? (
+          <div className="text-center py-16 text-muted-foreground">
+            <Search className="w-12 h-12 mx-auto mb-4 opacity-30" />
+            <p>No documents match your search criteria.</p>
+            <button
+              onClick={() => { setSearchQuery(''); setSelectedCategory('all'); }}
+              className="mt-4 text-accent hover:text-accent/80 text-sm underline"
+            >
+              Clear filters
+            </button>
           </div>
         ) : (
           <div className="text-center py-16 text-muted-foreground">
             <Share2 className="w-12 h-12 mx-auto mb-4 opacity-30" />
             <p>No documents or cross-references found. Add documents and cross-references to visualize the knowledge graph.</p>
-          </div>
-        )}
-        {data && (
-          <div className="mt-4 flex gap-4 text-sm text-muted-foreground">
-            <span>{data.nodes.length} documents</span>
-            <span>{data.edges.length} connections</span>
           </div>
         )}
       </div>

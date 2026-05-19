@@ -5,10 +5,18 @@ import { getSessionCookieOptions } from "./cookies";
 import { sdk, checkAdminPassword } from "./sdk";
 import { ENV } from "./env";
 import { loginLimiter, passwordResetLimiter } from "../rateLimiter";
+import {
+  isTotpEnabled, generateTotpSecretAndUri, generateQRCodeDataUrl,
+  verifyTotpToken, enableTotp, disableTotp,
+  generateRecoveryCodes, verifyRecoveryCode, getRecoveryCodesCount,
+} from "../totp";
 
 // Session durations
 const SESSION_REMEMBER_ME = ONE_YEAR_MS; // 1 year
 const SESSION_DEFAULT = 24 * 60 * 60 * 1000; // 24 hours
+
+// Pending 2FA sessions (password verified, awaiting TOTP)
+const pending2faSessions = new Map<string, { email: string; rememberMe: boolean; expiresAt: number }>();
 
 export function registerOAuthRoutes(app: Express) {
   // Email + password login — replaces Manus OAuth
@@ -46,38 +54,152 @@ export function registerOAuthRoutes(app: Express) {
       return;
     }
 
-    // Upsert admin user in DB
-    const openId = "admin";
-    await db.upsertUser({
-      openId,
-      name: "Admin",
-      email: ENV.adminEmail,
-      loginMethod: "email",
-      role: "admin",
-      lastSignedIn: new Date(),
-    });
+    // Check if TOTP is enabled - if so, require 2FA step
+    if (isTotpEnabled()) {
+      const crypto = await import('crypto');
+      const challengeToken = crypto.randomBytes(32).toString('hex');
+      pending2faSessions.set(challengeToken, {
+        email: email.toLowerCase().trim(),
+        rememberMe: !!rememberMe,
+        expiresAt: Date.now() + 5 * 60 * 1000, // 5 minutes
+      });
+      res.json({ requires2FA: true, challengeToken });
+      return;
+    }
 
-    // Session duration based on "Remember me" checkbox
-    const sessionDuration = rememberMe ? SESSION_REMEMBER_ME : SESSION_DEFAULT;
+    // No 2FA - complete login directly
+    await completeLogin(req, res, !!rememberMe, ip);
+  });
 
-    const sessionToken = await sdk.createSessionToken(openId, {
-      name: "Admin",
-      expiresInMs: sessionDuration,
-    });
+  // 2FA verification endpoint
+  app.post("/api/auth/verify-2fa", async (req: Request, res: Response) => {
+    const ip = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() || req.ip || 'unknown';
+    const { challengeToken, totpCode, recoveryCode } = req.body ?? {};
 
-    const cookieOptions = getSessionCookieOptions(req);
-    res.cookie(COOKIE_NAME, sessionToken, { ...cookieOptions, maxAge: sessionDuration });
+    if (!challengeToken || typeof challengeToken !== 'string') {
+      res.status(400).json({ error: "challengeToken is required" });
+      return;
+    }
 
-    // Audit log: successful login
-    await db.logActivity("login_success", undefined, ip, JSON.stringify({
-      email: ENV.adminEmail,
-      rememberMe: !!rememberMe,
-      sessionDuration: sessionDuration / 1000 + 's',
+    const session = pending2faSessions.get(challengeToken);
+    if (!session || session.expiresAt < Date.now()) {
+      pending2faSessions.delete(challengeToken);
+      res.status(401).json({ error: "2FA session expired. Please login again." });
+      return;
+    }
+
+    // Verify either TOTP code or recovery code
+    let verified = false;
+    if (totpCode && typeof totpCode === 'string') {
+      verified = verifyTotpToken(totpCode);
+    } else if (recoveryCode && typeof recoveryCode === 'string') {
+      verified = verifyRecoveryCode(recoveryCode);
+    }
+
+    if (!verified) {
+      await db.logActivity("2fa_failed", undefined, ip, JSON.stringify({
+        email: session.email,
+        timestamp: new Date().toISOString(),
+      }));
+      res.status(401).json({ error: "Invalid verification code" });
+      return;
+    }
+
+    // Clean up pending session
+    pending2faSessions.delete(challengeToken);
+
+    // Complete login
+    await completeLogin(req, res, session.rememberMe, ip);
+  });
+
+  // 2FA setup - generate secret and QR code
+  app.post("/api/auth/2fa/setup", async (req: Request, res: Response) => {
+    // Must be authenticated (check cookie)
+    const user = await sdk.authenticateRequest(req);
+    if (!user) {
+      res.status(401).json({ error: "Authentication required" });
+      return;
+    }
+
+    const { secret, otpauthUrl } = generateTotpSecretAndUri();
+    const qrCodeDataUrl = await generateQRCodeDataUrl(otpauthUrl);
+
+    res.json({ secret, otpauthUrl, qrCodeDataUrl });
+  });
+
+  // 2FA enable - verify token and activate
+  app.post("/api/auth/2fa/enable", async (req: Request, res: Response) => {
+    const user = await sdk.authenticateRequest(req);
+    if (!user) {
+      res.status(401).json({ error: "Authentication required" });
+      return;
+    }
+
+    const { secret, token } = req.body ?? {};
+    if (!secret || !token) {
+      res.status(400).json({ error: "secret and token are required" });
+      return;
+    }
+
+    // Verify the token against the provided secret
+    const valid = verifyTotpToken(token, secret);
+    if (!valid) {
+      res.status(400).json({ error: "Invalid verification code. Please try again." });
+      return;
+    }
+
+    // Enable TOTP
+    enableTotp(secret);
+    const recoveryCodes = generateRecoveryCodes();
+
+    await db.logActivity("2fa_enabled", undefined, undefined, JSON.stringify({
       timestamp: new Date().toISOString(),
-      userAgent: req.headers['user-agent'] || 'unknown',
+    }));
+
+    res.json({ success: true, recoveryCodes });
+  });
+
+  // 2FA disable
+  app.post("/api/auth/2fa/disable", async (req: Request, res: Response) => {
+    const user = await sdk.authenticateRequest(req);
+    if (!user) {
+      res.status(401).json({ error: "Authentication required" });
+      return;
+    }
+
+    const { password } = req.body ?? {};
+    if (!password) {
+      res.status(400).json({ error: "Password confirmation required" });
+      return;
+    }
+
+    const passwordMatch = await checkAdminPassword(password);
+    if (!passwordMatch) {
+      res.status(401).json({ error: "Invalid password" });
+      return;
+    }
+
+    disableTotp();
+
+    await db.logActivity("2fa_disabled", undefined, undefined, JSON.stringify({
+      timestamp: new Date().toISOString(),
     }));
 
     res.json({ success: true });
+  });
+
+  // 2FA status
+  app.get("/api/auth/2fa/status", async (req: Request, res: Response) => {
+    const user = await sdk.authenticateRequest(req);
+    if (!user) {
+      res.status(401).json({ error: "Authentication required" });
+      return;
+    }
+
+    res.json({
+      enabled: isTotpEnabled(),
+      recoveryCodesRemaining: getRecoveryCodesCount(),
+    });
   });
 
   // Password reset request (sends notification to owner)
@@ -147,4 +269,38 @@ export function registerOAuthRoutes(app: Express) {
 
     res.json({ success: true, message: "Password change request sent. Update ADMIN_PASSWORD in Settings → Secrets." });
   });
+}
+
+// Helper to complete login (shared between direct login and post-2FA)
+async function completeLogin(req: Request, res: Response, rememberMe: boolean, ip: string) {
+  const openId = "admin";
+  await db.upsertUser({
+    openId,
+    name: "Admin",
+    email: ENV.adminEmail,
+    loginMethod: "email",
+    role: "admin",
+    lastSignedIn: new Date(),
+  });
+
+  const sessionDuration = rememberMe ? SESSION_REMEMBER_ME : SESSION_DEFAULT;
+
+  const sessionToken = await sdk.createSessionToken(openId, {
+    name: "Admin",
+    expiresInMs: sessionDuration,
+  });
+
+  const cookieOptions = getSessionCookieOptions(req);
+  res.cookie(COOKIE_NAME, sessionToken, { ...cookieOptions, maxAge: sessionDuration });
+
+  // Audit log: successful login
+  await db.logActivity("login_success", undefined, ip, JSON.stringify({
+    email: ENV.adminEmail,
+    rememberMe,
+    sessionDuration: sessionDuration / 1000 + 's',
+    timestamp: new Date().toISOString(),
+    userAgent: req.headers['user-agent'] || 'unknown',
+  }));
+
+  res.json({ success: true });
 }

@@ -123,6 +123,8 @@ import AdminLeadsPage from "./pages/AdminLeadsPage";
 import ROICalculatorPage from "./pages/ROICalculatorPage";
 import BillingPage from "./pages/BillingPage";
 import AdminSettingsPage from "./pages/AdminSettingsPage";
+import AdminTeamPage from "./pages/AdminTeamPage";
+import AdminQuickActionToolbar from "./components/AdminQuickActionToolbar";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -242,6 +244,7 @@ function Router() {
       <Route path="/roi" component={ROICalculatorPage} />
       <Route path="/billing" component={BillingPage} />
       <Route path="/admin/settings" component={AdminSettingsPage} />
+      <Route path="/admin/team" component={AdminTeamPage} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />
@@ -275,6 +278,7 @@ function App() {
           </main>
           <ScrollToTop />
           <MobileBottomNav />
+          <AdminQuickActionToolbar />
         </TooltipProvider>
       </ThemeProvider>
     </ErrorBoundary>

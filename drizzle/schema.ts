@@ -1143,3 +1143,16 @@ export const leads = mysqlTable("leads", {
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 export type Lead = typeof leads.$inferSelect;
+
+// Team invite tokens - for multi-user invite system
+export const inviteTokens = mysqlTable("invite_tokens", {
+  id: int("id").autoincrement().primaryKey(),
+  token: varchar("token", { length: 64 }).notNull().unique(),
+  email: varchar("email", { length: 320 }).notNull(),
+  role: mysqlEnum("role", ["user", "admin"]).default("user").notNull(),
+  invitedBy: int("invitedBy").notNull(),
+  expiresAt: timestamp("expiresAt").notNull(),
+  acceptedAt: timestamp("acceptedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+export type InviteToken = typeof inviteTokens.$inferSelect;

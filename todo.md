@@ -425,8 +425,8 @@
 - [x] Add contact sales chat widget (custom floating chat bubble on /product, feeds into leads pipeline)
 - [x] Add lead source tracking field (utmSource, utmMedium, utmCampaign, utmContent, referrer columns + frontend capture)
 - [x] Add CSV export for leads in admin dashboard (Export CSV button on /admin/leads page)
-- [ ] Improve document graph with search/filter controls
-- [ ] Add quick-action toolbar for admin (shortcuts to common tasks)
-- [ ] Add multi-user invite system with viewer/editor/admin roles
-- [ ] Add TOTP/2FA for admin login
+- [x] Improve document graph with search/filter controls (search input, category dropdown, reset filters, match highlighting)
+- [x] Add quick-action toolbar for admin (floating FAB with 8 shortcuts: New Doc, View Leads, Export CSV, Analytics, Knowledge Graph, Announcements, All Documents, Settings)
+- [x] Add multi-user invite system with viewer/editor/admin roles (/admin/team page with invite generation, role management, pending/accepted tracking)
+- [x] Add TOTP/2FA for admin login (setup via QR code, verify step in login flow, recovery codes, enable/disable in /admin/settings)
 - [ ] Add dark/light theme toggle persistence (localStorage)

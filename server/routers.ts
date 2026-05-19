@@ -129,6 +129,7 @@ import {
   getPerformanceBenchmarks, savePerformanceBenchmark,
   getKnowledgeGraphData,
   createLead, getLeads, updateLeadStatus, getLeadStats,
+  createInviteToken, getInviteByToken, markInviteAccepted, getTeamInvites, deleteInviteToken, getTeamMembers, updateUserRoleById,
 } from "./db";
 import { invokeLLM } from "./_core/llm";
 import { notifyOwner } from "./_core/notification";
@@ -1138,6 +1139,41 @@ export const appRouter = router({
     visitorAccess: adminProcedure
       .input(z.object({ visitorId: z.string() }))
       .query(async ({ input }) => getVisitorDocumentAccess(input.visitorId)),
+
+    // Team invite system
+    teamMembers: adminProcedure.query(async () => getTeamMembers()),
+
+    invites: adminProcedure.query(async () => getTeamInvites()),
+
+    createInvite: adminProcedure
+      .input(z.object({
+        email: z.string().email(),
+        role: z.enum(['user', 'admin']),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        const crypto = await import('crypto');
+        const token = crypto.randomBytes(32).toString('hex');
+        const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
+        const userId = (ctx.user as any)?.id || 1;
+        await createInviteToken({ token, email: input.email, role: input.role, invitedBy: userId, expiresAt });
+        const inviteUrl = `${ctx.req.headers.origin || 'https://argbuilder.io'}/invite/${token}`;
+        await notifyOwner({ title: 'New Team Invite Sent', content: `Invited ${input.email} as ${input.role}. Link: ${inviteUrl}` });
+        return { success: true, token, inviteUrl };
+      }),
+
+    revokeInvite: adminProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        await deleteInviteToken(input.id);
+        return { success: true };
+      }),
+
+    changeRole: adminProcedure
+      .input(z.object({ userId: z.number(), role: z.enum(['user', 'admin']) }))
+      .mutation(async ({ input }) => {
+        await updateUserRoleById(input.userId, input.role);
+        return { success: true };
+      }),
   }),
 
   // ==================== Batch 12: Bulk Archive/Restore ====================

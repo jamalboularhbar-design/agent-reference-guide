@@ -3,12 +3,13 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { Shield, Key, Clock, AlertTriangle } from "lucide-react";
+import TwoFactorSettings from "@/components/TwoFactorSettings";
 
 export default function AdminSettingsPage() {
   const { user, loading: authLoading } = useAuth();
   const [, navigate] = useLocation();
 
-  const [activeTab, setActiveTab] = useState<"password" | "login-history">("password");
+  const [activeTab, setActiveTab] = useState<"password" | "login-history" | "2fa">("password");
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -186,6 +187,17 @@ export default function AdminSettingsPage() {
             <Clock className="w-4 h-4" />
             Login History
           </button>
+          <button
+            onClick={() => setActiveTab("2fa")}
+            className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-md text-sm font-medium transition-colors ${
+              activeTab === "2fa"
+                ? "bg-primary text-primary-foreground"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <Shield className="w-4 h-4" />
+            2FA
+          </button>
         </div>
 
         {/* Change Password Tab */}
@@ -355,6 +367,13 @@ export default function AdminSettingsPage() {
                 })}
               </div>
             )}
+          </div>
+        )}
+
+        {/* 2FA Tab */}
+        {activeTab === "2fa" && (
+          <div className="bg-card border border-border rounded-lg p-6">
+            <TwoFactorSettings />
           </div>
         )}
       </div>
