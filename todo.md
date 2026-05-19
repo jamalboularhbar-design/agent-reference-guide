@@ -340,3 +340,10 @@
 - [x] Update launch collateral (GTM-Strategy.md, One-Pager, Pitch Deck, Stripe Guide, all launch-package files)
 - [x] Run TypeScript check and tests (307 passing, 0 errors)
 - [x] Save checkpoint
+
+## Weekly Metrics Review (Automated)
+
+- [x] Create /api/scheduled/weekly-review endpoint handler
+- [x] Mount handler in server/_core/index.ts
+- [x] TypeScript check passes (0 errors)
+- [ ] Deploy and create Heartbeat cron (Monday 9 AM ET / 14:00 UTC)
