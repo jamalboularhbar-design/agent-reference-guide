@@ -4,7 +4,7 @@ import { useAuth } from '@/_core/hooks/useAuth';
 import { Link } from 'wouter';
 import {
   BookOpen, Brain, BarChart3, Shield, Users, Zap,
-  CheckCircle2, ArrowRight, Star, ChevronRight, Sparkles,
+  CheckCircle2, ArrowRight, Star, ChevronRight, Sparkles, Loader2,
   Network, Clock, Search, FileText, Lock, Globe,
   Building2, Hotel, Stethoscope, ShoppingBag, Factory, Briefcase,
   Layers, Rocket
@@ -129,7 +129,8 @@ export default function LandingPage() {
     try {
       await submitLead.mutateAsync({ ...form, source: 'landing_page' });
       setSubmitted(true);
-      toast.success('Thank you! We\'ll be in touch shortly.');
+      setForm({ fullName: '', email: '', company: '', jobTitle: '', teamSize: '', message: '' });
+      toast.success('Demo request submitted successfully!');
     } catch {
       toast.error('Something went wrong. Please try again.');
     }
@@ -616,29 +617,52 @@ export default function LandingPage() {
               <Button
                 type="submit"
                 size="lg"
-                className="w-full bg-teal-500 hover:bg-teal-400 text-black font-semibold py-6 text-lg"
+                className="w-full bg-teal-500 hover:bg-teal-400 text-black font-semibold py-6 text-lg disabled:opacity-70 disabled:cursor-not-allowed"
                 disabled={submitLead.isPending}
               >
-                {submitLead.isPending ? 'Submitting...' : 'Request Your Demo'}
-                <ArrowRight className="w-5 h-5 ml-2" />
+                {submitLead.isPending ? (
+                  <>
+                    <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                    Sending your request...
+                  </>
+                ) : (
+                  <>
+                    Request Your Demo
+                    <ArrowRight className="w-5 h-5 ml-2" />
+                  </>
+                )}
               </Button>
               <p className="text-xs text-gray-500 text-center">
                 No credit card required. We'll respond within 24 hours.
               </p>
             </form>
           ) : (
-            <div className="text-center p-12 rounded-2xl bg-teal-500/10 border border-teal-500/20">
-              <CheckCircle2 className="w-16 h-16 text-teal-400 mx-auto mb-4" />
+            <div className="text-center p-12 rounded-2xl bg-teal-500/10 border border-teal-500/20 animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <div className="w-20 h-20 rounded-full bg-teal-500/20 flex items-center justify-center mx-auto mb-6">
+                <CheckCircle2 className="w-12 h-12 text-teal-400" />
+              </div>
               <h3 className="text-2xl font-bold mb-2">You're on the list!</h3>
-              <p className="text-gray-400 mb-6">
-                Our team will reach out within 24 hours to schedule your personalized demo.
-                In the meantime, feel free to explore the platform.
+              <p className="text-gray-400 mb-2">
+                Your demo request has been received and sent to our team.
               </p>
-              <Link href="/">
-                <Button className="bg-teal-500 hover:bg-teal-400 text-black font-semibold">
-                  Explore the Platform <ArrowRight className="w-4 h-4 ml-2" />
+              <p className="text-gray-500 text-sm mb-8">
+                We'll reach out within 24 hours to schedule your personalized walkthrough.
+                Check your inbox for a confirmation email.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                <Link href="/">
+                  <Button className="bg-teal-500 hover:bg-teal-400 text-black font-semibold">
+                    Explore the Platform <ArrowRight className="w-4 h-4 ml-2" />
+                  </Button>
+                </Link>
+                <Button
+                  variant="outline"
+                  className="border-white/20 text-white hover:bg-white/5"
+                  onClick={() => setSubmitted(false)}
+                >
+                  Submit Another Request
                 </Button>
-              </Link>
+              </div>
             </div>
           )}
         </div>

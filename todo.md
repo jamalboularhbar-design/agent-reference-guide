@@ -383,3 +383,8 @@
 - [x] Implement Close CRM lead creation on demo form submission
 - [x] Write test for Close CRM integration (4 tests passing, lead created: lead_UDEsBPKx600qU0NF9b1JZeBLxzvVkG4m4K3nw197VZe)
 - [x] Save checkpoint
+
+## Demo Request Form UX
+- [x] Add loading state (spinner + disabled button) during form submission
+- [x] Add clear success message after successful submission
+- [x] Reset form fields after success
