@@ -346,4 +346,11 @@
 - [x] Create /api/scheduled/weekly-review endpoint handler
 - [x] Mount handler in server/_core/index.ts
 - [x] TypeScript check passes (0 errors)
-- [ ] Deploy and create Heartbeat cron (Monday 9 AM ET / 14:00 UTC)
+- [x] Deploy and create Heartbeat cron (Monday 9 AM ET / 14:00 UTC) — task_uid: m7bzHKwtDp4TDyqpaF7g36
+
+## SEO Fixes (Landing Page /)
+
+- [x] Add meta description (50-160 chars) via useEffect
+- [x] Add meta keywords via useEffect
+- [x] Fix title length (30-60 chars) via document.title in useEffect
+- [x] Add keyword-rich H2 heading ("AI-Powered Operational Reference Guide")

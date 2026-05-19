@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -25,6 +25,28 @@ import { generatePersonaContent, exportToPDF } from '@/lib/exportPdf';
 export default function Home() {
   const [activePersona, setActivePersona] = useState<'travel' | 'artkech'>('travel');
   const [showSearch, setShowSearch] = useState(false);
+
+  useEffect(() => {
+    document.title = 'ARG Builder — AI-Powered Operational Intelligence Platform';
+    
+    // Meta description
+    let metaDesc = document.querySelector('meta[name="description"]') as HTMLMetaElement;
+    if (!metaDesc) {
+      metaDesc = document.createElement('meta');
+      metaDesc.name = 'description';
+      document.head.appendChild(metaDesc);
+    }
+    metaDesc.content = 'ARG Builder helps mid-market companies automate operational processes with AI-powered reference guides, knowledge management, and workflow intelligence across all verticals.';
+
+    // Meta keywords
+    let metaKeywords = document.querySelector('meta[name="keywords"]') as HTMLMetaElement;
+    if (!metaKeywords) {
+      metaKeywords = document.createElement('meta');
+      metaKeywords.name = 'keywords';
+      document.head.appendChild(metaKeywords);
+    }
+    metaKeywords.content = 'AI operational intelligence, knowledge management platform, mid-market SaaS, operational reference guide, workflow automation, AI-powered operations, business process management, ARG Builder';
+  }, []);
 
   const handleExport = () => {
     const content = generatePersonaContent(activePersona);
@@ -131,7 +153,7 @@ export default function Home() {
         {/* Top toolbar */}
         <div className="flex items-center justify-between mb-12 gap-4 flex-wrap">
           <div>
-            <h2 className="font-display text-3xl mb-1 text-foreground">Reference Guide</h2>
+            <h2 className="font-display text-3xl mb-1 text-foreground">AI-Powered Operational Reference Guide</h2>
             <p className="text-muted-foreground text-sm">Operational processes & best practices</p>
           </div>
           <div className="flex items-center gap-2">
