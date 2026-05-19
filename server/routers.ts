@@ -128,7 +128,7 @@ import {
   getUserDocCollections, createUserDocCollection, deleteUserDocCollection, getUserDocCollectionItems, addDocToCollection, removeDocFromCollection,
   getPerformanceBenchmarks, savePerformanceBenchmark,
   getKnowledgeGraphData,
-  createLead, getLeads, updateLeadStatus,
+  createLead, getLeads, updateLeadStatus, getLeadStats,
 } from "./db";
 import { invokeLLM } from "./_core/llm";
 import { notifyOwner } from "./_core/notification";
@@ -2425,6 +2425,7 @@ export const appRouter = router({
       return { success: true, id };
     }),
     list: adminProcedure.input(z.object({ status: z.string().optional() }).optional()).query(async ({ input }) => getLeads(input?.status)),
+    stats: adminProcedure.query(async () => getLeadStats()),
     updateStatus: adminProcedure.input(z.object({ id: z.number(), status: z.string() })).mutation(async ({ input }) => {
       await updateLeadStatus(input.id, input.status);
       return { success: true };

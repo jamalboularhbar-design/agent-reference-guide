@@ -85,6 +85,7 @@ const adminLinks = [
   { label: 'Knowledge Graph', href: '/admin/knowledge-graph', icon: Share2 },
   { label: 'Benchmarks', href: '/admin/benchmarks', icon: TrendingUp },
   { label: 'Lead Management', href: '/admin/leads', icon: Users },
+  { label: 'Account Settings', href: '/admin/settings', icon: Settings },
 ];
 
 export default function AdminNavDropdown() {

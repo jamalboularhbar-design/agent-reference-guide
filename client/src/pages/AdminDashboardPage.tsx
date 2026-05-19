@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { trpc } from '@/lib/trpc';
 import { BarChart3, TrendingUp, Download, PieChart } from 'lucide-react';
+import LeadsDashboardWidget from '@/components/LeadsDashboardWidget';
 import { Link } from 'wouter';
 
 export default function AdminDashboardPage() {
@@ -184,6 +185,11 @@ export default function AdminDashboardPage() {
               ← Back to Admin
             </Link>
           </div>
+        </div>
+
+        {/* Leads Pipeline Widget */}
+        <div className="mb-8">
+          <LeadsDashboardWidget />
         </div>
 
         {/* Charts Grid */}

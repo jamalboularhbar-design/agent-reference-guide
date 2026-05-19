@@ -35,6 +35,13 @@ export function registerOAuthRoutes(app: Express) {
     const passwordMatch = await checkAdminPassword(password);
 
     if (!emailMatch || !passwordMatch) {
+      // Audit log: failed login attempt
+      await db.logActivity("login_failed", undefined, ip, JSON.stringify({
+        email: email.toLowerCase().trim(),
+        reason: !emailMatch ? "invalid_email" : "invalid_password",
+        timestamp: new Date().toISOString(),
+        userAgent: req.headers['user-agent'] || 'unknown',
+      }));
       res.status(401).json({ error: "Invalid email or password" });
       return;
     }
@@ -60,6 +67,16 @@ export function registerOAuthRoutes(app: Express) {
 
     const cookieOptions = getSessionCookieOptions(req);
     res.cookie(COOKIE_NAME, sessionToken, { ...cookieOptions, maxAge: sessionDuration });
+
+    // Audit log: successful login
+    await db.logActivity("login_success", undefined, ip, JSON.stringify({
+      email: ENV.adminEmail,
+      rememberMe: !!rememberMe,
+      sessionDuration: sessionDuration / 1000 + 's',
+      timestamp: new Date().toISOString(),
+      userAgent: req.headers['user-agent'] || 'unknown',
+    }));
+
     res.json({ success: true });
   });
 

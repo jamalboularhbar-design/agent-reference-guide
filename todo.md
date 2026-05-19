@@ -401,3 +401,9 @@
 - [x] Implement forgot password / password reset flow with secure token + owner notification
 - [x] Add configurable session timeout with "Remember me" option (24h default / 1 year with remember me)
 - [x] Add password change endpoint (/api/auth/change-password)
+
+## Admin Features & Security (May 19 batch 3)
+- [x] Build Change Password UI page in admin settings (/admin/settings)
+- [x] Build leads dashboard widget on admin home page (total, this week, conversion, by status, recent leads)
+- [x] Implement audit logging for login events (login_success, login_failed with IP, email, userAgent, timestamp)
+- [x] Add Account Settings to admin nav dropdown

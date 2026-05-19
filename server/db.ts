@@ -4529,3 +4529,34 @@ export async function updateLeadStatus(id: number, newStatus: string) {
   if (!db) return;
   await db.update(leads).set({ status: newStatus }).where(eq(leads.id, id));
 }
+
+export async function getLeadStats() {
+  const db = await getDb();
+  if (!db) return { total: 0, thisWeek: 0, byStatus: [] as { status: string; count: number }[], recentLeads: [] as any[] };
+
+  const allLeads = await db.select().from(leads).orderBy(desc(leads.createdAt));
+
+  const now = new Date();
+  const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+  const thisWeek = allLeads.filter(l => new Date(l.createdAt) >= weekAgo).length;
+
+  // Group by status
+  const statusMap: Record<string, number> = {};
+  for (const lead of allLeads) {
+    statusMap[lead.status] = (statusMap[lead.status] || 0) + 1;
+  }
+  const byStatus = Object.entries(statusMap).map(([status, count]) => ({ status, count }));
+
+  // Recent 5 leads
+  const recentLeads = allLeads.slice(0, 5).map(l => ({
+    id: l.id,
+    fullName: l.fullName,
+    email: l.email,
+    company: l.company,
+    status: l.status,
+    createdAt: l.createdAt,
+  }));
+
+  return { total: allLeads.length, thisWeek, byStatus, recentLeads };
+}
