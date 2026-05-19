@@ -388,3 +388,8 @@
 - [x] Add loading state (spinner + disabled button) during form submission
 - [x] Add clear success message after successful submission
 - [x] Reset form fields after success
+
+## Login Fix & Form Improvements
+- [x] Diagnose and fix the login issue (ADMIN_PASSWORD env var was not loading; fixed by setting correct secrets)
+- [x] Add inline field-level validation to demo request form (name required, email format, work email check)
+- [x] Add confirmation email for demo request submissions (owner notification on new lead via notifyOwner)

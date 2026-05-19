@@ -48,6 +48,32 @@ export default function LandingPage() {
     fullName: '', email: '', company: '', jobTitle: '', teamSize: '', message: '',
   });
   const [submitted, setSubmitted] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
+
+  const validateField = (name: string, value: string) => {
+    if (name === 'fullName' && !value.trim()) return 'Full name is required';
+    if (name === 'email') {
+      if (!value.trim()) return 'Email is required';
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) return 'Please enter a valid email address';
+      if (/(@gmail|@yahoo|@hotmail|@outlook)/i.test(value)) return 'Please use your work email';
+    }
+    return '';
+  };
+
+  const handleBlur = (name: string) => {
+    setTouched(prev => ({ ...prev, [name]: true }));
+    const error = validateField(name, (form as any)[name]);
+    setFieldErrors(prev => ({ ...prev, [name]: error }));
+  };
+
+  const handleFieldChange = (name: string, value: string) => {
+    setForm(prev => ({ ...prev, [name]: value }));
+    if (touched[name]) {
+      const error = validateField(name, value);
+      setFieldErrors(prev => ({ ...prev, [name]: error }));
+    }
+  };
 
   // SEO meta tags for /product page
   useEffect(() => {
@@ -122,10 +148,13 @@ export default function LandingPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.fullName || !form.email) {
-      toast.error('Please fill in your name and email');
-      return;
-    }
+    // Validate all required fields
+    const errors: Record<string, string> = {};
+    errors.fullName = validateField('fullName', form.fullName);
+    errors.email = validateField('email', form.email);
+    setFieldErrors(errors);
+    setTouched({ fullName: true, email: true });
+    if (errors.fullName || errors.email) return;
     try {
       await submitLead.mutateAsync({ ...form, source: 'landing_page' });
       setSubmitted(true);
@@ -542,11 +571,14 @@ export default function LandingPage() {
                   <Input
                     id="demo-fullname"
                     value={form.fullName}
-                    onChange={(e) => setForm({ ...form, fullName: e.target.value })}
+                    onChange={(e) => handleFieldChange('fullName', e.target.value)}
+                    onBlur={() => handleBlur('fullName')}
                     placeholder="Jane Smith"
-                    className="bg-white/5 border-white/10 text-white placeholder:text-gray-600"
-                    required
+                    className={`bg-white/5 border-white/10 text-white placeholder:text-gray-600 ${touched.fullName && fieldErrors.fullName ? 'border-red-500/60 focus-visible:ring-red-500/30' : ''}`}
                   />
+                  {touched.fullName && fieldErrors.fullName && (
+                    <p className="text-xs text-red-400 mt-1">{fieldErrors.fullName}</p>
+                  )}
                 </div>
                 <div>
                   <label htmlFor="demo-email" className="block text-sm text-gray-400 mb-1.5">Work Email *</label>
@@ -554,11 +586,14 @@ export default function LandingPage() {
                     id="demo-email"
                     type="email"
                     value={form.email}
-                    onChange={(e) => setForm({ ...form, email: e.target.value })}
+                    onChange={(e) => handleFieldChange('email', e.target.value)}
+                    onBlur={() => handleBlur('email')}
                     placeholder="jane@company.com"
-                    className="bg-white/5 border-white/10 text-white placeholder:text-gray-600"
-                    required
+                    className={`bg-white/5 border-white/10 text-white placeholder:text-gray-600 ${touched.email && fieldErrors.email ? 'border-red-500/60 focus-visible:ring-red-500/30' : ''}`}
                   />
+                  {touched.email && fieldErrors.email && (
+                    <p className="text-xs text-red-400 mt-1">{fieldErrors.email}</p>
+                  )}
                 </div>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

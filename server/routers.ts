@@ -2402,6 +2402,14 @@ export const appRouter = router({
         console.error("[Close CRM] Background lead creation failed:", err)
       );
 
+      // Notify owner about new demo request (non-blocking)
+      notifyOwner({
+        title: `New Demo Request: ${input.fullName}`,
+        content: `Name: ${input.fullName}\nEmail: ${input.email}\nCompany: ${input.company || 'N/A'}\nJob Title: ${input.jobTitle || 'N/A'}\nTeam Size: ${input.teamSize || 'N/A'}\nMessage: ${input.message || 'None'}\nSource: ${input.source || 'direct'}`,
+      }).catch((err) =>
+        console.error("[Notification] Failed to notify owner of new lead:", err)
+      );
+
       return { success: true, id };
     }),
     list: adminProcedure.input(z.object({ status: z.string().optional() }).optional()).query(async ({ input }) => getLeads(input?.status)),
