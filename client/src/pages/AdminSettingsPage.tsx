@@ -1,17 +1,23 @@
 import { useState } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { useLocation } from "wouter";
+import { trpc } from "@/lib/trpc";
+import { Shield, Key, Clock } from "lucide-react";
 
 export default function AdminSettingsPage() {
   const { user, loading: authLoading } = useAuth();
   const [, navigate] = useLocation();
 
+  const [activeTab, setActiveTab] = useState<"password" | "login-history">("password");
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
+
+  // Fetch activity log for login events
+  const { data: activityData } = trpc.activity.list.useQuery({ limit: 100 });
 
   if (authLoading) {
     return (
@@ -73,9 +79,14 @@ export default function AdminSettingsPage() {
     }
   };
 
+  // Filter login events from activity log
+  const loginEvents = (activityData || []).filter(
+    (e: any) => e.action === "login_success" || e.action === "login_failed"
+  );
+
   return (
     <div className="min-h-screen bg-background">
-      <div className="max-w-2xl mx-auto px-4 py-12">
+      <div className="max-w-3xl mx-auto px-4 py-12">
         {/* Header */}
         <div className="mb-8">
           <button
@@ -109,77 +120,170 @@ export default function AdminSettingsPage() {
           </div>
         </div>
 
-        {/* Change Password Card */}
-        <div className="bg-card border border-border rounded-lg p-6">
-          <h2 className="text-lg font-semibold text-foreground mb-4">Change Password</h2>
-          <p className="text-sm text-muted-foreground mb-6">
-            After submitting, you'll need to update the ADMIN_PASSWORD in your project's Settings → Secrets for the change to take effect on next server restart.
-          </p>
-
-          <form onSubmit={handleChangePassword} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1.5">
-                Current Password
-              </label>
-              <input
-                type="password"
-                required
-                value={currentPassword}
-                onChange={e => setCurrentPassword(e.target.value)}
-                placeholder="Enter current password"
-                className="w-full px-4 py-2.5 rounded-lg bg-background border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 text-sm"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1.5">
-                New Password
-              </label>
-              <input
-                type="password"
-                required
-                value={newPassword}
-                onChange={e => setNewPassword(e.target.value)}
-                placeholder="At least 6 characters"
-                className="w-full px-4 py-2.5 rounded-lg bg-background border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 text-sm"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1.5">
-                Confirm New Password
-              </label>
-              <input
-                type="password"
-                required
-                value={confirmPassword}
-                onChange={e => setConfirmPassword(e.target.value)}
-                placeholder="Re-enter new password"
-                className="w-full px-4 py-2.5 rounded-lg bg-background border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 text-sm"
-              />
-            </div>
-
-            {error && (
-              <p className="text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-4 py-2.5">
-                {error}
-              </p>
-            )}
-
-            {success && (
-              <p className="text-sm text-green-400 bg-green-500/10 border border-green-500/20 rounded-lg px-4 py-2.5">
-                {success}
-              </p>
-            )}
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full py-2.5 px-4 rounded-lg bg-primary text-primary-foreground font-semibold text-sm hover:bg-primary/90 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
-            >
-              {loading ? "Updating…" : "Update Password"}
-            </button>
-          </form>
+        {/* Tabs */}
+        <div className="flex gap-1 mb-6 bg-card border border-border rounded-lg p-1">
+          <button
+            onClick={() => setActiveTab("password")}
+            className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-md text-sm font-medium transition-colors ${
+              activeTab === "password"
+                ? "bg-primary text-primary-foreground"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <Key className="w-4 h-4" />
+            Change Password
+          </button>
+          <button
+            onClick={() => setActiveTab("login-history")}
+            className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-md text-sm font-medium transition-colors ${
+              activeTab === "login-history"
+                ? "bg-primary text-primary-foreground"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <Clock className="w-4 h-4" />
+            Login History
+          </button>
         </div>
+
+        {/* Change Password Tab */}
+        {activeTab === "password" && (
+          <div className="bg-card border border-border rounded-lg p-6">
+            <h2 className="text-lg font-semibold text-foreground mb-4">Change Password</h2>
+            <p className="text-sm text-muted-foreground mb-6">
+              After submitting, you'll need to update the ADMIN_PASSWORD in your project's Settings → Secrets for the change to take effect on next server restart.
+            </p>
+
+            <form onSubmit={handleChangePassword} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1.5">
+                  Current Password
+                </label>
+                <input
+                  type="password"
+                  required
+                  value={currentPassword}
+                  onChange={e => setCurrentPassword(e.target.value)}
+                  placeholder="Enter current password"
+                  className="w-full px-4 py-2.5 rounded-lg bg-background border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 text-sm"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1.5">
+                  New Password
+                </label>
+                <input
+                  type="password"
+                  required
+                  value={newPassword}
+                  onChange={e => setNewPassword(e.target.value)}
+                  placeholder="At least 6 characters"
+                  className="w-full px-4 py-2.5 rounded-lg bg-background border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 text-sm"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1.5">
+                  Confirm New Password
+                </label>
+                <input
+                  type="password"
+                  required
+                  value={confirmPassword}
+                  onChange={e => setConfirmPassword(e.target.value)}
+                  placeholder="Re-enter new password"
+                  className="w-full px-4 py-2.5 rounded-lg bg-background border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 text-sm"
+                />
+              </div>
+
+              {error && (
+                <p className="text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-4 py-2.5">
+                  {error}
+                </p>
+              )}
+
+              {success && (
+                <p className="text-sm text-green-400 bg-green-500/10 border border-green-500/20 rounded-lg px-4 py-2.5">
+                  {success}
+                </p>
+              )}
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full py-2.5 px-4 rounded-lg bg-primary text-primary-foreground font-semibold text-sm hover:bg-primary/90 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {loading ? "Updating…" : "Update Password"}
+              </button>
+            </form>
+          </div>
+        )}
+
+        {/* Login History Tab */}
+        {activeTab === "login-history" && (
+          <div className="bg-card border border-border rounded-lg p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-foreground">Login History</h2>
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <Shield className="w-3.5 h-3.5" />
+                Last 100 events
+              </div>
+            </div>
+
+            {loginEvents.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-8">
+                No login events recorded yet.
+              </p>
+            ) : (
+              <div className="space-y-2 max-h-[500px] overflow-y-auto">
+                {loginEvents.map((event: any) => {
+                  const details = event.details ? JSON.parse(event.details) : {};
+                  const isSuccess = event.action === "login_success";
+                  return (
+                    <div
+                      key={event.id}
+                      className={`flex items-start gap-3 p-3 rounded-lg border ${
+                        isSuccess
+                          ? "border-green-500/20 bg-green-500/5"
+                          : "border-red-500/20 bg-red-500/5"
+                      }`}
+                    >
+                      <div className={`mt-0.5 w-2 h-2 rounded-full shrink-0 ${
+                        isSuccess ? "bg-green-500" : "bg-red-500"
+                      }`} />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className={`text-sm font-medium ${
+                            isSuccess ? "text-green-400" : "text-red-400"
+                          }`}>
+                            {isSuccess ? "Successful Login" : "Failed Attempt"}
+                          </span>
+                          <span className="text-xs text-muted-foreground shrink-0">
+                            {new Date(event.createdAt).toLocaleString()}
+                          </span>
+                        </div>
+                        <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                          <span>IP: {event.visitorId || "unknown"}</span>
+                          {details.email && <span>Email: {details.email}</span>}
+                          {details.reason && <span>Reason: {details.reason.replace('_', ' ')}</span>}
+                          {details.rememberMe !== undefined && (
+                            <span>Remember Me: {details.rememberMe ? "Yes" : "No"}</span>
+                          )}
+                          {details.userAgent && (
+                            <span className="truncate max-w-[300px]" title={details.userAgent}>
+                              UA: {details.userAgent.slice(0, 50)}{details.userAgent.length > 50 ? "…" : ""}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

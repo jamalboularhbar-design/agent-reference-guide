@@ -407,3 +407,8 @@
 - [x] Build leads dashboard widget on admin home page (total, this week, conversion, by status, recent leads)
 - [x] Implement audit logging for login events (login_success, login_failed with IP, email, userAgent, timestamp)
 - [x] Add Account Settings to admin nav dropdown
+
+## Document Graph & Follow-ups (May 19 batch 4)
+- [x] Auto-generate cross-references (1,415 connections: 206 title mentions, 273 keyword overlaps, 936 category neighbors across 525 docs)
+- [x] Add login history tab to Account Settings page (shows last 100 login success/failure events with IP, email, UA)
+- [x] Create weekly leads digest handler (POST /api/scheduled/leads-digest) — deploy needed before creating cron
