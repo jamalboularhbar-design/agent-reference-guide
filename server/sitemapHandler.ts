@@ -26,6 +26,12 @@ function formatDate(date: Date): string {
   return date.toISOString().split("T")[0];
 }
 
+// Generate hreflang annotations for a URL (x-default = English for now)
+function hreflangLinks(url: string): string {
+  return `    <xhtml:link rel="alternate" hreflang="en" href="${escapeXml(url)}" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="${escapeXml(url)}" />`;
+}
+
 export async function sitemapHandler(req: Request, res: Response) {
   try {
     const db = await getDb();
@@ -43,28 +49,35 @@ export async function sitemapHandler(req: Request, res: Response) {
         .where(eq(documents.status, "published"));
 
       documentUrls = publishedDocs.map(
-        (doc) =>
-          `  <url>
-    <loc>${escapeXml(`${BASE_URL}/docs/${doc.slug}`)}</loc>
+        (doc) => {
+          const loc = `${BASE_URL}/docs/${doc.slug}`;
+          return `  <url>
+    <loc>${escapeXml(loc)}</loc>
     <lastmod>${formatDate(doc.updatedAt)}</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
-  </url>`
+${hreflangLinks(loc)}
+  </url>`;
+        }
       );
     }
 
     const staticUrls = STATIC_ROUTES.map(
-      (route) =>
-        `  <url>
-    <loc>${escapeXml(`${BASE_URL}${route.path}`)}</loc>
+      (route) => {
+        const loc = `${BASE_URL}${route.path}`;
+        return `  <url>
+    <loc>${escapeXml(loc)}</loc>
     <lastmod>${formatDate(new Date())}</lastmod>
     <changefreq>${route.changefreq}</changefreq>
     <priority>${route.priority}</priority>
-  </url>`
+${hreflangLinks(loc)}
+  </url>`;
+      }
     );
 
     const xml = `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:xhtml="http://www.w3.org/1999/xhtml">
 ${staticUrls.join("\n")}
 ${documentUrls.join("\n")}
 </urlset>`;

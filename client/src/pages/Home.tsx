@@ -48,12 +48,16 @@ export default function Home() {
     metaKeywords.content = 'AI operational intelligence, knowledge management platform, mid-market SaaS, operational reference guide, workflow automation, AI-powered operations, business process management, ARG Builder';
 
     // Open Graph meta tags
+    const ogImageUrl = 'https://d2xsxph8kpxj0f.cloudfront.net/310519663609289051/2ZSCuHTjdaVo7h4vqS7dZB/og-image-argbuilder-ZutmaYZHU87mr4cVDB2dma.png';
     const ogTags: Record<string, string> = {
       'og:type': 'website',
       'og:url': window.location.origin,
       'og:title': 'ARG Builder — AI-Powered Operational Intelligence Platform',
       'og:description': 'ARG Builder helps mid-market companies automate operational processes with AI-powered reference guides, knowledge management, and workflow intelligence across all verticals.',
       'og:site_name': 'ARG Builder',
+      'og:image': ogImageUrl,
+      'og:image:width': '2560',
+      'og:image:height': '1440',
     };
     Object.entries(ogTags).forEach(([property, content]) => {
       let tag = document.querySelector(`meta[property="${property}"]`) as HTMLMetaElement;
@@ -70,6 +74,7 @@ export default function Home() {
       'twitter:card': 'summary_large_image',
       'twitter:title': 'ARG Builder — AI-Powered Operational Intelligence Platform',
       'twitter:description': 'AI-powered operational intelligence for mid-market companies. Automate knowledge management, workflows, and team processes across all verticals.',
+      'twitter:image': ogImageUrl,
     };
     Object.entries(twitterTags).forEach(([name, content]) => {
       let tag = document.querySelector(`meta[name="${name}"]`) as HTMLMetaElement;

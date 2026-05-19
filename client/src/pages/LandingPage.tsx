@@ -72,12 +72,16 @@ export default function LandingPage() {
     metaKeywords.content = 'operational intelligence platform, mid-market SaaS, AI knowledge management, workflow automation, ARG Builder pricing, business process AI, operational reference guide';
 
     // Open Graph meta tags
+    const ogImageUrl = 'https://d2xsxph8kpxj0f.cloudfront.net/310519663609289051/2ZSCuHTjdaVo7h4vqS7dZB/og-image-argbuilder-ZutmaYZHU87mr4cVDB2dma.png';
     const ogTags: Record<string, string> = {
       'og:type': 'product',
       'og:url': `${window.location.origin}/product`,
       'og:title': 'ARG Builder — AI Operational Intelligence for Mid-Market Companies',
       'og:description': 'Automate operational processes with AI-powered reference guides, knowledge management, and workflow intelligence. 6 verticals. Starting at $299/mo.',
       'og:site_name': 'ARG Builder',
+      'og:image': ogImageUrl,
+      'og:image:width': '2560',
+      'og:image:height': '1440',
     };
     Object.entries(ogTags).forEach(([property, content]) => {
       let tag = document.querySelector(`meta[property="${property}"]`) as HTMLMetaElement;
@@ -94,6 +98,7 @@ export default function LandingPage() {
       'twitter:card': 'summary_large_image',
       'twitter:title': 'ARG Builder — AI Operational Intelligence for Mid-Market',
       'twitter:description': 'AI-powered operational intelligence for mid-market companies. 6 verticals, starting at $299/mo.',
+      'twitter:image': ogImageUrl,
     };
     Object.entries(twitterTags).forEach(([name, content]) => {
       let tag = document.querySelector(`meta[name="${name}"]`) as HTMLMetaElement;
@@ -532,8 +537,9 @@ export default function LandingPage() {
             <form onSubmit={handleSubmit} className="space-y-4 p-8 rounded-2xl bg-white/[0.03] border border-white/10">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm text-gray-400 mb-1.5">Full Name *</label>
+                  <label htmlFor="demo-fullname" className="block text-sm text-gray-400 mb-1.5">Full Name *</label>
                   <Input
+                    id="demo-fullname"
                     value={form.fullName}
                     onChange={(e) => setForm({ ...form, fullName: e.target.value })}
                     placeholder="Jane Smith"
@@ -542,8 +548,9 @@ export default function LandingPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm text-gray-400 mb-1.5">Work Email *</label>
+                  <label htmlFor="demo-email" className="block text-sm text-gray-400 mb-1.5">Work Email *</label>
                   <Input
+                    id="demo-email"
                     type="email"
                     value={form.email}
                     onChange={(e) => setForm({ ...form, email: e.target.value })}
@@ -555,8 +562,9 @@ export default function LandingPage() {
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm text-gray-400 mb-1.5">Company</label>
+                  <label htmlFor="demo-company" className="block text-sm text-gray-400 mb-1.5">Company</label>
                   <Input
+                    id="demo-company"
                     value={form.company}
                     onChange={(e) => setForm({ ...form, company: e.target.value })}
                     placeholder="Acme Corp"
@@ -564,8 +572,9 @@ export default function LandingPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm text-gray-400 mb-1.5">Job Title</label>
+                  <label htmlFor="demo-jobtitle" className="block text-sm text-gray-400 mb-1.5">Job Title</label>
                   <Input
+                    id="demo-jobtitle"
                     value={form.jobTitle}
                     onChange={(e) => setForm({ ...form, jobTitle: e.target.value })}
                     placeholder="VP of Operations"
@@ -574,11 +583,13 @@ export default function LandingPage() {
                 </div>
               </div>
               <div>
-                <label className="block text-sm text-gray-400 mb-1.5">Industry</label>
+                <label htmlFor="industry-select" className="block text-sm text-gray-400 mb-1.5">Industry</label>
                 <select
+                  id="industry-select"
                   value={form.teamSize}
                   onChange={(e) => setForm({ ...form, teamSize: e.target.value })}
                   className="w-full rounded-md bg-white/5 border border-white/10 text-white px-3 py-2 text-sm"
+                  aria-label="Select your industry"
                 >
                   <option value="" className="bg-gray-900">Select your industry</option>
                   <option value="hospitality" className="bg-gray-900">Hospitality & Travel</option>
@@ -591,13 +602,15 @@ export default function LandingPage() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm text-gray-400 mb-1.5">What's your biggest operational challenge?</label>
+                <label htmlFor="demo-challenge" className="block text-sm text-gray-400 mb-1.5">What's your biggest operational challenge?</label>
                 <textarea
+                  id="demo-challenge"
                   value={form.message}
                   onChange={(e) => setForm({ ...form, message: e.target.value })}
                   placeholder="Tell us about your current setup and pain points..."
                   rows={3}
                   className="w-full rounded-md bg-white/5 border border-white/10 text-white px-3 py-2 text-sm placeholder:text-gray-600 resize-none"
+                  aria-label="Describe your biggest operational challenge"
                 />
               </div>
               <Button

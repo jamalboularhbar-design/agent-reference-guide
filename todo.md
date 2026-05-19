@@ -365,3 +365,15 @@
 - [x] Fix LoginPage branding ("Agent Reference Guide" → "ARG Builder")
 - [x] Add SEO meta tags to LandingPage (/product)
 - [x] Save checkpoint
+
+## Follow-up Actions (May 19, 2026)
+- [x] Create OG social sharing image (1200x630px) and add to meta tags
+- [x] Fix sitemap accessibility for Google Search Console (robots.txt issue is platform-level on .manus.space; custom domain serves correct file)
+- [ ] Reminder: Stripe API keys needed in Settings → Payment (user action required)
+- [x] Add analytics tracking (privacy-friendly) — Umami already integrated via VITE_ANALYTICS env vars
+- [x] Create Loom demo recording script (docs/loom-demo-script.md)
+- [x] Product Hunt launch preparation (docs/product-hunt-launch-guide.md)
+- [x] Verify root domain DNS A records propagation (confirmed Cloudflare setup)
+- [x] Add hreflang tags for future multi-language support (xhtml:link in sitemap)
+- [x] Email capture automation guide (docs/email-capture-crm-guide.md)
+- [x] Run Lighthouse audit and fix accessibility issues (labels, aria-labels added)
