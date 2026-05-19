@@ -429,4 +429,4 @@
 - [x] Add quick-action toolbar for admin (floating FAB with 8 shortcuts: New Doc, View Leads, Export CSV, Analytics, Knowledge Graph, Announcements, All Documents, Settings)
 - [x] Add multi-user invite system with viewer/editor/admin roles (/admin/team page with invite generation, role management, pending/accepted tracking)
 - [x] Add TOTP/2FA for admin login (setup via QR code, verify step in login flow, recovery codes, enable/disable in /admin/settings)
-- [ ] Add dark/light theme toggle persistence (localStorage)
+- [x] Add dark/light theme toggle persistence (localStorage) — already implemented in ThemeContext with preferred_theme key + legacy fallback
