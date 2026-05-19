@@ -412,3 +412,9 @@
 - [x] Auto-generate cross-references (1,415 connections: 206 title mentions, 273 keyword overlaps, 936 category neighbors across 525 docs)
 - [x] Add login history tab to Account Settings page (shows last 100 login success/failure events with IP, email, UA)
 - [x] Create weekly leads digest handler (POST /api/scheduled/leads-digest) — deploy needed before creating cron
+
+## Follow-ups (May 19 batch 5)
+- [x] Add "Report Suspicious Activity" button to Login History tab (notifies admin with event details via notifyOwner)
+- [x] Activate weekly leads digest cron via Heartbeat (Monday 8 AM ET / 12:00 UTC, task_uid: 72jFQVa2jCSymPJkderDyB)
+- [x] Build Close CRM automated email sequence (seq_35QZqN40zFJfzmG5AunVU8: Welcome → Value Prop → CTA over 5 days)
+- [x] Auto-subscribe new leads to nurture sequence on form submission

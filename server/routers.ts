@@ -2,7 +2,7 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { COOKIE_NAME } from "@shared/const";
 import { stripeRouter } from "./stripeRouter";
-import { createCloseLead } from "./closeCrm";
+import { createCloseLead, subscribeToNurtureSequence } from "./closeCrm";
 import { leadSubmitLimiter, loginLimiter } from "./rateLimiter";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
@@ -2409,8 +2409,29 @@ export const appRouter = router({
 
       const id = await createLead(input);
 
-      // Push to Close CRM (non-blocking)
-      createCloseLead(input).catch((err) =>
+      // Push to Close CRM and subscribe to nurture sequence (non-blocking)
+      createCloseLead(input).then((leadId) => {
+        if (leadId) {
+          // Fetch the contact ID from the newly created lead, then subscribe
+          const apiKey = process.env.CLOSE_CRM_API_KEY;
+          if (apiKey) {
+            const authHeader = `Basic ${Buffer.from(`${apiKey}:`).toString("base64")}`;
+            fetch(`https://api.close.com/api/v1/lead/${leadId}/`, {
+              headers: { Authorization: authHeader },
+            })
+              .then((res) => res.json())
+              .then((lead: any) => {
+                const contactId = lead?.contacts?.[0]?.id;
+                if (contactId) {
+                  subscribeToNurtureSequence(contactId, input.email).catch((err) =>
+                    console.error("[Close CRM] Sequence subscription failed:", err)
+                  );
+                }
+              })
+              .catch((err) => console.error("[Close CRM] Failed to fetch lead for sequence:", err));
+          }
+        }
+      }).catch((err) =>
         console.error("[Close CRM] Background lead creation failed:", err)
       );
 

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
-import { Shield, Key, Clock } from "lucide-react";
+import { Shield, Key, Clock, AlertTriangle } from "lucide-react";
 
 export default function AdminSettingsPage() {
   const { user, loading: authLoading } = useAuth();
@@ -15,6 +15,13 @@ export default function AdminSettingsPage() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
+
+  // Report suspicious activity state
+  const [reportingId, setReportingId] = useState<number | null>(null);
+  const [reportSuccess, setReportSuccess] = useState<number | null>(null);
+  const [reportError, setReportError] = useState<string>("");
+
+  const notifyOwnerMutation = trpc.system.notifyOwner.useMutation();
 
   // Fetch activity log for login events
   const { data: activityData } = trpc.activity.list.useQuery({ limit: 100 });
@@ -76,6 +83,41 @@ export default function AdminSettingsPage() {
       setError("Network error — please try again");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleReportSuspicious = async (event: any) => {
+    setReportingId(event.id);
+    setReportError("");
+    setReportSuccess(null);
+
+    const details = event.details ? JSON.parse(event.details) : {};
+    const timestamp = new Date(event.createdAt).toLocaleString();
+
+    try {
+      await notifyOwnerMutation.mutateAsync({
+        title: "⚠️ Suspicious Login Activity Reported",
+        content: [
+          `A user has flagged suspicious login activity on their account.`,
+          ``,
+          `**Event Details:**`,
+          `- Type: ${event.action === "login_failed" ? "Failed Login Attempt" : "Successful Login"}`,
+          `- Time: ${timestamp}`,
+          `- IP Address: ${event.visitorId || "unknown"}`,
+          `- Email Used: ${details.email || "unknown"}`,
+          `- User Agent: ${details.userAgent || "unknown"}`,
+          details.reason ? `- Failure Reason: ${details.reason.replace("_", " ")}` : "",
+          ``,
+          `**Reported by:** ${user.email || user.name || "Admin"}`,
+          `**Action Required:** Review this login attempt and consider rotating credentials if unauthorized.`,
+        ].filter(Boolean).join("\n"),
+      });
+
+      setReportSuccess(event.id);
+    } catch {
+      setReportError("Failed to send report. Please try again.");
+    } finally {
+      setReportingId(null);
     }
   };
 
@@ -231,6 +273,13 @@ export default function AdminSettingsPage() {
               </div>
             </div>
 
+            {/* Report status messages */}
+            {reportError && (
+              <p className="text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-4 py-2.5 mb-4">
+                {reportError}
+              </p>
+            )}
+
             {loginEvents.length === 0 ? (
               <p className="text-sm text-muted-foreground text-center py-8">
                 No login events recorded yet.
@@ -240,6 +289,9 @@ export default function AdminSettingsPage() {
                 {loginEvents.map((event: any) => {
                   const details = event.details ? JSON.parse(event.details) : {};
                   const isSuccess = event.action === "login_success";
+                  const isReporting = reportingId === event.id;
+                  const wasReported = reportSuccess === event.id;
+
                   return (
                     <div
                       key={event.id}
@@ -259,9 +311,11 @@ export default function AdminSettingsPage() {
                           }`}>
                             {isSuccess ? "Successful Login" : "Failed Attempt"}
                           </span>
-                          <span className="text-xs text-muted-foreground shrink-0">
-                            {new Date(event.createdAt).toLocaleString()}
-                          </span>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <span className="text-xs text-muted-foreground">
+                              {new Date(event.createdAt).toLocaleString()}
+                            </span>
+                          </div>
                         </div>
                         <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
                           <span>IP: {event.visitorId || "unknown"}</span>
@@ -274,6 +328,25 @@ export default function AdminSettingsPage() {
                             <span className="truncate max-w-[300px]" title={details.userAgent}>
                               UA: {details.userAgent.slice(0, 50)}{details.userAgent.length > 50 ? "…" : ""}
                             </span>
+                          )}
+                        </div>
+
+                        {/* Report Suspicious Activity Button */}
+                        <div className="mt-2">
+                          {wasReported ? (
+                            <span className="inline-flex items-center gap-1.5 text-xs text-green-400 font-medium">
+                              <Shield className="w-3 h-3" />
+                              Report sent to admin
+                            </span>
+                          ) : (
+                            <button
+                              onClick={() => handleReportSuspicious(event)}
+                              disabled={isReporting}
+                              className="inline-flex items-center gap-1.5 text-xs text-amber-400 hover:text-amber-300 font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              <AlertTriangle className="w-3 h-3" />
+                              {isReporting ? "Reporting…" : "Report Suspicious Activity"}
+                            </button>
                           )}
                         </div>
                       </div>
