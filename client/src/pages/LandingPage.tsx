@@ -12,6 +12,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
+import ChatWidget from '@/components/ChatWidget';
 
 const HERO_IMG = '/manus-storage/hero-dashboard_9f31bf62.png';
 const KNOWLEDGE_GRAPH_IMG = '/manus-storage/feature-knowledge-graph_ed196875.png';
@@ -156,7 +157,16 @@ export default function LandingPage() {
     setTouched({ fullName: true, email: true });
     if (errors.fullName || errors.email) return;
     try {
-      await submitLead.mutateAsync({ ...form, source: 'landing_page' });
+      // Capture UTM params and referrer for lead source tracking
+      const params = new URLSearchParams(window.location.search);
+      const utmData = {
+        utmSource: params.get('utm_source') || undefined,
+        utmMedium: params.get('utm_medium') || undefined,
+        utmCampaign: params.get('utm_campaign') || undefined,
+        utmContent: params.get('utm_content') || undefined,
+        referrer: document.referrer || undefined,
+      };
+      await submitLead.mutateAsync({ ...form, source: 'landing_page', ...utmData });
       setSubmitted(true);
       setForm({ fullName: '', email: '', company: '', jobTitle: '', teamSize: '', message: '' });
       toast.success('Demo request submitted successfully!');
@@ -680,10 +690,23 @@ export default function LandingPage() {
               <p className="text-gray-400 mb-2">
                 Your demo request has been received and sent to our team.
               </p>
-              <p className="text-gray-500 text-sm mb-8">
+              <p className="text-gray-500 text-sm mb-4">
                 We'll reach out within 24 hours to schedule your personalized walkthrough.
                 Check your inbox for a confirmation email.
               </p>
+              <div className="bg-white/5 border border-white/10 rounded-xl p-4 mb-6">
+                <p className="text-sm text-gray-300 mb-2 font-medium">Want to skip the wait?</p>
+                <a
+                  href="https://cal.com/argbuilder/demo"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 text-teal-400 hover:text-teal-300 text-sm font-semibold transition-colors"
+                >
+                  <Clock className="w-4 h-4" />
+                  Book a 15-min demo directly on our calendar
+                  <ArrowRight className="w-3 h-3" />
+                </a>
+              </div>
               <div className="flex flex-col sm:flex-row gap-3 justify-center">
                 <Link href="/">
                   <Button className="bg-teal-500 hover:bg-teal-400 text-black font-semibold">
@@ -702,6 +725,9 @@ export default function LandingPage() {
           )}
         </div>
       </section>
+
+      {/* Chat Widget */}
+      <ChatWidget />
 
       {/* Footer */}
       <footer className="py-16 px-4 border-t border-white/5">

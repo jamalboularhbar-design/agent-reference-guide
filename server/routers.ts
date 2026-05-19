@@ -2395,6 +2395,11 @@ export const appRouter = router({
       jobTitle: z.string().optional(),
       teamSize: z.string().optional(),
       source: z.string().optional(),
+      utmSource: z.string().optional(),
+      utmMedium: z.string().optional(),
+      utmCampaign: z.string().optional(),
+      utmContent: z.string().optional(),
+      referrer: z.string().optional(),
       message: z.string().optional(),
     })).mutation(async ({ input, ctx }) => {
       // Rate limit: 3 submissions per IP per hour
@@ -2450,6 +2455,18 @@ export const appRouter = router({
     updateStatus: adminProcedure.input(z.object({ id: z.number(), status: z.string() })).mutation(async ({ input }) => {
       await updateLeadStatus(input.id, input.status);
       return { success: true };
+    }),
+    exportCsv: adminProcedure.query(async () => {
+      const allLeads = await getLeads();
+      const headers = ['ID', 'Full Name', 'Email', 'Company', 'Job Title', 'Team Size', 'Source', 'UTM Source', 'UTM Medium', 'UTM Campaign', 'UTM Content', 'Referrer', 'Status', 'Message', 'Created At'];
+      const rows = allLeads.map((l: any) => [
+        l.id, l.fullName, l.email, l.company || '', l.jobTitle || '', l.teamSize || '',
+        l.source || '', l.utmSource || '', l.utmMedium || '', l.utmCampaign || '',
+        l.utmContent || '', l.referrer || '', l.status, l.message || '',
+        l.createdAt ? new Date(l.createdAt).toISOString() : '',
+      ]);
+      const csvContent = [headers, ...rows].map(row => row.map((cell: any) => `"${String(cell).replace(/"/g, '""')}"`).join(',')).join('\n');
+      return { csv: csvContent, count: allLeads.length };
     }),
   }),
 

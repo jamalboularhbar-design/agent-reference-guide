@@ -418,3 +418,15 @@
 - [x] Activate weekly leads digest cron via Heartbeat (Monday 8 AM ET / 12:00 UTC, task_uid: 72jFQVa2jCSymPJkderDyB)
 - [x] Build Close CRM automated email sequence (seq_35QZqN40zFJfzmG5AunVU8: Welcome → Value Prop → CTA over 5 days)
 - [x] Auto-subscribe new leads to nurture sequence on form submission
+
+## Follow-ups (May 19 batch 6)
+- [x] Test full lead-to-email flow (verified: lead created in Close, sequence subscription active, status: active)
+- [x] Add Cal.com scheduling link to /product page (appears in demo success state: "Book a 15-min demo directly")
+- [x] Add contact sales chat widget (custom floating chat bubble on /product, feeds into leads pipeline)
+- [x] Add lead source tracking field (utmSource, utmMedium, utmCampaign, utmContent, referrer columns + frontend capture)
+- [x] Add CSV export for leads in admin dashboard (Export CSV button on /admin/leads page)
+- [ ] Improve document graph with search/filter controls
+- [ ] Add quick-action toolbar for admin (shortcuts to common tasks)
+- [ ] Add multi-user invite system with viewer/editor/admin roles
+- [ ] Add TOTP/2FA for admin login
+- [ ] Add dark/light theme toggle persistence (localStorage)

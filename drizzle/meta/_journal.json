@@ -176,6 +176,13 @@
       "when": 1778549415097,
       "tag": "0024_orange_hellfire_club",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "5",
+      "when": 1779231355517,
+      "tag": "0025_bent_moon_knight",
+      "breakpoints": true
     }
   ]
 }

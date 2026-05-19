@@ -3,7 +3,7 @@ import { trpc } from '@/lib/trpc';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Users, Mail, Building2, Briefcase, Clock, CheckCircle2, XCircle, MessageSquare } from 'lucide-react';
+import { Users, Mail, Building2, Briefcase, Clock, CheckCircle2, XCircle, MessageSquare, Download } from 'lucide-react';
 
 const STATUS_COLORS: Record<string, string> = {
   new: 'bg-blue-500/20 text-blue-300 border-blue-500/30',
@@ -42,9 +42,36 @@ export default function AdminLeadsPage() {
             </h1>
             <p className="text-muted-foreground mt-1">Manage incoming demo requests and leads from the ARG Builder landing page</p>
           </div>
-          <Badge variant="outline" className="text-lg px-4 py-2">
-            {leads?.length ?? 0} leads
-          </Badge>
+          <div className="flex items-center gap-3">
+            <Button
+              size="sm"
+              variant="outline"
+              className="border-white/20 text-white hover:bg-white/5"
+              onClick={() => {
+                fetch('/api/trpc/leads.exportCsv', { credentials: 'include' })
+                  .then(res => res.json())
+                  .then((data: any) => {
+                    const csv = data?.result?.data?.json?.csv;
+                    if (!csv) { toast.error('Export failed'); return; }
+                    const blob = new Blob([csv], { type: 'text/csv' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `leads-export-${new Date().toISOString().split('T')[0]}.csv`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                    toast.success('Leads exported successfully');
+                  })
+                  .catch(() => toast.error('Export failed'));
+              }}
+            >
+              <Download className="w-4 h-4 mr-1" />
+              Export CSV
+            </Button>
+            <Badge variant="outline" className="text-lg px-4 py-2">
+              {leads?.length ?? 0} leads
+            </Badge>
+          </div>
         </div>
 
         {/* Status Filter */}
