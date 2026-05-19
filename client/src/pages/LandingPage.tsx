@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { trpc } from '@/lib/trpc';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { Link } from 'wouter';
@@ -48,6 +48,72 @@ export default function LandingPage() {
     fullName: '', email: '', company: '', jobTitle: '', teamSize: '', message: '',
   });
   const [submitted, setSubmitted] = useState(false);
+
+  // SEO meta tags for /product page
+  useEffect(() => {
+    document.title = 'ARG Builder Product — AI Operational Intelligence for Mid-Market';
+
+    // Meta description
+    let metaDesc = document.querySelector('meta[name="description"]') as HTMLMetaElement;
+    if (!metaDesc) {
+      metaDesc = document.createElement('meta');
+      metaDesc.name = 'description';
+      document.head.appendChild(metaDesc);
+    }
+    metaDesc.content = 'ARG Builder delivers AI-powered operational intelligence for mid-market companies across hospitality, healthcare, professional services, retail, manufacturing, and SaaS. Starting at $299/mo.';
+
+    // Meta keywords
+    let metaKeywords = document.querySelector('meta[name="keywords"]') as HTMLMetaElement;
+    if (!metaKeywords) {
+      metaKeywords = document.createElement('meta');
+      metaKeywords.name = 'keywords';
+      document.head.appendChild(metaKeywords);
+    }
+    metaKeywords.content = 'operational intelligence platform, mid-market SaaS, AI knowledge management, workflow automation, ARG Builder pricing, business process AI, operational reference guide';
+
+    // Open Graph meta tags
+    const ogTags: Record<string, string> = {
+      'og:type': 'product',
+      'og:url': `${window.location.origin}/product`,
+      'og:title': 'ARG Builder — AI Operational Intelligence for Mid-Market Companies',
+      'og:description': 'Automate operational processes with AI-powered reference guides, knowledge management, and workflow intelligence. 6 verticals. Starting at $299/mo.',
+      'og:site_name': 'ARG Builder',
+    };
+    Object.entries(ogTags).forEach(([property, content]) => {
+      let tag = document.querySelector(`meta[property="${property}"]`) as HTMLMetaElement;
+      if (!tag) {
+        tag = document.createElement('meta');
+        tag.setAttribute('property', property);
+        document.head.appendChild(tag);
+      }
+      tag.content = content;
+    });
+
+    // Twitter Card meta tags
+    const twitterTags: Record<string, string> = {
+      'twitter:card': 'summary_large_image',
+      'twitter:title': 'ARG Builder — AI Operational Intelligence for Mid-Market',
+      'twitter:description': 'AI-powered operational intelligence for mid-market companies. 6 verticals, starting at $299/mo.',
+    };
+    Object.entries(twitterTags).forEach(([name, content]) => {
+      let tag = document.querySelector(`meta[name="${name}"]`) as HTMLMetaElement;
+      if (!tag) {
+        tag = document.createElement('meta');
+        tag.name = name;
+        document.head.appendChild(tag);
+      }
+      tag.content = content;
+    });
+
+    // Canonical URL
+    let canonical = document.querySelector('link[rel="canonical"]') as HTMLLinkElement;
+    if (!canonical) {
+      canonical = document.createElement('link');
+      canonical.rel = 'canonical';
+      document.head.appendChild(canonical);
+    }
+    canonical.href = `${window.location.origin}/product`;
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

@@ -11,6 +11,7 @@ import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 import { registerStripeWebhook } from "../stripeWebhook";
 import { weeklyReviewHandler } from "../scheduledWeeklyReview";
+import { sitemapHandler } from "../sitemapHandler";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -52,6 +53,9 @@ async function startServer() {
   );
   // Scheduled task endpoints (must be before Vite/static fallthrough)
   app.post("/api/scheduled/weekly-review", weeklyReviewHandler);
+
+  // SEO: Dynamic sitemap.xml
+  app.get("/sitemap.xml", sitemapHandler);
 
   // development mode uses Vite, production mode uses static files
   if (process.env.NODE_ENV === "development") {

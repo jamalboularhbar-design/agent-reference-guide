@@ -39,7 +39,7 @@ export default function LoginPage() {
         {/* Logo / title */}
         <div className="text-center mb-10">
           <h1 className="text-3xl font-bold text-foreground tracking-tight mb-1">
-            Agent Reference Guide
+            ARG Builder
           </h1>
           <p className="text-muted-foreground text-sm">Sign in to your workspace</p>
         </div>

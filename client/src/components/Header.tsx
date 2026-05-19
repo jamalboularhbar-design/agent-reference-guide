@@ -37,7 +37,7 @@ export default function Header() {
             <Sparkles className="w-4 h-4 sm:w-6 sm:h-6 text-accent-foreground" />
           </div>
           <div className="min-w-0">
-            <h1 className="font-display text-lg sm:text-2xl font-bold text-foreground truncate">Agent Guide</h1>
+            <h1 className="font-display text-lg sm:text-2xl font-bold text-foreground truncate">ARG Builder</h1>
             <p className="text-[10px] sm:text-xs text-muted-foreground tracking-wide hidden sm:block">Operational Reference System</p>
           </div>
         </div>

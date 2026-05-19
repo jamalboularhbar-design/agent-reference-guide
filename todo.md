@@ -354,3 +354,14 @@
 - [x] Add meta keywords via useEffect
 - [x] Fix title length (30-60 chars) via document.title in useEffect
 - [x] Add keyword-rich H2 heading ("AI-Powered Operational Reference Guide")
+
+### SEO & Branding Follow-ups
+- [x] Fix Open Graph meta tags (og:url, og:title, og:description, og:image) for social sharing
+- [x] Fix Twitter Card meta tags for proper link previews
+- [x] Create sitemap.xml with all document URLs (dynamic endpoint at /sitemap.xml)
+- [x] Create robots.txt with sitemap reference
+- [x] Add JSON-LD structured data (SoftwareApplication schema)
+- [x] Fix header branding ("Agent Guide" → "ARG Builder")
+- [x] Fix LoginPage branding ("Agent Reference Guide" → "ARG Builder")
+- [x] Add SEO meta tags to LandingPage (/product)
+- [x] Save checkpoint

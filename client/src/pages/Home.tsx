@@ -46,6 +46,104 @@ export default function Home() {
       document.head.appendChild(metaKeywords);
     }
     metaKeywords.content = 'AI operational intelligence, knowledge management platform, mid-market SaaS, operational reference guide, workflow automation, AI-powered operations, business process management, ARG Builder';
+
+    // Open Graph meta tags
+    const ogTags: Record<string, string> = {
+      'og:type': 'website',
+      'og:url': window.location.origin,
+      'og:title': 'ARG Builder — AI-Powered Operational Intelligence Platform',
+      'og:description': 'ARG Builder helps mid-market companies automate operational processes with AI-powered reference guides, knowledge management, and workflow intelligence across all verticals.',
+      'og:site_name': 'ARG Builder',
+    };
+    Object.entries(ogTags).forEach(([property, content]) => {
+      let tag = document.querySelector(`meta[property="${property}"]`) as HTMLMetaElement;
+      if (!tag) {
+        tag = document.createElement('meta');
+        tag.setAttribute('property', property);
+        document.head.appendChild(tag);
+      }
+      tag.content = content;
+    });
+
+    // Twitter Card meta tags
+    const twitterTags: Record<string, string> = {
+      'twitter:card': 'summary_large_image',
+      'twitter:title': 'ARG Builder — AI-Powered Operational Intelligence Platform',
+      'twitter:description': 'AI-powered operational intelligence for mid-market companies. Automate knowledge management, workflows, and team processes across all verticals.',
+    };
+    Object.entries(twitterTags).forEach(([name, content]) => {
+      let tag = document.querySelector(`meta[name="${name}"]`) as HTMLMetaElement;
+      if (!tag) {
+        tag = document.createElement('meta');
+        tag.name = name;
+        document.head.appendChild(tag);
+      }
+      tag.content = content;
+    });
+
+    // Canonical URL
+    let canonical = document.querySelector('link[rel="canonical"]') as HTMLLinkElement;
+    if (!canonical) {
+      canonical = document.createElement('link');
+      canonical.rel = 'canonical';
+      document.head.appendChild(canonical);
+    }
+    canonical.href = window.location.origin;
+
+    // JSON-LD Structured Data (SoftwareApplication schema)
+    let jsonLd = document.querySelector('script[data-schema="arg-builder"]') as HTMLScriptElement;
+    if (!jsonLd) {
+      jsonLd = document.createElement('script');
+      jsonLd.type = 'application/ld+json';
+      jsonLd.setAttribute('data-schema', 'arg-builder');
+      document.head.appendChild(jsonLd);
+    }
+    jsonLd.textContent = JSON.stringify({
+      '@context': 'https://schema.org',
+      '@type': 'SoftwareApplication',
+      'name': 'ARG Builder',
+      'applicationCategory': 'BusinessApplication',
+      'operatingSystem': 'Web',
+      'description': 'AI-powered operational intelligence platform for mid-market companies. Automate knowledge management, workflows, and team processes across all verticals.',
+      'url': window.location.origin,
+      'offers': [
+        {
+          '@type': 'Offer',
+          'name': 'Starter',
+          'price': '299',
+          'priceCurrency': 'USD',
+          'priceValidUntil': '2027-12-31',
+          'description': 'Flat rate for teams up to 25 users'
+        },
+        {
+          '@type': 'Offer',
+          'name': 'Professional',
+          'price': '15',
+          'priceCurrency': 'USD',
+          'priceValidUntil': '2027-12-31',
+          'description': 'Per user per month, 25-seat minimum'
+        }
+      ],
+      'publisher': {
+        '@type': 'Organization',
+        'name': 'ARG Builder',
+        'url': 'https://www.argbuilder.io'
+      },
+      'featureList': [
+        'AI-Powered Knowledge Management',
+        'Operational Workflow Automation',
+        'Multi-Vertical Support',
+        'Team Collaboration Tools',
+        'Analytics & Reporting',
+        'Custom Integrations'
+      ]
+    });
+
+    // Cleanup on unmount
+    return () => {
+      const schemaScript = document.querySelector('script[data-schema="arg-builder"]');
+      if (schemaScript) schemaScript.remove();
+    };
   }, []);
 
   const handleExport = () => {
