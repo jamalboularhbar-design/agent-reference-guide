@@ -430,3 +430,15 @@
 - [x] Add multi-user invite system with viewer/editor/admin roles (/admin/team page with invite generation, role management, pending/accepted tracking)
 - [x] Add TOTP/2FA for admin login (setup via QR code, verify step in login flow, recovery codes, enable/disable in /admin/settings)
 - [x] Add dark/light theme toggle persistence (localStorage) — already implemented in ThemeContext with preferred_theme key + legacy fallback
+
+## Batch 7: Marketing & Sales Conversion (Enterprise Trials)
+- [x] Build free trial signup system (14-day trial, time-limited access, auto-expiry, trial status tracking, admin management)
+- [x] Create enterprise pricing page with 3-tier comparison (Starter/Professional/Enterprise) and annual discount + trial signup form
+- [x] Add social proof section (client logos, testimonials, key metrics, integrated into /product landing page)
+- [x] Build conversion-optimized hero/landing section with strong CTAs ("Start Free Trial", "Book Demo", trust signals)
+- [x] Add email nurture sequence triggers (welcome, day-3 tips, day-7 value, day-12 warning, day-14 expired + admin process button)
+- [x] Create ROI calculator tool (already built at /roi with team size, salary, hours searching, tool cost inputs + PDF export + lead capture)
+- [x] Add trial dashboard with usage stats, conversion funnel, status management, and nurture trigger at /admin/trials
+- [x] Build case study / use case pages (travel ops, creative studio, enterprise SaaS compliance) at /case-studies
+- [x] Add exit-intent modal (20% off offer on mouse leave) + trial expiry banner (countdown for last 3 days)
+- [x] Add comparison section (ARG Builder vs Notion/Confluence/Guru) with 12-feature matrix on /product page

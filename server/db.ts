@@ -1,6 +1,6 @@
 import { eq, like, or, sql, desc, asc, count, and } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, documents, documentRatings, readingLists, readingListItems, searchAnalytics, documentTags, documentComments, documentVersions, customCategories, downloadHistory, announcements, activityLog, documentAuditTrail, bookmarkNotes, shareLinks, scheduledPublish, inlineComments, brandingSettings, webhooks, recentlyViewed, documentFeedback, categoryOrdering, documentSubscriptions, subscriptionNotifications, userReadingPosition, searchHistory, aiSummaries, documentTranslations, userPreferences, readingStreakLeaderboard, glossaryTerms, documentDependencies, readingGoals, readingProgress, documentTemplates, savedFilters, documentQuizzes, reviewReminders, documentAnnotations, documentCollections, collectionItems, workflowStatuses, workflowTransitions, documentWorkflowStatus, archivalPolicies, archivedDocuments, contentGapSuggestions, duplicateContentPairs, activityFeed, documentSnapshots, readingCorrelations, quizResults, documentSeoMeta, systemNotificationLog, adminPermissions, approvalSlaConfig, webhookEventLog, documentAccessRequests, onboardingProgress, documentCitations, readingSessions, documentQualityAudits, emailDigestConfig, documentMedia, workspaces, workspaceMembers, reviewSchedules, coAuthorActivity, migrationJobs, sentimentScores, retentionPolicies, accessibilityChecks, customReports, pushNotifications, templateMarketplace, templateRatings, complianceReports, documentChangeLog, userLandingPreference, bulkExportJobs, documentCrossReferences, userEngagementScorecard, scheduledAnnouncements, dashboardWidgetConfig, brokenLinkScans, savedSearchFilters, duplicateContentScans, userDocCollections, userDocCollectionItems, performanceBenchmarks, leads, inviteTokens } from "../drizzle/schema";
+import { InsertUser, users, documents, documentRatings, readingLists, readingListItems, searchAnalytics, documentTags, documentComments, documentVersions, customCategories, downloadHistory, announcements, activityLog, documentAuditTrail, bookmarkNotes, shareLinks, scheduledPublish, inlineComments, brandingSettings, webhooks, recentlyViewed, documentFeedback, categoryOrdering, documentSubscriptions, subscriptionNotifications, userReadingPosition, searchHistory, aiSummaries, documentTranslations, userPreferences, readingStreakLeaderboard, glossaryTerms, documentDependencies, readingGoals, readingProgress, documentTemplates, savedFilters, documentQuizzes, reviewReminders, documentAnnotations, documentCollections, collectionItems, workflowStatuses, workflowTransitions, documentWorkflowStatus, archivalPolicies, archivedDocuments, contentGapSuggestions, duplicateContentPairs, activityFeed, documentSnapshots, readingCorrelations, quizResults, documentSeoMeta, systemNotificationLog, adminPermissions, approvalSlaConfig, webhookEventLog, documentAccessRequests, onboardingProgress, documentCitations, readingSessions, documentQualityAudits, emailDigestConfig, documentMedia, workspaces, workspaceMembers, reviewSchedules, coAuthorActivity, migrationJobs, sentimentScores, retentionPolicies, accessibilityChecks, customReports, pushNotifications, templateMarketplace, templateRatings, complianceReports, documentChangeLog, userLandingPreference, bulkExportJobs, documentCrossReferences, userEngagementScorecard, scheduledAnnouncements, dashboardWidgetConfig, brokenLinkScans, savedSearchFilters, duplicateContentScans, userDocCollections, userDocCollectionItems, performanceBenchmarks, leads, inviteTokens, trials, nurturEmails } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -4611,4 +4611,140 @@ export async function updateUserRoleById(userId: number, role: 'user' | 'admin')
   const db = await getDb();
   if (!db) return;
   await db.update(users).set({ role }).where(eq(users.id, userId));
+}
+
+// ─── Trial System ────────────────────────────────────────────────────────────
+
+export async function createTrial(data: {
+  email: string;
+  fullName: string;
+  companyName?: string;
+  teamSize?: string;
+  useCase?: string;
+  planTier?: 'starter' | 'professional' | 'enterprise';
+  utmSource?: string;
+  utmMedium?: string;
+  utmCampaign?: string;
+  referrer?: string;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+
+  const expiresAt = new Date();
+  expiresAt.setDate(expiresAt.getDate() + 14); // 14-day trial
+
+  await db.insert(trials).values({
+    ...data,
+    planTier: data.planTier || 'professional',
+    expiresAt,
+  });
+
+  // Return the created trial
+  const result = await db.select().from(trials).where(eq(trials.email, data.email)).orderBy(desc(trials.createdAt)).limit(1);
+  return result[0] || null;
+}
+
+export async function getTrialByEmail(email: string) {
+  const db = await getDb();
+  if (!db) return null;
+
+  const result = await db.select().from(trials).where(eq(trials.email, email)).orderBy(desc(trials.createdAt)).limit(1);
+  return result[0] || null;
+}
+
+export async function getTrialById(id: number) {
+  const db = await getDb();
+  if (!db) return null;
+
+  const result = await db.select().from(trials).where(eq(trials.id, id)).limit(1);
+  return result[0] || null;
+}
+
+export async function getAllTrials(opts?: { status?: string; limit?: number; offset?: number }) {
+  const db = await getDb();
+  if (!db) return { trials: [], total: 0 };
+
+  const { status, limit = 50, offset = 0 } = opts || {};
+  const conditions = [];
+  if (status && status !== 'all') {
+    conditions.push(sql`${trials.status} = ${status}`);
+  }
+
+  const whereClause = conditions.length > 0 ? sql`${sql.join(conditions, sql` AND `)}` : undefined;
+
+  const countResult = whereClause
+    ? await db.select({ total: count() }).from(trials).where(whereClause)
+    : await db.select({ total: count() }).from(trials);
+  const total = countResult[0]?.total ?? 0;
+
+  const rows = whereClause
+    ? await db.select().from(trials).where(whereClause).orderBy(desc(trials.createdAt)).limit(limit).offset(offset)
+    : await db.select().from(trials).orderBy(desc(trials.createdAt)).limit(limit).offset(offset);
+
+  return { trials: rows, total };
+}
+
+export async function updateTrialStatus(id: number, status: 'active' | 'expired' | 'converted' | 'cancelled') {
+  const db = await getDb();
+  if (!db) return;
+
+  const updateSet: Record<string, unknown> = { status };
+  if (status === 'converted') {
+    updateSet.convertedAt = new Date();
+  }
+
+  await db.update(trials).set(updateSet).where(eq(trials.id, id));
+}
+
+export async function updateTrialUsage(id: number, data: { documentsViewed?: number; searchesPerformed?: number; featuresUsed?: string }) {
+  const db = await getDb();
+  if (!db) return;
+
+  await db.update(trials).set({ ...data, lastActiveAt: new Date() }).where(eq(trials.id, id));
+}
+
+export async function getTrialStats() {
+  const db = await getDb();
+  if (!db) return { active: 0, expired: 0, converted: 0, cancelled: 0, total: 0 };
+
+  const result = await db.select({
+    status: trials.status,
+    count: count(),
+  }).from(trials).groupBy(trials.status);
+
+  const stats = { active: 0, expired: 0, converted: 0, cancelled: 0, total: 0 };
+  result.forEach(r => {
+    (stats as any)[r.status] = r.count;
+    stats.total += r.count;
+  });
+  return stats;
+}
+
+// ─── Nurture Email Tracking ──────────────────────────────────────────────────
+
+export async function recordNurtureEmail(trialId: number, email: string, sequenceStep: string) {
+  const db = await getDb();
+  if (!db) return;
+
+  await db.insert(nurturEmails).values({ trialId, email, sequenceStep });
+}
+
+export async function getNurtureEmailsForTrial(trialId: number) {
+  const db = await getDb();
+  if (!db) return [];
+
+  return db.select().from(nurturEmails).where(eq(nurturEmails.trialId, trialId)).orderBy(asc(nurturEmails.sentAt));
+}
+
+export async function getLastNurtureStep(trialId: number): Promise<string | null> {
+  const db = await getDb();
+  if (!db) return null;
+
+  const result = await db.select({ sequenceStep: nurturEmails.sequenceStep })
+    .from(nurturEmails)
+    .where(eq(nurturEmails.trialId, trialId))
+    .orderBy(desc(nurturEmails.sentAt))
+    .limit(1);
+
+  return result[0]?.sequenceStep || null;
 }

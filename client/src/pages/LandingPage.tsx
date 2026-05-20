@@ -13,6 +13,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import ChatWidget from '@/components/ChatWidget';
+import SocialProof from '@/components/SocialProof';
+import { ExitIntentModal, ComparisonSection } from '@/components/ConversionModals';
 
 const HERO_IMG = '/manus-storage/hero-dashboard_9f31bf62.png';
 const KNOWLEDGE_GRAPH_IMG = '/manus-storage/feature-knowledge-graph_ed196875.png';
@@ -188,7 +190,7 @@ export default function LandingPage() {
             <a href="#vision" className="hover:text-white transition-colors">Vision</a>
             <a href="#platform" className="hover:text-white transition-colors">Platform</a>
             <a href="#verticals" className="hover:text-white transition-colors">Verticals</a>
-            <a href="#pricing" className="hover:text-white transition-colors">Pricing</a>
+            <Link href="/pricing" className="hover:text-white transition-colors">Pricing</Link>
             <Link href="/roi" className="hover:text-white transition-colors">ROI Calculator</Link>
             <a href="#contact" className="hover:text-white transition-colors">Contact</a>
           </div>
@@ -229,17 +231,18 @@ export default function LandingPage() {
               ARG Builder creates AI-powered operational intelligence platforms tailored to your industry. We turn scattered SOPs, playbooks, and tribal knowledge into living systems your entire team can trust — from hospitality to healthcare, SaaS to manufacturing.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <a href="#contact">
+              <Link href="/start-trial?plan=professional">
                 <Button size="lg" className="bg-teal-500 hover:bg-teal-400 text-black font-semibold px-8 py-6 text-lg">
-                  Request Early Access <ArrowRight className="w-5 h-5 ml-2" />
+                  Start Free Trial <ArrowRight className="w-5 h-5 ml-2" />
                 </Button>
-              </a>
-              <a href="#platform">
+              </Link>
+              <a href="#contact">
                 <Button size="lg" variant="outline" className="border-white/20 text-white hover:bg-white/5 px-8 py-6 text-lg">
-                  See the Platform
+                  Book a Demo
                 </Button>
               </a>
             </div>
+            <p className="text-sm text-gray-500 mt-4">14-day free trial &middot; No credit card required &middot; Cancel anytime</p>
           </div>
           {/* Hero Image */}
           <div className="relative mt-16 mx-auto max-w-5xl">
@@ -470,6 +473,9 @@ export default function LandingPage() {
           </div>
         </div>
       </section>
+
+      {/* Social Proof */}
+      <SocialProof />
 
       {/* Pricing Section */}
       <section id="pricing" className="py-24 px-4">
@@ -726,8 +732,14 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* Comparison Section */}
+      <ComparisonSection />
+
       {/* Chat Widget */}
       <ChatWidget />
+
+      {/* Exit Intent Modal */}
+      <ExitIntentModal />
 
       {/* Footer */}
       <footer className="py-16 px-4 border-t border-white/5">

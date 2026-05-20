@@ -130,6 +130,7 @@ import {
   getKnowledgeGraphData,
   createLead, getLeads, updateLeadStatus, getLeadStats,
   createInviteToken, getInviteByToken, markInviteAccepted, getTeamInvites, deleteInviteToken, getTeamMembers, updateUserRoleById,
+  createTrial, getTrialByEmail, getAllTrials, updateTrialStatus, getTrialStats, recordNurtureEmail, getNurtureEmailsForTrial,
 } from "./db";
 import { invokeLLM } from "./_core/llm";
 import { notifyOwner } from "./_core/notification";
@@ -2508,5 +2509,88 @@ export const appRouter = router({
 
   // Stripe billing
   stripe: stripeRouter,
+
+  // Trial system
+  trials: router({
+    startTrial: publicProcedure.input(z.object({
+      email: z.string().email(),
+      fullName: z.string().min(1),
+      companyName: z.string().optional(),
+      teamSize: z.string().optional(),
+      useCase: z.string().optional(),
+      planTier: z.enum(['starter', 'professional', 'enterprise']).optional(),
+      utmSource: z.string().optional(),
+      utmMedium: z.string().optional(),
+      utmCampaign: z.string().optional(),
+      referrer: z.string().optional(),
+    })).mutation(async ({ input }) => {
+      const existing = await getTrialByEmail(input.email);
+      if (existing && existing.status === 'active') {
+        return { success: false, error: 'An active trial already exists for this email', trial: existing };
+      }
+      const trial = await createTrial(input);
+      if (trial) {
+        await recordNurtureEmail(trial.id, trial.email, 'welcome');
+      }
+      try {
+        await createLead({
+          email: input.email,
+          fullName: input.fullName,
+          company: input.companyName || undefined,
+          teamSize: input.teamSize || undefined,
+          source: 'trial_signup',
+        });
+      } catch {}
+      return { success: true, trial };
+    }),
+
+    checkStatus: publicProcedure.input(z.object({
+      email: z.string().email(),
+    })).query(async ({ input }) => {
+      const trial = await getTrialByEmail(input.email);
+      if (!trial) return { exists: false, trial: null };
+      if (trial.status === 'active' && new Date(trial.expiresAt) < new Date()) {
+        await updateTrialStatus(trial.id, 'expired');
+        return { exists: true, trial: { ...trial, status: 'expired' as const } };
+      }
+      return { exists: true, trial };
+    }),
+
+    list: adminProcedure.input(z.object({
+      status: z.string().optional(),
+      limit: z.number().optional(),
+      offset: z.number().optional(),
+    }).optional()).query(async ({ input }) => {
+      return getAllTrials(input || {});
+    }),
+
+    stats: adminProcedure.query(async () => {
+      return getTrialStats();
+    }),
+
+    updateStatus: adminProcedure.input(z.object({
+      id: z.number(),
+      status: z.enum(['active', 'expired', 'converted', 'cancelled']),
+    })).mutation(async ({ input }) => {
+      await updateTrialStatus(input.id, input.status);
+      return { success: true };
+    }),
+
+    nurtureHistory: adminProcedure.input(z.object({
+      trialId: z.number(),
+    })).query(async ({ input }) => {
+      return getNurtureEmailsForTrial(input.trialId);
+    }),
+
+    nurtureSequenceConfig: adminProcedure.query(async () => {
+      const { getNurtureSequenceConfig } = await import('./nurtureSequence');
+      return getNurtureSequenceConfig();
+    }),
+
+    processNurture: adminProcedure.mutation(async () => {
+      const { processNurtureEmails } = await import('./nurtureSequence');
+      return processNurtureEmails();
+    }),
+  }),
 });
 export type AppRouter = typeof appRouter;

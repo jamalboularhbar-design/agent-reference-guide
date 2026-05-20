@@ -1156,3 +1156,47 @@ export const inviteTokens = mysqlTable("invite_tokens", {
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 export type InviteToken = typeof inviteTokens.$inferSelect;
+
+// Trial signups - tracks enterprise trial registrations
+export const trials = mysqlTable("trials", {
+  id: int("id").autoincrement().primaryKey(),
+  email: varchar("email", { length: 320 }).notNull(),
+  companyName: varchar("companyName", { length: 255 }),
+  fullName: varchar("fullName", { length: 255 }).notNull(),
+  teamSize: varchar("teamSize", { length: 50 }),
+  useCase: text("useCase"),
+  // Trial status: active, expired, converted, cancelled
+  status: mysqlEnum("status", ["active", "expired", "converted", "cancelled"]).default("active").notNull(),
+  // Plan tier they're trialing
+  planTier: mysqlEnum("planTier", ["starter", "professional", "enterprise"]).default("professional").notNull(),
+  // Trial dates
+  startedAt: timestamp("startedAt").defaultNow().notNull(),
+  expiresAt: timestamp("expiresAt").notNull(),
+  convertedAt: timestamp("convertedAt"),
+  // UTM tracking
+  utmSource: varchar("utmSource", { length: 100 }),
+  utmMedium: varchar("utmMedium", { length: 100 }),
+  utmCampaign: varchar("utmCampaign", { length: 100 }),
+  referrer: text("referrer"),
+  // Usage tracking
+  documentsViewed: int("documentsViewed").default(0),
+  searchesPerformed: int("searchesPerformed").default(0),
+  featuresUsed: text("featuresUsed"), // JSON array of feature names
+  lastActiveAt: timestamp("lastActiveAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+export type Trial = typeof trials.$inferSelect;
+export type InsertTrial = typeof trials.$inferInsert;
+
+// Email nurture sequence tracking
+export const nurturEmails = mysqlTable("nurture_emails", {
+  id: int("id").autoincrement().primaryKey(),
+  trialId: int("trialId").notNull(),
+  email: varchar("email", { length: 320 }).notNull(),
+  // Sequence step: welcome, day3_tips, day7_value, day12_warning, day14_expired, converted
+  sequenceStep: varchar("sequenceStep", { length: 50 }).notNull(),
+  sentAt: timestamp("sentAt").defaultNow().notNull(),
+  openedAt: timestamp("openedAt"),
+  clickedAt: timestamp("clickedAt"),
+});
+export type NurtureEmail = typeof nurturEmails.$inferSelect;

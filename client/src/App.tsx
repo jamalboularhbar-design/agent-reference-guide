@@ -125,6 +125,10 @@ import BillingPage from "./pages/BillingPage";
 import AdminSettingsPage from "./pages/AdminSettingsPage";
 import AdminTeamPage from "./pages/AdminTeamPage";
 import AdminQuickActionToolbar from "./components/AdminQuickActionToolbar";
+import PricingPage from "./pages/PricingPage";
+import StartTrialPage from "./pages/StartTrialPage";
+import AdminTrialDashboardPage from "./pages/AdminTrialDashboardPage";
+import CaseStudiesPage from "./pages/CaseStudiesPage";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -240,10 +244,14 @@ function Router() {
       <Route path={"/admin/benchmarks"} component={AdminPerformanceBenchmarksPage} />
       <Route path={"/my-collections"} component={UserCollectionsPage} />
       <Route path="/product" component={LandingPage} />
+      <Route path="/pricing" component={PricingPage} />
+      <Route path="/start-trial" component={StartTrialPage} />
       <Route path="/admin/leads" component={AdminLeadsPage} />
       <Route path="/roi" component={ROICalculatorPage} />
       <Route path="/billing" component={BillingPage} />
       <Route path="/admin/settings" component={AdminSettingsPage} />
+      <Route path="/admin/trials" component={AdminTrialDashboardPage} />
+      <Route path="/case-studies" component={CaseStudiesPage} />
       <Route path="/admin/team" component={AdminTeamPage} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
