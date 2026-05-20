@@ -132,6 +132,7 @@ import {
   createInviteToken, getInviteByToken, markInviteAccepted, getTeamInvites, deleteInviteToken, getTeamMembers, updateUserRoleById,
   createTrial, getTrialByEmail, getAllTrials, updateTrialStatus, getTrialStats, recordNurtureEmail, getNurtureEmailsForTrial,
   createReferral, getReferralByCode, getReferralsByUser, markReferralSignedUp, getReferralStats,
+  getWizardState, saveWizardState,
 } from "./db";
 import { invokeLLM } from "./_core/llm";
 import { notifyOwner } from "./_core/notification";
@@ -2658,6 +2659,35 @@ export const appRouter = router({
 
     trackSignup: publicProcedure.input(z.object({ code: z.string(), email: z.string() })).mutation(async ({ input }) => {
       await markReferralSignedUp(input.code, input.email);
+      return { success: true };
+    }),
+  }),
+
+  // ─── Enterprise Onboarding Wizard (Persistent State) ───────────────────────────
+  onboardingWizard: router({
+    getState: protectedProcedure.query(async ({ ctx }) => {
+      const state = await getWizardState(ctx.user.id);
+      if (!state) return { currentStep: 0, completedSteps: [] as number[], formData: {} as Record<string, string | boolean>, isComplete: false };
+      return {
+        currentStep: state.currentStep,
+        completedSteps: state.completedSteps as number[],
+        formData: state.formData as Record<string, string | boolean>,
+        isComplete: state.isComplete === 1,
+      };
+    }),
+
+    saveState: protectedProcedure.input(z.object({
+      currentStep: z.number(),
+      completedSteps: z.array(z.number()),
+      formData: z.record(z.string(), z.union([z.string(), z.boolean()])),
+      isComplete: z.boolean().optional(),
+    })).mutation(async ({ ctx, input }) => {
+      await saveWizardState(ctx.user.id, {
+        currentStep: input.currentStep,
+        completedSteps: input.completedSteps,
+        formData: input.formData as Record<string, string | boolean>,
+        isComplete: input.isComplete,
+      });
       return { success: true };
     }),
   }),
