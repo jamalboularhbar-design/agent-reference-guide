@@ -140,6 +140,13 @@ import ResourcesPage from "./pages/ResourcesPage";
 import AdminLeadScoresPage from "./pages/AdminLeadScoresPage";
 import FAQPage from "./pages/FAQPage";
 import AdminPerformanceDashboardPage from "./pages/AdminPerformanceDashboardPage";
+import AdminSSOPage from "./pages/AdminSSOPage";
+import StatusPage from "./pages/StatusPage";
+import AdminDomainsPage from "./pages/AdminDomainsPage";
+import AdminCompliancePage from "./pages/AdminCompliancePage";
+import AdminPermissionsPage from "./pages/AdminPermissionsPage";
+import IntegrationsPage from "./pages/IntegrationsPage";
+import AdminOnboardingWizardPage from "./pages/AdminOnboardingWizardPage";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -177,6 +184,13 @@ function Router() {
       <Route path={"/bookmarks"} component={BookmarksPage} />
       <Route path={"/share/:token"} component={ShareLinkPage} />
       <Route path={"/admin/branding"} component={AdminBrandingPage} />
+      <Route path={"/admin/sso"} component={AdminSSOPage} />
+      <Route path={"/status"} component={StatusPage} />
+      <Route path={"/admin/domains"} component={AdminDomainsPage} />
+      <Route path={"/admin/compliance"} component={AdminCompliancePage} />
+      <Route path={"/admin/permissions"} component={AdminPermissionsPage} />
+      <Route path={"/integrations"} component={IntegrationsPage} />
+      <Route path={"/admin/onboarding-wizard"} component={AdminOnboardingWizardPage} />
       <Route path={"/admin/webhooks"} component={AdminWebhooksPage} />
       <Route path={"/admin/users"} component={AdminUsersPage} />
       <Route path={"/admin/visitors"} component={AdminVisitorAnalyticsPage} />
