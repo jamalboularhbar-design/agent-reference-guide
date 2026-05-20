@@ -491,3 +491,4 @@
 - [x] Add advanced role permissions matrix (/admin/permissions with 19 permissions across 5 categories, 4 roles, toggle UI)
 - [x] Create integration marketplace page (/integrations with 18 connectors, categories, search, connect/manage buttons)
 - [x] Build enterprise onboarding wizard (/admin/onboarding-wizard with 7-step setup: org profile, team invites, auth/SSO, import, branding, integrations, go-live checklist)
+- [x] Wire enterprise onboarding wizard to backend tRPC procedure (save/resume state in DB, load on page visit)

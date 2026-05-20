@@ -1,20 +1,13 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { 
   Building2, Users, Shield, FileUp, Palette, Puzzle, Rocket, 
-  CheckCircle, ChevronRight, ChevronLeft, ArrowRight, Circle
+  CheckCircle, ChevronRight, ChevronLeft, Circle, Loader2, Save
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-
-interface WizardStep {
-  id: number;
-  title: string;
-  description: string;
-  icon: React.ReactNode;
-  fields: StepField[];
-}
+import { trpc } from '@/lib/trpc';
 
 interface StepField {
   id: string;
@@ -24,6 +17,14 @@ interface StepField {
   options?: string[];
   required?: boolean;
   helpText?: string;
+}
+
+interface WizardStep {
+  id: number;
+  title: string;
+  description: string;
+  icon: React.ReactNode;
+  fields: StepField[];
 }
 
 const WIZARD_STEPS: WizardStep[] = [
@@ -118,39 +119,91 @@ export default function AdminOnboardingWizardPage() {
   const [currentStep, setCurrentStep] = useState(0);
   const [formData, setFormData] = useState<Record<string, string | boolean>>({});
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+
+  // Load saved state from backend
+  const { data: savedState, isLoading } = trpc.onboardingWizard.getState.useQuery();
+  const saveMutation = trpc.onboardingWizard.saveState.useMutation({
+    onSuccess: () => {
+      setHasUnsavedChanges(false);
+      toast.success('Progress saved');
+    },
+    onError: () => {
+      toast.error('Failed to save progress');
+    },
+  });
+
+  // Restore state from DB on load
+  useEffect(() => {
+    if (savedState && !isLoading) {
+      setCurrentStep(savedState.currentStep);
+      setCompletedSteps(new Set(savedState.completedSteps));
+      setFormData(savedState.formData);
+    }
+  }, [savedState, isLoading]);
 
   const step = WIZARD_STEPS[currentStep];
   const progress = ((currentStep + 1) / WIZARD_STEPS.length) * 100;
 
-  const updateField = (fieldId: string, value: string | boolean) => {
-    setFormData(prev => ({ ...prev, [fieldId]: value }));
-  };
+  const persistState = useCallback((nextStep: number, nextCompleted: Set<number>, nextFormData: Record<string, string | boolean>, isComplete?: boolean) => {
+    saveMutation.mutate({
+      currentStep: nextStep,
+      completedSteps: Array.from(nextCompleted),
+      formData: nextFormData,
+      isComplete,
+    });
+  }, [saveMutation]);
 
-  const markStepComplete = () => {
-    setCompletedSteps(prev => { const next = new Set(Array.from(prev)); next.add(currentStep); return next; });
+  const updateField = (fieldId: string, value: string | boolean) => {
+    setFormData(prev => {
+      const next = { ...prev, [fieldId]: value };
+      setHasUnsavedChanges(true);
+      return next;
+    });
   };
 
   const handleNext = () => {
-    markStepComplete();
-    if (currentStep < WIZARD_STEPS.length - 1) {
-      setCurrentStep(currentStep + 1);
-    }
+    const nextCompleted = new Set(Array.from(completedSteps));
+    nextCompleted.add(currentStep);
+    setCompletedSteps(nextCompleted);
+
+    const nextStep = Math.min(currentStep + 1, WIZARD_STEPS.length - 1);
+    setCurrentStep(nextStep);
+    persistState(nextStep, nextCompleted, formData);
   };
 
   const handlePrev = () => {
     if (currentStep > 0) {
-      setCurrentStep(currentStep - 1);
+      const nextStep = currentStep - 1;
+      setCurrentStep(nextStep);
+      persistState(nextStep, completedSteps, formData);
     }
   };
 
   const handleFinish = () => {
-    markStepComplete();
+    const nextCompleted = new Set(Array.from(completedSteps));
+    nextCompleted.add(currentStep);
+    setCompletedSteps(nextCompleted);
+    persistState(currentStep, nextCompleted, formData, true);
     toast.success('Enterprise onboarding complete! Your knowledge base is ready to go.');
   };
 
   const handleSkip = () => {
     if (currentStep < WIZARD_STEPS.length - 1) {
-      setCurrentStep(currentStep + 1);
+      const nextStep = currentStep + 1;
+      setCurrentStep(nextStep);
+      persistState(nextStep, completedSteps, formData);
+    }
+  };
+
+  const handleSave = () => {
+    persistState(currentStep, completedSteps, formData);
+  };
+
+  const handleStepClick = (idx: number) => {
+    setCurrentStep(idx);
+    if (hasUnsavedChanges) {
+      persistState(idx, completedSteps, formData);
     }
   };
 
@@ -246,17 +299,36 @@ export default function AdminOnboardingWizardPage() {
     }
   };
 
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto" />
+          <p className="text-muted-foreground mt-3">Loading your setup progress...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
       <div className="border-b border-border bg-gradient-to-b from-primary/5 to-transparent">
         <div className="max-w-4xl mx-auto px-6 py-8">
-          <div className="text-center">
-            <Badge className="mb-3 bg-primary/10 text-primary">Enterprise Setup</Badge>
-            <h1 className="text-2xl font-bold">Onboarding Wizard</h1>
-            <p className="text-muted-foreground mt-1">
-              Complete these steps to configure your enterprise knowledge base
-            </p>
+          <div className="flex items-center justify-between">
+            <div className="text-center flex-1">
+              <Badge className="mb-3 bg-primary/10 text-primary">Enterprise Setup</Badge>
+              <h1 className="text-2xl font-bold">Onboarding Wizard</h1>
+              <p className="text-muted-foreground mt-1">
+                Complete these steps to configure your enterprise knowledge base
+              </p>
+            </div>
+            {hasUnsavedChanges && (
+              <Button variant="outline" size="sm" onClick={handleSave} disabled={saveMutation.isPending}>
+                {saveMutation.isPending ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Save className="w-4 h-4 mr-1" />}
+                Save
+              </Button>
+            )}
           </div>
 
           {/* Progress Bar */}
@@ -283,7 +355,7 @@ export default function AdminOnboardingWizardPage() {
               {WIZARD_STEPS.map((s, idx) => (
                 <button
                   key={s.id}
-                  onClick={() => setCurrentStep(idx)}
+                  onClick={() => handleStepClick(idx)}
                   className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left text-sm transition-colors ${
                     idx === currentStep
                       ? 'bg-primary/10 text-primary font-medium'
@@ -303,6 +375,14 @@ export default function AdminOnboardingWizardPage() {
                 </button>
               ))}
             </nav>
+
+            {savedState?.isComplete && (
+              <div className="mt-4 p-3 rounded-lg bg-green-500/10 border border-green-500/20">
+                <p className="text-xs text-green-600 font-medium flex items-center gap-2">
+                  <CheckCircle className="w-4 h-4" /> Setup Complete
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Step Content */}
@@ -341,12 +421,14 @@ export default function AdminOnboardingWizardPage() {
                       </Button>
                     )}
                     {currentStep < WIZARD_STEPS.length - 1 ? (
-                      <Button onClick={handleNext}>
+                      <Button onClick={handleNext} disabled={saveMutation.isPending}>
+                        {saveMutation.isPending ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : null}
                         Next <ChevronRight className="w-4 h-4 ml-1" />
                       </Button>
                     ) : (
-                      <Button onClick={handleFinish} className="bg-green-600 hover:bg-green-700">
-                        <Rocket className="w-4 h-4 mr-2" /> Launch Knowledge Base
+                      <Button onClick={handleFinish} className="bg-green-600 hover:bg-green-700" disabled={saveMutation.isPending}>
+                        {saveMutation.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Rocket className="w-4 h-4 mr-2" />}
+                        Launch Knowledge Base
                       </Button>
                     )}
                   </div>
@@ -354,7 +436,7 @@ export default function AdminOnboardingWizardPage() {
               </CardContent>
             </Card>
 
-            {/* Quick Tips */}
+            {/* Contextual Tips */}
             {currentStep === 0 && (
               <Card className="mt-4 border-blue-500/20 bg-blue-500/5">
                 <CardContent className="pt-4 pb-4">

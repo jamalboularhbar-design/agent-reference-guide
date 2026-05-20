@@ -1,4 +1,4 @@
-import { boolean, float, int, mediumtext, mysqlEnum, mysqlTable, text, tinyint, timestamp, varchar } from "drizzle-orm/mysql-core";
+import { boolean, float, int, json, mediumtext, mysqlEnum, mysqlTable, text, tinyint, timestamp, varchar } from "drizzle-orm/mysql-core";
 
 /**
  * Core user table backing auth flow.
@@ -1215,3 +1215,17 @@ export const referrals = mysqlTable("referrals", {
   convertedAt: timestamp("convertedAt"),
 });
 export type Referral = typeof referrals.$inferSelect;
+
+// ─── Enterprise Onboarding State ─────────────────────────────────────────────
+export const onboardingState = mysqlTable("onboarding_state", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  currentStep: int("currentStep").default(0).notNull(),
+  completedSteps: json("completedSteps").$type<number[]>().default([]).notNull(),
+  formData: json("formData").$type<Record<string, string | boolean>>().default({}).notNull(),
+  isComplete: int("isComplete").default(0).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type OnboardingState = typeof onboardingState.$inferSelect;
+export type InsertOnboardingState = typeof onboardingState.$inferInsert;
