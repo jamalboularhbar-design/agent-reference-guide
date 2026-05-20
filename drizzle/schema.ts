@@ -1260,3 +1260,114 @@ export const apiKeys = mysqlTable("api_keys", {
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 export type ApiKey = typeof apiKeys.$inferSelect;
+
+// Team Workspace tables
+export const teamTasks = mysqlTable("team_tasks", {
+  id: int("id").autoincrement().primaryKey(),
+  title: varchar("title", { length: 255 }).notNull(),
+  description: text("description"),
+  assigneeId: int("assignee_id"),
+  status: varchar("status", { length: 50 }).notNull().default("todo"),
+  priority: varchar("priority", { length: 20 }).notNull().default("medium"),
+  dueDate: timestamp("due_date"),
+  createdBy: int("created_by").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+export type TeamTask = typeof teamTasks.$inferSelect;
+
+export const teamDiscussions = mysqlTable("team_discussions", {
+  id: int("id").autoincrement().primaryKey(),
+  title: varchar("title", { length: 255 }).notNull(),
+  content: text("content").notNull(),
+  authorId: int("author_id").notNull(),
+  isPinned: int("is_pinned").notNull().default(0),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+export type TeamDiscussion = typeof teamDiscussions.$inferSelect;
+
+export const teamDiscussionReplies = mysqlTable("team_discussion_replies", {
+  id: int("id").autoincrement().primaryKey(),
+  discussionId: int("discussion_id").notNull(),
+  content: text("content").notNull(),
+  authorId: int("author_id").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+export type TeamDiscussionReply = typeof teamDiscussionReplies.$inferSelect;
+
+// Webhook delivery log
+export const webhookDeliveries = mysqlTable("webhook_deliveries", {
+  id: int("id").autoincrement().primaryKey(),
+  webhookId: varchar("webhook_id", { length: 100 }).notNull(),
+  eventType: varchar("event_type", { length: 100 }).notNull(),
+  targetUrl: varchar("target_url", { length: 500 }).notNull(),
+  requestPayload: json("request_payload"),
+  responseStatus: int("response_status"),
+  responseBody: text("response_body"),
+  deliveryStatus: varchar("delivery_status", { length: 20 }).notNull().default("pending"),
+  retryCount: int("retry_count").notNull().default(0),
+  nextRetryAt: timestamp("next_retry_at"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  completedAt: timestamp("completed_at"),
+});
+export type WebhookDelivery = typeof webhookDeliveries.$inferSelect;
+
+// AI usage metering
+export const aiUsageLog = mysqlTable("ai_usage_log", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("user_id").notNull(),
+  service: varchar("service", { length: 50 }).notNull(),
+  tokensInput: int("tokens_input").notNull().default(0),
+  tokensOutput: int("tokens_output").notNull().default(0),
+  costEstimate: varchar("cost_estimate", { length: 20 }).notNull().default("0.00"),
+  model: varchar("model", { length: 100 }),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+export type AiUsageLog = typeof aiUsageLog.$inferSelect;
+
+// Custom field definitions
+export const customFieldDefinitions = mysqlTable("custom_field_definitions", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 100 }).notNull(),
+  label: varchar("label", { length: 200 }).notNull(),
+  fieldType: varchar("field_type", { length: 30 }).notNull().default("text"),
+  options: json("options"),
+  category: varchar("category", { length: 100 }),
+  isRequired: int("is_required").notNull().default(0),
+  sortOrder: int("sort_order").notNull().default(0),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+export type CustomFieldDefinition = typeof customFieldDefinitions.$inferSelect;
+
+export const customFieldValues = mysqlTable("custom_field_values", {
+  id: int("id").autoincrement().primaryKey(),
+  fieldId: int("field_id").notNull(),
+  documentId: int("document_id").notNull(),
+  value: text("value"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+export type CustomFieldValue = typeof customFieldValues.$inferSelect;
+
+// Document workflow SLA
+export const workflowSlaConfig = mysqlTable("workflow_sla_config", {
+  id: int("id").autoincrement().primaryKey(),
+  stage: varchar("stage", { length: 50 }).notNull(),
+  maxHours: int("max_hours").notNull().default(48),
+  alertEmail: varchar("alert_email", { length: 255 }),
+  isActive: int("is_active").notNull().default(1),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+export type WorkflowSlaConfig = typeof workflowSlaConfig.$inferSelect;
+
+export const workflowSlaBreaches = mysqlTable("workflow_sla_breaches", {
+  id: int("id").autoincrement().primaryKey(),
+  documentId: int("document_id").notNull(),
+  stage: varchar("stage", { length: 50 }).notNull(),
+  enteredAt: timestamp("entered_at").notNull(),
+  breachedAt: timestamp("breached_at").notNull().defaultNow(),
+  resolvedAt: timestamp("resolved_at"),
+  maxHours: int("max_hours").notNull(),
+});
+export type WorkflowSlaBreach = typeof workflowSlaBreaches.$inferSelect;

@@ -174,6 +174,13 @@ import UsageBillingPage from "./pages/UsageBillingPage";
 import ApiKeyManagementPage from "./pages/ApiKeyManagementPage";
 import NotificationPrefsPage from "./pages/NotificationPrefsPage";
 import AdminCommandCenterPage from "./pages/AdminCommandCenterPage";
+import GlobalCommandPalette from "./components/GlobalCommandPalette";
+import DocumentVersionRestorePage from "./pages/DocumentVersionRestorePage";
+import ExportCenterPage from "./pages/ExportCenterPage";
+import AdminImpersonationPage from "./pages/AdminImpersonationPage";
+import CustomFieldsPage from "./pages/CustomFieldsPage";
+import WorkflowSlaPage from "./pages/WorkflowSlaPage";
+import PlatformChangelogPage from "./pages/PlatformChangelogPage";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -342,6 +349,12 @@ function Router() {
       <Route path="/settings/api-keys" component={ApiKeyManagementPage} />
       <Route path="/settings/notifications" component={NotificationPrefsPage} />
       <Route path="/admin/command-center" component={AdminCommandCenterPage} />
+      <Route path="/admin/version-restore" component={DocumentVersionRestorePage} />
+      <Route path="/admin/export-center" component={ExportCenterPage} />
+      <Route path="/admin/impersonation" component={AdminImpersonationPage} />
+      <Route path="/admin/custom-fields" component={CustomFieldsPage} />
+      <Route path="/admin/workflow-sla" component={WorkflowSlaPage} />
+      <Route path="/platform/changelog" component={PlatformChangelogPage} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />
@@ -377,6 +390,7 @@ function App() {
           <MobileBottomNav />
           <AdminQuickActionToolbar />
           <WizardRedirectGuard />
+          <GlobalCommandPalette />
         </TooltipProvider>
       </ThemeProvider>
     </ErrorBoundary>

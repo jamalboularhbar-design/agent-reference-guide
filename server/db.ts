@@ -1,6 +1,6 @@
 import { eq, like, or, sql, desc, asc, count, and } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, documents, documentRatings, readingLists, readingListItems, searchAnalytics, documentTags, documentComments, documentVersions, customCategories, downloadHistory, announcements, activityLog, documentAuditTrail, bookmarkNotes, shareLinks, scheduledPublish, inlineComments, brandingSettings, webhooks, recentlyViewed, documentFeedback, categoryOrdering, documentSubscriptions, subscriptionNotifications, userReadingPosition, searchHistory, aiSummaries, documentTranslations, userPreferences, readingStreakLeaderboard, glossaryTerms, documentDependencies, readingGoals, readingProgress, documentTemplates, savedFilters, documentQuizzes, reviewReminders, documentAnnotations, documentCollections, collectionItems, workflowStatuses, workflowTransitions, documentWorkflowStatus, archivalPolicies, archivedDocuments, contentGapSuggestions, duplicateContentPairs, activityFeed, documentSnapshots, readingCorrelations, quizResults, documentSeoMeta, systemNotificationLog, adminPermissions, approvalSlaConfig, webhookEventLog, documentAccessRequests, onboardingProgress, documentCitations, readingSessions, documentQualityAudits, emailDigestConfig, documentMedia, workspaces, workspaceMembers, reviewSchedules, coAuthorActivity, migrationJobs, sentimentScores, retentionPolicies, accessibilityChecks, customReports, pushNotifications, templateMarketplace, templateRatings, complianceReports, documentChangeLog, userLandingPreference, bulkExportJobs, documentCrossReferences, userEngagementScorecard, scheduledAnnouncements, dashboardWidgetConfig, brokenLinkScans, savedSearchFilters, duplicateContentScans, userDocCollections, userDocCollectionItems, performanceBenchmarks, leads, inviteTokens, trials, nurturEmails, referrals, onboardingWizardState, aiConfig, apiKeys } from "../drizzle/schema";
+import { InsertUser, users, documents, documentRatings, readingLists, readingListItems, searchAnalytics, documentTags, documentComments, documentVersions, customCategories, downloadHistory, announcements, activityLog, documentAuditTrail, bookmarkNotes, shareLinks, scheduledPublish, inlineComments, brandingSettings, webhooks, recentlyViewed, documentFeedback, categoryOrdering, documentSubscriptions, subscriptionNotifications, userReadingPosition, searchHistory, aiSummaries, documentTranslations, userPreferences, readingStreakLeaderboard, glossaryTerms, documentDependencies, readingGoals, readingProgress, documentTemplates, savedFilters, documentQuizzes, reviewReminders, documentAnnotations, documentCollections, collectionItems, workflowStatuses, workflowTransitions, documentWorkflowStatus, archivalPolicies, archivedDocuments, contentGapSuggestions, duplicateContentPairs, activityFeed, documentSnapshots, readingCorrelations, quizResults, documentSeoMeta, systemNotificationLog, adminPermissions, approvalSlaConfig, webhookEventLog, documentAccessRequests, onboardingProgress, documentCitations, readingSessions, documentQualityAudits, emailDigestConfig, documentMedia, workspaces, workspaceMembers, reviewSchedules, coAuthorActivity, migrationJobs, sentimentScores, retentionPolicies, accessibilityChecks, customReports, pushNotifications, templateMarketplace, templateRatings, complianceReports, documentChangeLog, userLandingPreference, bulkExportJobs, documentCrossReferences, userEngagementScorecard, scheduledAnnouncements, dashboardWidgetConfig, brokenLinkScans, savedSearchFilters, duplicateContentScans, userDocCollections, userDocCollectionItems, performanceBenchmarks, leads, inviteTokens, trials, nurturEmails, referrals, onboardingWizardState, aiConfig, apiKeys, teamTasks, teamDiscussions, teamDiscussionReplies, webhookDeliveries, aiUsageLog, customFieldDefinitions, customFieldValues, workflowSlaConfig, workflowSlaBreaches } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -4914,4 +4914,190 @@ export async function getAllApiKeys() {
   const db = await getDb();
   if (!db) return [];
   return db.select().from(apiKeys).orderBy(desc(apiKeys.createdAt));
+}
+
+// ─── Team Workspace ─────────────────────────────────────────────────────────
+
+export async function getTeamTasks(opts?: { status?: string }) {
+  const db = await getDb();
+  if (!db) return [];
+  if (opts?.status && opts.status !== 'all') {
+    return db.select().from(teamTasks).where(eq(teamTasks.status, opts.status)).orderBy(desc(teamTasks.createdAt));
+  }
+  return db.select().from(teamTasks).orderBy(desc(teamTasks.createdAt));
+}
+
+export async function createTeamTask(data: { title: string; description?: string; assigneeId?: number; priority?: string; dueDate?: Date; createdBy: number }) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+  const result = await db.insert(teamTasks).values(data).$returningId();
+  return result[0].id;
+}
+
+export async function updateTeamTask(id: number, data: { title?: string; description?: string; status?: string; priority?: string; assigneeId?: number; dueDate?: Date | null }) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+  await db.update(teamTasks).set({ ...data, updatedAt: new Date() }).where(eq(teamTasks.id, id));
+}
+
+export async function deleteTeamTask(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+  await db.delete(teamTasks).where(eq(teamTasks.id, id));
+}
+
+export async function getTeamDiscussions() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(teamDiscussions).orderBy(desc(teamDiscussions.isPinned), desc(teamDiscussions.createdAt));
+}
+
+export async function createTeamDiscussion(data: { title: string; content: string; authorId: number }) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+  const result = await db.insert(teamDiscussions).values(data).$returningId();
+  return result[0].id;
+}
+
+export async function getDiscussionReplies(discussionId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(teamDiscussionReplies).where(eq(teamDiscussionReplies.discussionId, discussionId)).orderBy(asc(teamDiscussionReplies.createdAt));
+}
+
+export async function createDiscussionReply(data: { discussionId: number; content: string; authorId: number }) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+  await db.insert(teamDiscussionReplies).values(data);
+}
+
+// ─── Webhook Deliveries ─────────────────────────────────────────────────────
+
+export async function logWebhookDelivery(data: { webhookId: string; eventType: string; targetUrl: string; requestPayload?: any; responseStatus?: number; responseBody?: string; deliveryStatus: string }) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+  await db.insert(webhookDeliveries).values(data);
+}
+
+export async function getWebhookDeliveries(opts?: { webhookId?: string; limit?: number }) {
+  const db = await getDb();
+  if (!db) return [];
+  const limit = opts?.limit || 50;
+  if (opts?.webhookId) {
+    return db.select().from(webhookDeliveries).where(eq(webhookDeliveries.webhookId, opts.webhookId)).orderBy(desc(webhookDeliveries.createdAt)).limit(limit);
+  }
+  return db.select().from(webhookDeliveries).orderBy(desc(webhookDeliveries.createdAt)).limit(limit);
+}
+
+export async function updateWebhookDeliveryStatus(id: number, data: { deliveryStatus: string; responseStatus?: number; responseBody?: string; retryCount?: number }) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+  await db.update(webhookDeliveries).set({ ...data, completedAt: new Date() }).where(eq(webhookDeliveries.id, id));
+}
+
+// ─── AI Usage Metering ──────────────────────────────────────────────────────
+
+export async function logAiUsage(data: { userId: number; service: string; tokensInput: number; tokensOutput: number; costEstimate: string; model?: string }) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+  await db.insert(aiUsageLog).values(data);
+}
+
+export async function getAiUsageByUser(userId: number, opts?: { limit?: number }) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(aiUsageLog).where(eq(aiUsageLog.userId, userId)).orderBy(desc(aiUsageLog.createdAt)).limit(opts?.limit || 100);
+}
+
+export async function getAiUsageSummary() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select({
+    service: aiUsageLog.service,
+    totalInput: sql<number>`SUM(${aiUsageLog.tokensInput})`,
+    totalOutput: sql<number>`SUM(${aiUsageLog.tokensOutput})`,
+    totalCalls: count(),
+  }).from(aiUsageLog).groupBy(aiUsageLog.service);
+}
+
+// ─── Custom Fields ──────────────────────────────────────────────────────────
+
+export async function getCustomFieldDefinitions(category?: string) {
+  const db = await getDb();
+  if (!db) return [];
+  if (category) {
+    return db.select().from(customFieldDefinitions).where(eq(customFieldDefinitions.category, category)).orderBy(asc(customFieldDefinitions.sortOrder));
+  }
+  return db.select().from(customFieldDefinitions).orderBy(asc(customFieldDefinitions.sortOrder));
+}
+
+export async function createCustomField(data: { name: string; label: string; fieldType: string; options?: any; category?: string; isRequired?: number; sortOrder?: number }) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+  const result = await db.insert(customFieldDefinitions).values(data).$returningId();
+  return result[0].id;
+}
+
+export async function deleteCustomField(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+  await db.delete(customFieldValues).where(eq(customFieldValues.fieldId, id));
+  await db.delete(customFieldDefinitions).where(eq(customFieldDefinitions.id, id));
+}
+
+export async function getCustomFieldValues(documentId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(customFieldValues).where(eq(customFieldValues.documentId, documentId));
+}
+
+export async function upsertCustomFieldValue(data: { fieldId: number; documentId: number; value: string }) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+  const existing = await db.select().from(customFieldValues).where(and(eq(customFieldValues.fieldId, data.fieldId), eq(customFieldValues.documentId, data.documentId))).limit(1);
+  if (existing.length > 0) {
+    await db.update(customFieldValues).set({ value: data.value, updatedAt: new Date() }).where(eq(customFieldValues.id, existing[0].id));
+  } else {
+    await db.insert(customFieldValues).values(data);
+  }
+}
+
+// ─── Workflow SLA ───────────────────────────────────────────────────────────
+
+export async function getWorkflowSlaConfigs() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(workflowSlaConfig).orderBy(asc(workflowSlaConfig.stage));
+}
+
+export async function upsertWorkflowSlaConfig(data: { stage: string; maxHours: number; alertEmail?: string; isActive?: number }) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+  const existing = await db.select().from(workflowSlaConfig).where(eq(workflowSlaConfig.stage, data.stage)).limit(1);
+  if (existing.length > 0) {
+    await db.update(workflowSlaConfig).set(data).where(eq(workflowSlaConfig.id, existing[0].id));
+  } else {
+    await db.insert(workflowSlaConfig).values(data);
+  }
+}
+
+export async function getWorkflowSlaBreaches(opts?: { resolved?: boolean }) {
+  const db = await getDb();
+  if (!db) return [];
+  if (opts?.resolved === false) {
+    return db.select().from(workflowSlaBreaches).where(sql`${workflowSlaBreaches.resolvedAt} IS NULL`).orderBy(desc(workflowSlaBreaches.breachedAt));
+  }
+  return db.select().from(workflowSlaBreaches).orderBy(desc(workflowSlaBreaches.breachedAt)).limit(100);
+}
+
+export async function createSlaBreach(data: { documentId: number; stage: string; enteredAt: Date; maxHours: number }) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+  await db.insert(workflowSlaBreaches).values(data);
+}
+
+export async function resolveSlaBreach(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+  await db.update(workflowSlaBreaches).set({ resolvedAt: new Date() }).where(eq(workflowSlaBreaches.id, id));
 }

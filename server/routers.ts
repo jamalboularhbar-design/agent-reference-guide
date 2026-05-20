@@ -135,6 +135,12 @@ import {
   getWizardState, saveWizardState,
   getAllAiConfigs, getAiConfigByService, upsertAiConfig, incrementAiUsage,
   getApiKeysByUser, createApiKey, revokeApiKey, getAllApiKeys,
+  getTeamTasks, createTeamTask, updateTeamTask, deleteTeamTask,
+  getTeamDiscussions, createTeamDiscussion, getDiscussionReplies, createDiscussionReply,
+  logWebhookDelivery, getWebhookDeliveries, updateWebhookDeliveryStatus,
+  logAiUsage, getAiUsageByUser, getAiUsageSummary,
+  getCustomFieldDefinitions, createCustomField, deleteCustomField, getCustomFieldValues, upsertCustomFieldValue,
+  getWorkflowSlaConfigs, upsertWorkflowSlaConfig, getWorkflowSlaBreaches, createSlaBreach, resolveSlaBreach,
 } from "./db";
 import { invokeLLM } from "./_core/llm";
 import { notifyOwner } from "./_core/notification";
@@ -2959,6 +2965,156 @@ export const appRouter = router({
       .input(z.object({ keyId: z.number() }))
       .mutation(async ({ ctx, input }) => {
         await revokeApiKey(input.keyId, ctx.user.id);
+        return { success: true };
+      }),
+  }),
+
+  // ─── Team Workspace ─────────────────────────────────────────────────────
+  teamWorkspace: router({
+    getTasks: protectedProcedure
+      .input(z.object({ status: z.string().optional() }).optional())
+      .query(async ({ input }) => {
+        return getTeamTasks(input || undefined);
+      }),
+    createTask: protectedProcedure
+      .input(z.object({ title: z.string(), description: z.string().optional(), assigneeId: z.number().optional(), priority: z.string().optional(), dueDate: z.date().optional() }))
+      .mutation(async ({ ctx, input }) => {
+        const id = await createTeamTask({ ...input, createdBy: ctx.user.id });
+        return { id };
+      }),
+    updateTask: protectedProcedure
+      .input(z.object({ id: z.number(), title: z.string().optional(), description: z.string().optional(), status: z.string().optional(), priority: z.string().optional(), assigneeId: z.number().optional(), dueDate: z.date().nullable().optional() }))
+      .mutation(async ({ input }) => {
+        const { id, ...data } = input;
+        await updateTeamTask(id, data);
+        return { success: true };
+      }),
+    deleteTask: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        await deleteTeamTask(input.id);
+        return { success: true };
+      }),
+    getDiscussions: protectedProcedure.query(async () => {
+      return getTeamDiscussions();
+    }),
+    createDiscussion: protectedProcedure
+      .input(z.object({ title: z.string(), content: z.string() }))
+      .mutation(async ({ ctx, input }) => {
+        const id = await createTeamDiscussion({ ...input, authorId: ctx.user.id });
+        return { id };
+      }),
+    getReplies: protectedProcedure
+      .input(z.object({ discussionId: z.number() }))
+      .query(async ({ input }) => {
+        return getDiscussionReplies(input.discussionId);
+      }),
+    createReply: protectedProcedure
+      .input(z.object({ discussionId: z.number(), content: z.string() }))
+      .mutation(async ({ ctx, input }) => {
+        await createDiscussionReply({ ...input, authorId: ctx.user.id });
+        return { success: true };
+      }),
+  }),
+
+  // ─── Webhook Deliveries ─────────────────────────────────────────────────
+  webhookDelivery: router({
+    log: protectedProcedure
+      .input(z.object({ webhookId: z.string(), eventType: z.string(), targetUrl: z.string(), requestPayload: z.any().optional(), responseStatus: z.number().optional(), responseBody: z.string().optional(), deliveryStatus: z.string() }))
+      .mutation(async ({ input }) => {
+        await logWebhookDelivery(input);
+        return { success: true };
+      }),
+    list: protectedProcedure
+      .input(z.object({ webhookId: z.string().optional(), limit: z.number().optional() }).optional())
+      .query(async ({ input }) => {
+        return getWebhookDeliveries(input || undefined);
+      }),
+    updateStatus: protectedProcedure
+      .input(z.object({ id: z.number(), deliveryStatus: z.string(), responseStatus: z.number().optional(), responseBody: z.string().optional(), retryCount: z.number().optional() }))
+      .mutation(async ({ input }) => {
+        const { id, ...data } = input;
+        await updateWebhookDeliveryStatus(id, data);
+        return { success: true };
+      }),
+  }),
+
+  // ─── AI Usage Metering ──────────────────────────────────────────────────
+  aiUsageMetering: router({
+    log: protectedProcedure
+      .input(z.object({ service: z.string(), tokensInput: z.number(), tokensOutput: z.number(), costEstimate: z.string(), model: z.string().optional() }))
+      .mutation(async ({ ctx, input }) => {
+        await logAiUsage({ ...input, userId: ctx.user.id });
+        return { success: true };
+      }),
+    myUsage: protectedProcedure
+      .input(z.object({ limit: z.number().optional() }).optional())
+      .query(async ({ ctx, input }) => {
+        return getAiUsageByUser(ctx.user.id, input || undefined);
+      }),
+    summary: adminProcedure.query(async () => {
+      return getAiUsageSummary();
+    }),
+  }),
+
+  // ─── Custom Fields ─────────────────────────────────────────────────────
+  customFields: router({
+    getDefinitions: protectedProcedure
+      .input(z.object({ category: z.string().optional() }).optional())
+      .query(async ({ input }) => {
+        return getCustomFieldDefinitions(input?.category);
+      }),
+    createField: adminProcedure
+      .input(z.object({ name: z.string(), label: z.string(), fieldType: z.string(), options: z.any().optional(), category: z.string().optional(), isRequired: z.number().optional(), sortOrder: z.number().optional() }))
+      .mutation(async ({ input }) => {
+        const id = await createCustomField(input);
+        return { id };
+      }),
+    deleteField: adminProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        await deleteCustomField(input.id);
+        return { success: true };
+      }),
+    getValues: protectedProcedure
+      .input(z.object({ documentId: z.number() }))
+      .query(async ({ input }) => {
+        return getCustomFieldValues(input.documentId);
+      }),
+    setValue: protectedProcedure
+      .input(z.object({ fieldId: z.number(), documentId: z.number(), value: z.string() }))
+      .mutation(async ({ input }) => {
+        await upsertCustomFieldValue(input);
+        return { success: true };
+      }),
+  }),
+
+  // ─── Workflow SLA ──────────────────────────────────────────────────────
+  workflowSla: router({
+    getConfigs: adminProcedure.query(async () => {
+      return getWorkflowSlaConfigs();
+    }),
+    upsertConfig: adminProcedure
+      .input(z.object({ stage: z.string(), maxHours: z.number(), alertEmail: z.string().optional(), isActive: z.number().optional() }))
+      .mutation(async ({ input }) => {
+        await upsertWorkflowSlaConfig(input);
+        return { success: true };
+      }),
+    getBreaches: adminProcedure
+      .input(z.object({ resolved: z.boolean().optional() }).optional())
+      .query(async ({ input }) => {
+        return getWorkflowSlaBreaches(input || undefined);
+      }),
+    createBreach: adminProcedure
+      .input(z.object({ documentId: z.number(), stage: z.string(), enteredAt: z.date(), maxHours: z.number() }))
+      .mutation(async ({ input }) => {
+        await createSlaBreach(input);
+        return { success: true };
+      }),
+    resolveBreach: adminProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        await resolveSlaBreach(input.id);
         return { success: true };
       }),
   }),

@@ -531,3 +531,16 @@
 - [x] Create API key management page (/settings/api-keys — generate/revoke keys, set scopes, usage tracking per key, expiry dates)
 - [x] Add notification preferences center (/settings/notifications — per-channel toggles, digest frequency, quiet hours, 8 categories)
 - [x] Build admin command center (/admin/command-center — unified searchable quick-actions panel, 18 actions, keyboard shortcut ⌘K)
+
+## Batch 15: Enterprise Readiness & Production Infrastructure
+
+- [x] Add global ⌘K command palette overlay (keyboard shortcut from any page, search actions/pages/docs, fuzzy match, recent commands)
+- [x] Persist team workspace to database (tasks, discussions, file refs saved to DB via tRPC, load on mount, real-time sync)
+- [x] Wire webhook builder deliveries to database (log each delivery attempt, status, response code, retry count, searchable history)
+- [x] Add document version restore (click any version in history to restore it as current, with confirmation dialog and audit log)
+- [x] Persist AI usage metering to database (track tokens consumed per service per user, daily aggregation, cost calculation)
+- [x] Build unified export center (/admin/export-center — queue and download bulk exports: docs, analytics, audit logs, user data as CSV/JSON/PDF)
+- [x] Add admin impersonation mode (/admin/impersonation — view platform as specific user, read-only, visible banner, audit logged)
+- [x] Create custom field definitions system (/admin/custom-fields — define custom metadata fields per category, CRUD with DB persistence)
+- [x] Add document workflow SLA tracking (/admin/workflow-sla — set max time per stage, breach alerts, resolve breaches, compliance dashboard)
+- [x] Build platform changelog with release notes (/platform/changelog — version timeline, type filters, 8 releases documented)

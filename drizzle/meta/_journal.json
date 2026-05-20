@@ -232,6 +232,13 @@
       "when": 1779257045019,
       "tag": "0032_sloppy_bill_hollister",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "5",
+      "when": 1779258685170,
+      "tag": "0033_vengeful_betty_ross",
+      "breakpoints": true
     }
   ]
 }
