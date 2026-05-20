@@ -193,6 +193,13 @@ import GuestAnticipationPage from "./pages/GuestAnticipationPage";
 import ProviderSLAPage from "./pages/ProviderSLAPage";
 import ProviderCommissionsPage from "./pages/ProviderCommissionsPage";
 import ProviderOnboardingPage from "./pages/ProviderOnboardingPage";
+import WhatsAppTemplatesPage from "./pages/WhatsAppTemplatesPage";
+import ProviderComparePage from "./pages/ProviderComparePage";
+import GuestMatchingPage from "./pages/GuestMatchingPage";
+import PreArrivalChecklistPage from "./pages/PreArrivalChecklistPage";
+import RevenueAnalyticsPage from "./pages/RevenueAnalyticsPage";
+import IncidentLogPage from "./pages/IncidentLogPage";
+import TeamDirectoryPage from "./pages/TeamDirectoryPage";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -379,6 +386,13 @@ function Router() {
       <Route path="/provider-sla" component={ProviderSLAPage} />
       <Route path="/provider-commissions" component={ProviderCommissionsPage} />
       <Route path="/provider-onboarding" component={ProviderOnboardingPage} />
+      <Route path="/whatsapp-templates" component={WhatsAppTemplatesPage} />
+      <Route path="/provider-compare" component={ProviderComparePage} />
+      <Route path="/guest-matching" component={GuestMatchingPage} />
+      <Route path="/pre-arrival-checklist" component={PreArrivalChecklistPage} />
+      <Route path="/revenue-analytics" component={RevenueAnalyticsPage} />
+      <Route path="/incident-log" component={IncidentLogPage} />
+      <Route path="/team-directory" component={TeamDirectoryPage} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />

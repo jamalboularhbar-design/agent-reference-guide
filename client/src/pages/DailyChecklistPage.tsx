@@ -1,8 +1,10 @@
 import { useState, useMemo } from 'react';
 import { useLocation } from 'wouter';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, CheckSquare, Square, Clock, Sun, Moon, Coffee, Plane, Palette, Calendar, RotateCcw } from 'lucide-react';
+import { trpc } from '@/lib/trpc';
+import { toast } from 'sonner';
 
 type Persona = 'riad-routes' | 'artkech';
 type TimeOfDay = 'morning' | 'afternoon' | 'evening';
@@ -15,6 +17,15 @@ interface ChecklistItem {
   duration: string;
   responsible: string;
   sourceDoc?: string;
+}
+
+function getVisitorId(): string {
+  let id = localStorage.getItem('visitor_id');
+  if (!id) {
+    id = 'v_' + Math.random().toString(36).substring(2) + Date.now().toString(36);
+    localStorage.setItem('visitor_id', id);
+  }
+  return id;
 }
 
 const RR_CHECKLISTS: ChecklistItem[] = [
@@ -62,8 +73,26 @@ const AK_CHECKLISTS: ChecklistItem[] = [
 export default function DailyChecklistPage() {
   const [, navigate] = useLocation();
   const [activePersona, setActivePersona] = useState<Persona>('riad-routes');
-  const [completedItems, setCompletedItems] = useState<Set<string>>(new Set());
   const [filterTime, setFilterTime] = useState<TimeOfDay | 'all'>('all');
+
+  const visitorId = useMemo(() => getVisitorId(), []);
+  const todayStr = useMemo(() => new Date().toISOString().split('T')[0], []);
+
+  // Fetch persisted completions from DB
+  const { data: completions, refetch } = trpc.checklist.getCompletions.useQuery(
+    { visitorId, persona: activePersona, date: todayStr },
+    { staleTime: 10000 }
+  );
+
+  const toggleMutation = trpc.checklist.toggle.useMutation({
+    onSuccess: () => { refetch(); },
+    onError: () => { toast.error('Failed to save checklist state'); }
+  });
+
+  const completedItems = useMemo(() => {
+    if (!completions) return new Set<string>();
+    return new Set(completions.map((c: { itemId: string }) => c.itemId));
+  }, [completions]);
 
   const checklist = activePersona === 'riad-routes' ? RR_CHECKLISTS : AK_CHECKLISTS;
 
@@ -73,15 +102,8 @@ export default function DailyChecklistPage() {
   }, [checklist, filterTime]);
 
   const toggleItem = (id: string) => {
-    setCompletedItems(prev => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
+    toggleMutation.mutate({ visitorId, persona: activePersona, itemId: id, date: todayStr });
   };
-
-  const resetChecklist = () => setCompletedItems(new Set());
 
   const completionRate = checklist.length > 0
     ? Math.round((Array.from(completedItems).filter(id => checklist.some(c => c.id === id)).length / checklist.length) * 100)
@@ -128,13 +150,13 @@ export default function DailyChecklistPage() {
           </div>
           <div className="flex gap-2">
             <button
-              onClick={() => { setActivePersona('riad-routes'); setCompletedItems(new Set()); }}
+              onClick={() => setActivePersona('riad-routes')}
               className={`flex items-center gap-2 px-4 py-2 rounded-lg border text-sm transition-colors ${activePersona === 'riad-routes' ? 'bg-accent text-accent-foreground border-accent' : 'border-border hover:border-accent/50'}`}
             >
               <Plane className="w-4 h-4" /> Riad & Routes
             </button>
             <button
-              onClick={() => { setActivePersona('artkech'); setCompletedItems(new Set()); }}
+              onClick={() => setActivePersona('artkech')}
               className={`flex items-center gap-2 px-4 py-2 rounded-lg border text-sm transition-colors ${activePersona === 'artkech' ? 'bg-accent text-accent-foreground border-accent' : 'border-border hover:border-accent/50'}`}
             >
               <Palette className="w-4 h-4" /> ArtKech Studio
@@ -146,9 +168,7 @@ export default function DailyChecklistPage() {
         <div className="space-y-2">
           <div className="flex justify-between text-sm text-muted-foreground">
             <span>{Array.from(completedItems).filter(id => checklist.some(c => c.id === id)).length} of {checklist.length} tasks completed</span>
-            <button onClick={resetChecklist} className="flex items-center gap-1 hover:text-foreground transition-colors">
-              <RotateCcw className="w-3 h-3" /> Reset
-            </button>
+            <span className="text-xs text-muted-foreground/60">Auto-saved to database</span>
           </div>
           <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
             <div className="h-full bg-accent rounded-full transition-all duration-300" style={{ width: `${completionRate}%` }} />

@@ -575,3 +575,17 @@
 - [x] Build Provider Onboarding Checklist (/provider-onboarding — 12-step partner onboarding process with deliverables and timelines)
 - [x] Build Provider SLA Dashboard (/provider-sla — 12 service level metrics with target/performance tracking and status indicators)
 - [x] Build Provider Commissions page (/provider-commissions — commission tiers, seasonal rates, payment tracking)
+
+## Batch 19: Persistence Wiring + Provider Ops Depth
+
+- [x] Wire DailyChecklistPage to tRPC checklist.toggle/getCompletions for cross-session persistence
+- [x] Wire ShiftHandoverPage to tRPC handover.create/list/resolve for cross-session persistence
+- [x] Seed 8 real-world luxury riad/hotel providers into the database (Riad Yasmine, Royal Mansour, La Mamounia, Riad Kniza, etc.)
+- [x] Build WhatsApp message templates page (/whatsapp-templates — standardized provider communication templates for booking confirmations, special requests, escalations)
+- [x] Build Provider Performance Comparison page (/provider-compare — side-by-side comparison of provider metrics, response times, guest ratings)
+- [x] Build Guest-Provider Matching Intelligence (/guest-matching — preference-based provider recommendations with scoring algorithm)
+- [x] Build Pre-Arrival Coordination Checklist (/pre-arrival-checklist — 12-step provider coordination before guest arrival)
+- [x] Build Revenue & Booking Analytics page (/revenue-analytics — monthly performance, provider revenue breakdown, commission tracking)
+- [x] Build Incident Log page (/incident-log — track and resolve operational incidents per persona with severity/status)
+- [x] Build Team Contact Directory (/team-directory — searchable team member list with roles, contacts, availability per persona)
+- [x] Push Batch 19 results to Notion ARG-Builder hub

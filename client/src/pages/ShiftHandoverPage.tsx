@@ -1,29 +1,24 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useLocation } from 'wouter';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, ClipboardList, Plus, Trash2, Clock, AlertTriangle, CheckCircle, User, Plane, Palette } from 'lucide-react';
+import { ArrowLeft, ClipboardList, Plus, Clock, AlertTriangle, CheckCircle, User, Plane, Palette, Check } from 'lucide-react';
+import { trpc } from '@/lib/trpc';
+import { toast } from 'sonner';
 
 type Persona = 'riad-routes' | 'artkech';
 type Priority = 'urgent' | 'normal' | 'info';
 
-interface HandoverItem {
-  id: string;
-  content: string;
-  priority: Priority;
-  category: string;
+function getVisitorId(): string {
+  let id = localStorage.getItem('visitor_id');
+  if (!id) {
+    id = 'v_' + Math.random().toString(36).substring(2) + Date.now().toString(36);
+    localStorage.setItem('visitor_id', id);
+  }
+  return id;
 }
 
-interface HandoverNote {
-  id: string;
-  shift: string;
-  author: string;
-  timestamp: string;
-  items: HandoverItem[];
-  persona: Persona;
-}
-
-const RR_CATEGORIES = ['Guest Issues', 'Maintenance', 'Arrivals/Departures', 'VIP Notes', 'Supplier Updates', 'Security', 'F&B', 'General'];
+const RR_CATEGORIES = ['Guest Issues', 'Provider Coordination', 'Arrivals/Departures', 'VIP Notes', 'Supplier Updates', 'Security', 'F&B', 'General'];
 const AK_CATEGORIES = ['Client Deadlines', 'Design Reviews', 'Print Jobs', 'Freelancer Updates', 'Client Feedback', 'Equipment', 'Billing', 'General'];
 
 export default function ShiftHandoverPage() {
@@ -31,55 +26,72 @@ export default function ShiftHandoverPage() {
   const [activePersona, setActivePersona] = useState<Persona>('riad-routes');
   const [currentShift, setCurrentShift] = useState('');
   const [authorName, setAuthorName] = useState('');
-  const [items, setItems] = useState<HandoverItem[]>([]);
   const [newContent, setNewContent] = useState('');
   const [newPriority, setNewPriority] = useState<Priority>('normal');
   const [newCategory, setNewCategory] = useState('General');
-  const [savedNotes, setSavedNotes] = useState<HandoverNote[]>([]);
+
+  const visitorId = useMemo(() => getVisitorId(), []);
+  const todayStr = useMemo(() => new Date().toISOString().split('T')[0], []);
 
   const categories = activePersona === 'riad-routes' ? RR_CATEGORIES : AK_CATEGORIES;
 
-  const addItem = () => {
-    if (!newContent.trim()) return;
-    setItems(prev => [...prev, {
-      id: Date.now().toString(),
-      content: newContent.trim(),
+  // Fetch persisted handover notes from DB
+  const { data: handoverNotes, refetch } = trpc.handover.list.useQuery(
+    { persona: activePersona },
+    { staleTime: 10000 }
+  );
+
+  const createMutation = trpc.handover.create.useMutation({
+    onSuccess: () => {
+      toast.success('Handover item saved');
+      setNewContent('');
+      refetch();
+    },
+    onError: () => { toast.error('Failed to save handover item'); }
+  });
+
+  const resolveMutation = trpc.handover.resolve.useMutation({
+    onSuccess: () => {
+      toast.success('Item resolved');
+      refetch();
+    },
+    onError: () => { toast.error('Failed to resolve item'); }
+  });
+
+  const submitItem = () => {
+    if (!newContent.trim() || !currentShift || !authorName.trim()) {
+      toast.error('Please fill in your name, shift, and content');
+      return;
+    }
+    createMutation.mutate({
+      visitorId,
+      persona: activePersona,
       priority: newPriority,
-      category: newCategory
-    }]);
-    setNewContent('');
+      category: newCategory,
+      content: `[${authorName}] ${newContent.trim()}`,
+      shiftDate: todayStr,
+      shiftType: currentShift,
+    });
   };
 
-  const removeItem = (id: string) => {
-    setItems(prev => prev.filter(i => i.id !== id));
+  const resolveItem = (id: number) => {
+    resolveMutation.mutate({ id });
   };
 
-  const saveHandover = () => {
-    if (!items.length || !currentShift || !authorName) return;
-    const note: HandoverNote = {
-      id: Date.now().toString(),
-      shift: currentShift,
-      author: authorName,
-      timestamp: new Date().toLocaleString(),
-      items: [...items],
-      persona: activePersona
-    };
-    setSavedNotes(prev => [note, ...prev]);
-    setItems([]);
-    setCurrentShift('');
-  };
-
-  const priorityIcon = (p: Priority) => {
+  const priorityIcon = (p: string) => {
     if (p === 'urgent') return <AlertTriangle className="w-3 h-3 text-red-400" />;
     if (p === 'normal') return <Clock className="w-3 h-3 text-amber-400" />;
     return <CheckCircle className="w-3 h-3 text-blue-400" />;
   };
 
-  const priorityStyle = (p: Priority) => {
+  const priorityStyle = (p: string) => {
     if (p === 'urgent') return 'border-l-red-500 bg-red-500/5';
     if (p === 'normal') return 'border-l-amber-500 bg-amber-500/5';
     return 'border-l-blue-500 bg-blue-500/5';
   };
+
+  const activeNotes = (handoverNotes || []).filter((n: any) => !n.resolvedAt);
+  const resolvedNotes = (handoverNotes || []).filter((n: any) => n.resolvedAt);
 
   return (
     <div className="min-h-screen bg-background">
@@ -90,6 +102,7 @@ export default function ShiftHandoverPage() {
           </button>
           <ClipboardList className="w-5 h-5 text-accent" />
           <h1 className="text-lg font-bold">Shift Handover Notes</h1>
+          <Badge variant="secondary" className="ml-auto">{activeNotes.length} active</Badge>
         </div>
       </header>
 
@@ -115,7 +128,7 @@ export default function ShiftHandoverPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Plus className="w-5 h-5 text-accent" />
-              Create Handover Note
+              Add Handover Item
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -173,72 +186,64 @@ export default function ShiftHandoverPage() {
                   {categories.map(c => <option key={c} value={c}>{c}</option>)}
                 </select>
                 <button
-                  onClick={addItem}
-                  disabled={!newContent.trim()}
+                  onClick={submitItem}
+                  disabled={!newContent.trim() || !currentShift || !authorName.trim() || createMutation.isPending}
                   className="ml-auto px-3 py-1.5 rounded-lg bg-accent text-accent-foreground text-sm font-medium disabled:opacity-50"
                 >
-                  Add Item
+                  {createMutation.isPending ? 'Saving...' : 'Submit Item'}
                 </button>
               </div>
             </div>
-
-            {/* Current Items */}
-            {items.length > 0 && (
-              <div className="space-y-2">
-                <p className="text-sm font-medium text-muted-foreground">{items.length} items to hand over:</p>
-                {items.map(item => (
-                  <div key={item.id} className={`flex items-start gap-2 p-2 rounded-lg border-l-4 ${priorityStyle(item.priority)}`}>
-                    {priorityIcon(item.priority)}
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm">{item.content}</p>
-                      <span className="text-xs text-muted-foreground">{item.category}</span>
-                    </div>
-                    <button onClick={() => removeItem(item.id)} className="text-muted-foreground hover:text-red-400">
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* Save Button */}
-            <button
-              onClick={saveHandover}
-              disabled={!items.length || !currentShift || !authorName}
-              className="w-full py-2.5 rounded-lg bg-accent text-accent-foreground font-medium disabled:opacity-50 transition-opacity"
-            >
-              Save & Submit Handover
-            </button>
           </CardContent>
         </Card>
 
-        {/* Saved Handover Notes */}
-        {savedNotes.filter(n => n.persona === activePersona).length > 0 && (
-          <div className="space-y-4">
-            <h3 className="font-semibold text-lg">Recent Handover Notes</h3>
-            {savedNotes.filter(n => n.persona === activePersona).map(note => (
-              <Card key={note.id}>
-                <CardHeader className="pb-2">
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-sm flex items-center gap-2">
-                      <User className="w-4 h-4 text-muted-foreground" />
-                      {note.author} — {note.shift}
-                    </CardTitle>
-                    <span className="text-xs text-muted-foreground">{note.timestamp}</span>
+        {/* Active Handover Items */}
+        {activeNotes.length > 0 && (
+          <div className="space-y-3">
+            <h3 className="font-semibold text-lg flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 text-amber-400" />
+              Active Handover Items ({activeNotes.length})
+            </h3>
+            {activeNotes.map((note: any) => (
+              <div key={note.id} className={`flex items-start gap-2 p-3 rounded-lg border-l-4 ${priorityStyle(note.priority)}`}>
+                {priorityIcon(note.priority)}
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm">{note.content}</p>
+                  <div className="flex flex-wrap items-center gap-2 mt-1">
+                    <Badge variant="outline" className="text-xs">{note.category}</Badge>
+                    <span className="text-xs text-muted-foreground">{note.shiftType}</span>
+                    <span className="text-xs text-muted-foreground">{new Date(note.createdAt).toLocaleString()}</span>
                   </div>
-                </CardHeader>
-                <CardContent className="space-y-1.5">
-                  {note.items.map(item => (
-                    <div key={item.id} className={`flex items-start gap-2 p-2 rounded border-l-4 ${priorityStyle(item.priority)}`}>
-                      {priorityIcon(item.priority)}
-                      <div className="flex-1">
-                        <p className="text-sm">{item.content}</p>
-                        <span className="text-xs text-muted-foreground">{item.category}</span>
-                      </div>
-                    </div>
-                  ))}
-                </CardContent>
-              </Card>
+                </div>
+                <button
+                  onClick={() => resolveItem(note.id)}
+                  className="px-2 py-1 rounded bg-green-600/20 text-green-400 text-xs font-medium hover:bg-green-600/30 transition flex items-center gap-1"
+                >
+                  <Check className="w-3 h-3" /> Resolve
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Resolved Items */}
+        {resolvedNotes.length > 0 && (
+          <div className="space-y-3">
+            <h3 className="font-semibold text-lg flex items-center gap-2 text-muted-foreground">
+              <CheckCircle className="w-4 h-4 text-green-500" />
+              Resolved ({resolvedNotes.length})
+            </h3>
+            {resolvedNotes.slice(0, 10).map((note: any) => (
+              <div key={note.id} className="flex items-start gap-2 p-3 rounded-lg border border-border/50 opacity-60">
+                <CheckCircle className="w-3 h-3 text-green-500 mt-1" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm line-through">{note.content}</p>
+                  <div className="flex flex-wrap items-center gap-2 mt-1">
+                    <Badge variant="outline" className="text-xs">{note.category}</Badge>
+                    <span className="text-xs text-muted-foreground">Resolved {new Date(note.resolvedAt).toLocaleString()}</span>
+                  </div>
+                </div>
+              </div>
             ))}
           </div>
         )}
