@@ -1,6 +1,6 @@
 import { eq, like, or, sql, desc, asc, count, and } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, documents, documentRatings, readingLists, readingListItems, searchAnalytics, documentTags, documentComments, documentVersions, customCategories, downloadHistory, announcements, activityLog, documentAuditTrail, bookmarkNotes, shareLinks, scheduledPublish, inlineComments, brandingSettings, webhooks, recentlyViewed, documentFeedback, categoryOrdering, documentSubscriptions, subscriptionNotifications, userReadingPosition, searchHistory, aiSummaries, documentTranslations, userPreferences, readingStreakLeaderboard, glossaryTerms, documentDependencies, readingGoals, readingProgress, documentTemplates, savedFilters, documentQuizzes, reviewReminders, documentAnnotations, documentCollections, collectionItems, workflowStatuses, workflowTransitions, documentWorkflowStatus, archivalPolicies, archivedDocuments, contentGapSuggestions, duplicateContentPairs, activityFeed, documentSnapshots, readingCorrelations, quizResults, documentSeoMeta, systemNotificationLog, adminPermissions, approvalSlaConfig, webhookEventLog, documentAccessRequests, onboardingProgress, documentCitations, readingSessions, documentQualityAudits, emailDigestConfig, documentMedia, workspaces, workspaceMembers, reviewSchedules, coAuthorActivity, migrationJobs, sentimentScores, retentionPolicies, accessibilityChecks, customReports, pushNotifications, templateMarketplace, templateRatings, complianceReports, documentChangeLog, userLandingPreference, bulkExportJobs, documentCrossReferences, userEngagementScorecard, scheduledAnnouncements, dashboardWidgetConfig, brokenLinkScans, savedSearchFilters, duplicateContentScans, userDocCollections, userDocCollectionItems, performanceBenchmarks, leads, inviteTokens, trials, nurturEmails, referrals, onboardingWizardState, aiConfig, apiKeys, teamTasks, teamDiscussions, teamDiscussionReplies, webhookDeliveries, aiUsageLog, customFieldDefinitions, customFieldValues, workflowSlaConfig, workflowSlaBreaches } from "../drizzle/schema";
+import { InsertUser, users, documents, documentRatings, readingLists, readingListItems, searchAnalytics, documentTags, documentComments, documentVersions, customCategories, downloadHistory, announcements, activityLog, documentAuditTrail, bookmarkNotes, shareLinks, scheduledPublish, inlineComments, brandingSettings, webhooks, recentlyViewed, documentFeedback, categoryOrdering, documentSubscriptions, subscriptionNotifications, userReadingPosition, searchHistory, aiSummaries, documentTranslations, userPreferences, readingStreakLeaderboard, glossaryTerms, documentDependencies, readingGoals, readingProgress, documentTemplates, savedFilters, documentQuizzes, reviewReminders, documentAnnotations, documentCollections, collectionItems, workflowStatuses, workflowTransitions, documentWorkflowStatus, archivalPolicies, archivedDocuments, contentGapSuggestions, duplicateContentPairs, activityFeed, documentSnapshots, readingCorrelations, quizResults, documentSeoMeta, systemNotificationLog, adminPermissions, approvalSlaConfig, webhookEventLog, documentAccessRequests, onboardingProgress, documentCitations, readingSessions, documentQualityAudits, emailDigestConfig, documentMedia, workspaces, workspaceMembers, reviewSchedules, coAuthorActivity, migrationJobs, sentimentScores, retentionPolicies, accessibilityChecks, customReports, pushNotifications, templateMarketplace, templateRatings, complianceReports, documentChangeLog, userLandingPreference, bulkExportJobs, documentCrossReferences, userEngagementScorecard, scheduledAnnouncements, dashboardWidgetConfig, brokenLinkScans, savedSearchFilters, duplicateContentScans, userDocCollections, userDocCollectionItems, performanceBenchmarks, leads, inviteTokens, trials, nurturEmails, referrals, onboardingWizardState, aiConfig, apiKeys, teamTasks, teamDiscussions, teamDiscussionReplies, webhookDeliveries, aiUsageLog, customFieldDefinitions, customFieldValues, workflowSlaConfig, workflowSlaBreaches, checklistCompletions, shiftHandoverNotes, providers, providerQualityLogs } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -5100,4 +5100,100 @@ export async function resolveSlaBreach(id: number) {
   const db = await getDb();
   if (!db) throw new Error('Database not available');
   await db.update(workflowSlaBreaches).set({ resolvedAt: new Date() }).where(eq(workflowSlaBreaches.id, id));
+}
+
+// ========== Checklist Completions ==========
+export async function getChecklistCompletions(visitorId: string, persona: string, date: string) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(checklistCompletions).where(and(eq(checklistCompletions.visitorId, visitorId), eq(checklistCompletions.persona, persona), eq(checklistCompletions.completedDate, date)));
+}
+
+export async function toggleChecklistItem(visitorId: string, persona: string, itemId: string, date: string) {
+  const db = await getDb();
+  if (!db) return { success: false };
+  const existing = await db.select().from(checklistCompletions).where(and(eq(checklistCompletions.visitorId, visitorId), eq(checklistCompletions.persona, persona), eq(checklistCompletions.itemId, itemId), eq(checklistCompletions.completedDate, date)));
+  if (existing.length > 0) {
+    await db.delete(checklistCompletions).where(eq(checklistCompletions.id, existing[0].id));
+    return { success: true, completed: false };
+  } else {
+    await db.insert(checklistCompletions).values({ visitorId, persona, itemId, completedDate: date });
+    return { success: true, completed: true };
+  }
+}
+
+// ========== Shift Handover Notes ==========
+export async function getShiftHandovers(persona: string, date?: string) {
+  const db = await getDb();
+  if (!db) return [];
+  if (date) {
+    return db.select().from(shiftHandoverNotes).where(and(eq(shiftHandoverNotes.persona, persona), eq(shiftHandoverNotes.shiftDate, date))).orderBy(desc(shiftHandoverNotes.createdAt));
+  }
+  return db.select().from(shiftHandoverNotes).where(eq(shiftHandoverNotes.persona, persona)).orderBy(desc(shiftHandoverNotes.createdAt)).limit(50);
+}
+
+export async function createShiftHandover(data: { visitorId: string; persona: string; priority: string; category: string; content: string; shiftDate: string; shiftType: string }) {
+  const db = await getDb();
+  if (!db) return { success: false };
+  await db.insert(shiftHandoverNotes).values(data);
+  return { success: true };
+}
+
+export async function resolveShiftHandover(id: number) {
+  const db = await getDb();
+  if (!db) return { success: false };
+  await db.update(shiftHandoverNotes).set({ resolved: 1 }).where(eq(shiftHandoverNotes.id, id));
+  return { success: true };
+}
+
+// ========== Providers ==========
+export async function getProviders(status?: string) {
+  const db = await getDb();
+  if (!db) return [];
+  if (status) {
+    return db.select().from(providers).where(eq(providers.status, status as any)).orderBy(desc(providers.qualityScore));
+  }
+  return db.select().from(providers).orderBy(desc(providers.qualityScore));
+}
+
+export async function getProviderById(id: number) {
+  const db = await getDb();
+  if (!db) return null;
+  const rows = await db.select().from(providers).where(eq(providers.id, id));
+  return rows[0] || null;
+}
+
+export async function createProvider(data: { name: string; type: string; tier: string; location?: string; contactName?: string; contactPhone?: string; contactEmail?: string; roomCount?: number; priceRange?: string; specialties?: string; notes?: string }) {
+  const db = await getDb();
+  if (!db) return { success: false };
+  await db.insert(providers).values(data);
+  return { success: true };
+}
+
+export async function updateProvider(id: number, data: Partial<{ name: string; type: string; tier: string; location: string; contactName: string; contactPhone: string; contactEmail: string; roomCount: number; priceRange: string; specialties: string; qualityScore: number; responseTimeAvg: number; notes: string; status: string }>) {
+  const db = await getDb();
+  if (!db) return { success: false };
+  await db.update(providers).set(data as any).where(eq(providers.id, id));
+  return { success: true };
+}
+
+export async function deleteProvider(id: number) {
+  const db = await getDb();
+  if (!db) return { success: false };
+  await db.delete(providers).where(eq(providers.id, id));
+  return { success: true };
+}
+
+// ========== Provider Quality Logs ==========
+export async function getProviderQualityLogs(providerId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(providerQualityLogs).where(eq(providerQualityLogs.providerId, providerId)).orderBy(desc(providerQualityLogs.createdAt)).limit(50);
+}
+
+export async function addProviderQualityLog(data: { providerId: number; visitorId: string; type: string; content: string; rating?: number }) {
+  const db = await getDb();
+  if (!db) return { success: false };
+  await db.insert(providerQualityLogs).values(data);
+  return { success: true };
 }

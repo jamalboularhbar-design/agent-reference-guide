@@ -48,10 +48,10 @@ export default function PersonaDocsBrowserPage() {
       const title = doc.title.toLowerCase();
       if (persona === 'riad-routes') {
         if (title.includes('guest') || title.includes('check-in') || title.includes('checkout') || title.includes('departure') || title.includes('vip')) subcategory = 'Guest Services';
-        else if (title.includes('housekeeping') || title.includes('hammam') || title.includes('spa')) subcategory = 'Facilities & Housekeeping';
+        else if (title.includes('housekeeping') || title.includes('hammam') || title.includes('spa') || title.includes('provider')) subcategory = 'Provider Coordination';
         else if (title.includes('tour') || title.includes('medina') || title.includes('driver') || title.includes('fleet')) subcategory = 'Tours & Transport';
         else if (title.includes('food') || title.includes('beverage') || title.includes('f&b')) subcategory = 'Food & Beverage';
-        else if (title.includes('staff') || title.includes('training') || title.includes('night audit') || title.includes('security')) subcategory = 'Staff & Security';
+        else if (title.includes('staff') || title.includes('training') || title.includes('night audit') || title.includes('security') || title.includes('commission')) subcategory = 'Team & Operations';
         else if (title.includes('pricing') || title.includes('revenue') || title.includes('supplier') || title.includes('payment') || title.includes('procurement')) subcategory = 'Finance & Procurement';
         else if (title.includes('whatsapp') || title.includes('reputation') || title.includes('review') || title.includes('complaint')) subcategory = 'Communication & Reputation';
       } else if (persona === 'artkech') {

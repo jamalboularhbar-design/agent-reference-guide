@@ -18,24 +18,24 @@ interface ChecklistItem {
 }
 
 const RR_CHECKLISTS: ChecklistItem[] = [
-  { id: 'rr1', task: 'Review overnight guest messages & WhatsApp inquiries', timeSlot: 'morning', priority: 'high', duration: '15 min', responsible: 'Front Desk', sourceDoc: 'WhatsApp Concierge Communication Standards' },
-  { id: 'rr2', task: 'Verify today\'s check-in list and prepare welcome amenities', timeSlot: 'morning', priority: 'high', duration: '20 min', responsible: 'Front Desk', sourceDoc: 'Guest Check-In Protocol' },
-  { id: 'rr3', task: 'Assign housekeeping rotation for departing rooms', timeSlot: 'morning', priority: 'high', duration: '10 min', responsible: 'Head Housekeeper', sourceDoc: 'Housekeeping Daily Rotation' },
+  { id: 'rr1', task: 'Review overnight guest messages & WhatsApp inquiries', timeSlot: 'morning', priority: 'high', duration: '15 min', responsible: 'Concierge Lead', sourceDoc: 'WhatsApp Concierge Communication Standards' },
+  { id: 'rr2', task: 'Confirm today\'s arrivals with riad/hotel providers (room readiness, special requests)', timeSlot: 'morning', priority: 'high', duration: '20 min', responsible: 'Concierge Lead', sourceDoc: 'Guest Check-In Protocol' },
+  { id: 'rr3', task: 'Send pre-arrival guest preference briefs to accommodation providers', timeSlot: 'morning', priority: 'high', duration: '15 min', responsible: 'Guest Relations', sourceDoc: 'VIP Guest Handling Protocol' },
   { id: 'rr4', task: 'Confirm driver assignments for airport transfers', timeSlot: 'morning', priority: 'high', duration: '15 min', responsible: 'Operations Manager', sourceDoc: 'Driver Dispatch & Fleet Management' },
-  { id: 'rr5', task: 'Brief kitchen on dietary requirements for today\'s guests', timeSlot: 'morning', priority: 'medium', duration: '10 min', responsible: 'F&B Manager', sourceDoc: 'Food & Beverage Daily Operations' },
-  { id: 'rr6', task: 'Check hammam/spa booking schedule and prepare treatments', timeSlot: 'morning', priority: 'medium', duration: '15 min', responsible: 'Spa Coordinator', sourceDoc: 'Hammam & Spa Operations' },
+  { id: 'rr5', task: 'Relay dietary requirements to provider kitchens for today\'s guests', timeSlot: 'morning', priority: 'medium', duration: '10 min', responsible: 'Guest Relations', sourceDoc: 'Food & Beverage Daily Operations' },
+  { id: 'rr6', task: 'Coordinate spa/hammam bookings with provider wellness teams', timeSlot: 'morning', priority: 'medium', duration: '15 min', responsible: 'Experience Coordinator', sourceDoc: 'Hammam & Spa Operations' },
   { id: 'rr7', task: 'Confirm medina tour guide availability for booked tours', timeSlot: 'morning', priority: 'medium', duration: '10 min', responsible: 'Tour Coordinator', sourceDoc: 'Medina Tour Guide Briefing & Quality Standards' },
-  { id: 'rr8', task: 'Process guest check-ins with welcome ritual', timeSlot: 'afternoon', priority: 'high', duration: '30 min', responsible: 'Front Desk', sourceDoc: 'Guest Check-In Protocol' },
-  { id: 'rr9', task: 'Inspect turned rooms for quality standards', timeSlot: 'afternoon', priority: 'high', duration: '45 min', responsible: 'Head Housekeeper', sourceDoc: 'Housekeeping Daily Rotation' },
-  { id: 'rr10', task: 'Follow up on any pending guest complaints', timeSlot: 'afternoon', priority: 'high', duration: '20 min', responsible: 'Guest Relations', sourceDoc: 'Guest Complaint Resolution' },
+  { id: 'rr8', task: 'Greet arriving guests and facilitate smooth provider handoff', timeSlot: 'afternoon', priority: 'high', duration: '30 min', responsible: 'Concierge Lead', sourceDoc: 'Guest Check-In Protocol' },
+  { id: 'rr9', task: 'Follow up with providers on any guest-reported issues', timeSlot: 'afternoon', priority: 'high', duration: '20 min', responsible: 'Guest Relations', sourceDoc: 'Guest Complaint Resolution' },
+  { id: 'rr10', task: 'Check provider feedback on current guest stays (proactive quality check)', timeSlot: 'afternoon', priority: 'high', duration: '20 min', responsible: 'Quality Manager', sourceDoc: 'Guest Complaint Resolution' },
   { id: 'rr11', task: 'Review online reviews and respond to new ones', timeSlot: 'afternoon', priority: 'medium', duration: '30 min', responsible: 'Marketing', sourceDoc: 'Online Reputation & Review Management' },
-  { id: 'rr12', task: 'Check VIP arrivals for next 48 hours and prepare upgrades', timeSlot: 'afternoon', priority: 'medium', duration: '20 min', responsible: 'Guest Relations', sourceDoc: 'VIP Guest Handling Protocol' },
+  { id: 'rr12', task: 'Brief providers on VIP arrivals in next 48 hours (upgrades, preferences)', timeSlot: 'afternoon', priority: 'medium', duration: '20 min', responsible: 'Guest Relations', sourceDoc: 'VIP Guest Handling Protocol' },
   { id: 'rr13', task: 'Verify tomorrow\'s tour bookings and confirmations', timeSlot: 'afternoon', priority: 'medium', duration: '15 min', responsible: 'Tour Coordinator', sourceDoc: 'Tour Booking & Confirmation Workflow' },
-  { id: 'rr14', task: 'Process guest checkouts and collect feedback', timeSlot: 'evening', priority: 'high', duration: '20 min', responsible: 'Front Desk', sourceDoc: 'Guest Departure & Checkout Process' },
-  { id: 'rr15', task: 'Complete night audit and reconcile daily revenue', timeSlot: 'evening', priority: 'high', duration: '45 min', responsible: 'Night Auditor', sourceDoc: 'Night Audit & Security Procedures' },
-  { id: 'rr16', task: 'Security walkthrough and lock-up procedures', timeSlot: 'evening', priority: 'high', duration: '20 min', responsible: 'Security', sourceDoc: 'Night Audit & Security Procedures' },
-  { id: 'rr17', task: 'Update supplier payment tracker for due invoices', timeSlot: 'evening', priority: 'low', duration: '15 min', responsible: 'Finance', sourceDoc: 'Supplier Payment & Procurement' },
-  { id: 'rr18', task: 'Prepare handover notes for morning shift', timeSlot: 'evening', priority: 'medium', duration: '10 min', responsible: 'Night Manager', sourceDoc: 'Night Audit & Security Procedures' },
+  { id: 'rr14', task: 'Collect departure feedback from guests and share insights with providers', timeSlot: 'evening', priority: 'high', duration: '20 min', responsible: 'Concierge Lead', sourceDoc: 'Guest Departure & Checkout Process' },
+  { id: 'rr15', task: 'Reconcile daily bookings, commissions, and provider invoices', timeSlot: 'evening', priority: 'high', duration: '30 min', responsible: 'Finance', sourceDoc: 'Night Audit & Security Procedures' },
+  { id: 'rr16', task: 'Update provider quality tracker with today\'s observations', timeSlot: 'evening', priority: 'medium', duration: '15 min', responsible: 'Quality Manager', sourceDoc: 'Night Audit & Security Procedures' },
+  { id: 'rr17', task: 'Update supplier/provider payment tracker for due invoices', timeSlot: 'evening', priority: 'low', duration: '15 min', responsible: 'Finance', sourceDoc: 'Supplier Payment & Procurement' },
+  { id: 'rr18', task: 'Prepare handover notes for morning shift (guest status, provider issues)', timeSlot: 'evening', priority: 'medium', duration: '10 min', responsible: 'Evening Concierge', sourceDoc: 'Night Audit & Security Procedures' },
 ];
 
 const AK_CHECKLISTS: ChecklistItem[] = [

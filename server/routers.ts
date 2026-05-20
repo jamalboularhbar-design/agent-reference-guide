@@ -141,6 +141,10 @@ import {
   logAiUsage, getAiUsageByUser, getAiUsageSummary,
   getCustomFieldDefinitions, createCustomField, deleteCustomField, getCustomFieldValues, upsertCustomFieldValue,
   getWorkflowSlaConfigs, upsertWorkflowSlaConfig, getWorkflowSlaBreaches, createSlaBreach, resolveSlaBreach,
+  getChecklistCompletions, toggleChecklistItem,
+  getShiftHandovers, createShiftHandover, resolveShiftHandover,
+  getProviders, getProviderById, createProvider, updateProvider, deleteProvider,
+  getProviderQualityLogs, addProviderQualityLog,
 } from "./db";
 import { invokeLLM } from "./_core/llm";
 import { notifyOwner } from "./_core/notification";
@@ -3116,6 +3120,73 @@ export const appRouter = router({
       .mutation(async ({ input }) => {
         await resolveSlaBreach(input.id);
         return { success: true };
+      }),
+  }),
+  // ========== Operational Tools (Batch 18) ==========
+  checklist: router({
+    getCompletions: publicProcedure
+      .input(z.object({ visitorId: z.string(), persona: z.string(), date: z.string() }))
+      .query(async ({ input }) => {
+        return getChecklistCompletions(input.visitorId, input.persona, input.date);
+      }),
+    toggle: publicProcedure
+      .input(z.object({ visitorId: z.string(), persona: z.string(), itemId: z.string(), date: z.string() }))
+      .mutation(async ({ input }) => {
+        return toggleChecklistItem(input.visitorId, input.persona, input.itemId, input.date);
+      }),
+  }),
+  handover: router({
+    list: publicProcedure
+      .input(z.object({ persona: z.string(), date: z.string().optional() }))
+      .query(async ({ input }) => {
+        return getShiftHandovers(input.persona, input.date);
+      }),
+    create: publicProcedure
+      .input(z.object({ visitorId: z.string(), persona: z.string(), priority: z.string(), category: z.string(), content: z.string(), shiftDate: z.string(), shiftType: z.string() }))
+      .mutation(async ({ input }) => {
+        return createShiftHandover(input);
+      }),
+    resolve: publicProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        return resolveShiftHandover(input.id);
+      }),
+  }),
+  providerPartners: router({
+    list: publicProcedure
+      .input(z.object({ status: z.string().optional() }))
+      .query(async ({ input }) => {
+        return getProviders(input.status);
+      }),
+    getById: publicProcedure
+      .input(z.object({ id: z.number() }))
+      .query(async ({ input }) => {
+        return getProviderById(input.id);
+      }),
+    create: adminProcedure
+      .input(z.object({ name: z.string(), type: z.string(), tier: z.string(), location: z.string().optional(), contactName: z.string().optional(), contactPhone: z.string().optional(), contactEmail: z.string().optional(), roomCount: z.number().optional(), priceRange: z.string().optional(), specialties: z.string().optional(), notes: z.string().optional() }))
+      .mutation(async ({ input }) => {
+        return createProvider(input);
+      }),
+    update: adminProcedure
+      .input(z.object({ id: z.number(), data: z.object({ name: z.string().optional(), type: z.string().optional(), tier: z.string().optional(), location: z.string().optional(), contactName: z.string().optional(), contactPhone: z.string().optional(), contactEmail: z.string().optional(), roomCount: z.number().optional(), priceRange: z.string().optional(), specialties: z.string().optional(), qualityScore: z.number().optional(), responseTimeAvg: z.number().optional(), notes: z.string().optional(), status: z.string().optional() }) }))
+      .mutation(async ({ input }) => {
+        return updateProvider(input.id, input.data);
+      }),
+    delete: adminProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        return deleteProvider(input.id);
+      }),
+    qualityLogs: publicProcedure
+      .input(z.object({ providerId: z.number() }))
+      .query(async ({ input }) => {
+        return getProviderQualityLogs(input.providerId);
+      }),
+    addQualityLog: publicProcedure
+      .input(z.object({ providerId: z.number(), visitorId: z.string(), type: z.string(), content: z.string(), rating: z.number().optional() }))
+      .mutation(async ({ input }) => {
+        return addProviderQualityLog(input);
       }),
   }),
 });

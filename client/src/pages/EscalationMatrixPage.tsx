@@ -26,56 +26,56 @@ interface EscalationScenario {
 const RR_SCENARIOS: EscalationScenario[] = [
   {
     id: 'rr-medical',
-    title: 'Guest Medical Emergency',
+    title: 'Guest Medical Emergency During Trip',
     severity: 'critical',
-    description: 'Guest requires immediate medical attention — injury, allergic reaction, or health crisis.',
+    description: 'Guest requires immediate medical attention during a tour, transfer, or while at a provider property.',
     levels: [
-      { level: 1, title: 'Immediate Response', responseTime: '< 2 minutes', contacts: [{ name: 'On-Duty Manager', role: 'Night/Day Manager', phone: '+212 6XX-XXXXXX', email: 'duty@riadroutes.com' }], actions: ['Call emergency services (15 or 141)', 'Administer first aid if trained', 'Clear area and ensure guest privacy', 'Do NOT move injured guest unless danger'] },
-      { level: 2, title: 'Management Notification', responseTime: '< 10 minutes', contacts: [{ name: 'General Manager', role: 'GM', phone: '+212 6XX-XXXXXX', email: 'gm@riadroutes.com' }], actions: ['Notify GM regardless of time', 'Contact guest\'s emergency contact from file', 'Prepare incident report', 'Assign staff member to accompany to hospital'] },
-      { level: 3, title: 'Owner & Insurance', responseTime: '< 30 minutes', contacts: [{ name: 'Property Owner', role: 'Owner', phone: '+212 6XX-XXXXXX', email: 'owner@riadroutes.com' }], actions: ['Notify property owner', 'Contact insurance provider', 'Preserve CCTV footage', 'Prepare for potential media inquiries'] }
+      { level: 1, title: 'Immediate Response', responseTime: '< 2 minutes', contacts: [{ name: 'On-Duty Concierge', role: 'Concierge Lead', phone: '+212 6XX-XXXXXX', email: 'concierge@riadroutes.com' }], actions: ['Call emergency services (15 or 141)', 'Notify accommodation provider staff immediately', 'Contact guest\'s travel insurance provider', 'Stay on the line with guest until help arrives'] },
+      { level: 2, title: 'Coordination & Family Contact', responseTime: '< 10 minutes', contacts: [{ name: 'Operations Director', role: 'Director', phone: '+212 6XX-XXXXXX', email: 'ops@riadroutes.com' }], actions: ['Contact guest\'s emergency contact from booking file', 'Coordinate with provider to ensure room/facility access for medics', 'Arrange hospital transport if needed', 'Assign team member to accompany guest'] },
+      { level: 3, title: 'Insurance & Follow-up', responseTime: '< 30 minutes', contacts: [{ name: 'Business Owner', role: 'Owner', phone: '+212 6XX-XXXXXX', email: 'owner@riadroutes.com' }], actions: ['Notify business owner', 'File incident report with travel insurance', 'Coordinate with provider on any property-related factors', 'Arrange trip modification or cancellation as needed'] }
     ]
   },
   {
-    id: 'rr-security',
-    title: 'Security Breach / Theft',
+    id: 'rr-provider-failure',
+    title: 'Provider Service Failure',
     severity: 'critical',
-    description: 'Unauthorized access, theft from guest room, or security incident in the riad.',
+    description: 'Accommodation provider cancels last-minute, room not ready, or serious quality issue discovered on guest arrival.',
     levels: [
-      { level: 1, title: 'Immediate Lockdown', responseTime: '< 5 minutes', contacts: [{ name: 'Security Guard', role: 'Night Security', phone: '+212 6XX-XXXXXX', email: 'security@riadroutes.com' }], actions: ['Secure all entry/exit points', 'Check CCTV for last 30 minutes', 'Account for all guests', 'Do NOT confront suspects alone'] },
-      { level: 2, title: 'Police & Management', responseTime: '< 15 minutes', contacts: [{ name: 'On-Duty Manager', role: 'Manager', phone: '+212 6XX-XXXXXX', email: 'duty@riadroutes.com' }], actions: ['Call police (19)', 'Photograph scene before touching anything', 'Take guest statement', 'Offer guest relocation if room compromised'] },
-      { level: 3, title: 'Insurance & Legal', responseTime: '< 2 hours', contacts: [{ name: 'Legal Advisor', role: 'Legal', phone: '+212 5XX-XXXXXX', email: 'legal@riadroutes.com' }], actions: ['File police report', 'Notify insurance', 'Document all stolen/damaged items', 'Offer complimentary stay extension'] }
+      { level: 1, title: 'Immediate Guest Protection', responseTime: '< 5 minutes', contacts: [{ name: 'Concierge Lead', role: 'Concierge', phone: '+212 6XX-XXXXXX', email: 'concierge@riadroutes.com' }], actions: ['Contact backup provider from preferred list', 'Keep guest informed and comfortable (arrange café/lounge)', 'Document the failure with photos/messages', 'Apologize and offer immediate comfort gesture'] },
+      { level: 2, title: 'Alternative Arrangement', responseTime: '< 30 minutes', contacts: [{ name: 'Operations Director', role: 'Director', phone: '+212 6XX-XXXXXX', email: 'ops@riadroutes.com' }], actions: ['Confirm alternative accommodation of equal or higher standard', 'Arrange transport to new property', 'Offer complimentary experience as compensation', 'Formally escalate issue with failing provider'] },
+      { level: 3, title: 'Provider Relationship Review', responseTime: '< 24 hours', contacts: [{ name: 'Business Owner', role: 'Owner', phone: '+212 6XX-XXXXXX', email: 'owner@riadroutes.com' }], actions: ['Schedule provider accountability meeting', 'Update provider quality scorecard', 'Review partnership terms and SLA', 'Decide on provider status (warning/suspension/termination)'] }
     ]
   },
   {
-    id: 'rr-fire',
-    title: 'Fire / Structural Emergency',
+    id: 'rr-safety',
+    title: 'Guest Safety Concern at Provider Property',
     severity: 'critical',
-    description: 'Fire detected, structural damage, flooding, or building safety concern.',
+    description: 'Guest reports feeling unsafe, security issue at riad/hotel, or structural concern at provider property.',
     levels: [
-      { level: 1, title: 'Evacuation', responseTime: 'Immediate', contacts: [{ name: 'All Staff On-Duty', role: 'Everyone', phone: 'Internal Radio', email: '' }], actions: ['Activate fire alarm', 'Evacuate all guests to assembly point (courtyard)', 'Call fire brigade (15)', 'Account for all guests by room list'] },
-      { level: 2, title: 'Emergency Services', responseTime: '< 5 minutes', contacts: [{ name: 'General Manager', role: 'GM', phone: '+212 6XX-XXXXXX', email: 'gm@riadroutes.com' }], actions: ['Coordinate with fire brigade on arrival', 'Arrange alternative accommodation for guests', 'Notify all staff including off-duty', 'Secure valuables from safe'] },
-      { level: 3, title: 'Recovery & Insurance', responseTime: '< 1 hour', contacts: [{ name: 'Property Owner', role: 'Owner', phone: '+212 6XX-XXXXXX', email: 'owner@riadroutes.com' }], actions: ['Document damage with photos/video', 'Contact insurance immediately', 'Arrange guest transfers to partner riads', 'Begin restoration assessment'] }
+      { level: 1, title: 'Immediate Extraction', responseTime: '< 10 minutes', contacts: [{ name: 'On-Duty Concierge', role: 'Concierge', phone: '+212 6XX-XXXXXX', email: 'concierge@riadroutes.com' }], actions: ['Call guest to assess situation', 'If immediate danger: call police (19) and arrange extraction', 'Contact provider management directly', 'Offer to relocate guest immediately'] },
+      { level: 2, title: 'Relocation & Documentation', responseTime: '< 30 minutes', contacts: [{ name: 'Operations Director', role: 'Director', phone: '+212 6XX-XXXXXX', email: 'ops@riadroutes.com' }], actions: ['Arrange transfer to verified safe alternative', 'Document incident thoroughly', 'File police report if criminal activity involved', 'Ensure guest belongings are secured and transferred'] },
+      { level: 3, title: 'Legal & Provider Action', responseTime: '< 2 hours', contacts: [{ name: 'Business Owner', role: 'Owner', phone: '+212 6XX-XXXXXX', email: 'owner@riadroutes.com' }], actions: ['Suspend provider from active roster immediately', 'Consult legal advisor on liability', 'Notify other guests currently at same provider', 'Conduct full provider safety audit before reinstatement'] }
     ]
   },
   {
     id: 'rr-complaint',
     title: 'Severe Guest Complaint (Public Threat)',
     severity: 'high',
-    description: 'Guest threatens negative public review, legal action, or refuses to pay.',
+    description: 'Guest threatens negative public review, demands refund, or escalates dissatisfaction with trip experience.',
     levels: [
-      { level: 1, title: 'De-escalation', responseTime: '< 10 minutes', contacts: [{ name: 'Guest Relations Manager', role: 'Guest Relations', phone: '+212 6XX-XXXXXX', email: 'relations@riadroutes.com' }], actions: ['Listen actively without interrupting', 'Move conversation to private area', 'Offer immediate comfort (tea, upgrade)', 'Document complaint in detail'] },
-      { level: 2, title: 'Management Resolution', responseTime: '< 30 minutes', contacts: [{ name: 'General Manager', role: 'GM', phone: '+212 6XX-XXXXXX', email: 'gm@riadroutes.com' }], actions: ['GM takes over if unresolved', 'Authorize compensation up to 50% of stay', 'Offer concrete resolution timeline', 'Follow up within 2 hours'] },
-      { level: 3, title: 'Owner Decision', responseTime: '< 2 hours', contacts: [{ name: 'Property Owner', role: 'Owner', phone: '+212 6XX-XXXXXX', email: 'owner@riadroutes.com' }], actions: ['Full refund authorization if needed', 'Legal consultation if threats persist', 'Proactive review response preparation', 'Post-incident process review'] }
+      { level: 1, title: 'De-escalation', responseTime: '< 10 minutes', contacts: [{ name: 'Guest Relations Lead', role: 'Guest Relations', phone: '+212 6XX-XXXXXX', email: 'relations@riadroutes.com' }], actions: ['Listen actively without interrupting', 'Acknowledge the issue and take ownership', 'Offer immediate gesture (upgrade, experience, refund portion)', 'Document complaint in detail'] },
+      { level: 2, title: 'Resolution & Compensation', responseTime: '< 30 minutes', contacts: [{ name: 'Operations Director', role: 'Director', phone: '+212 6XX-XXXXXX', email: 'ops@riadroutes.com' }], actions: ['Director takes over if unresolved', 'Authorize compensation up to 50% of booking value', 'If provider-caused: escalate to provider for their contribution', 'Follow up within 2 hours with resolution'] },
+      { level: 3, title: 'Owner Decision', responseTime: '< 2 hours', contacts: [{ name: 'Business Owner', role: 'Owner', phone: '+212 6XX-XXXXXX', email: 'owner@riadroutes.com' }], actions: ['Full refund authorization if needed', 'Legal consultation if threats persist', 'Proactive review response preparation', 'Post-incident process review with provider'] }
     ]
   },
   {
     id: 'rr-noshow',
     title: 'Driver No-Show / Transport Failure',
     severity: 'medium',
-    description: 'Assigned driver fails to arrive for airport transfer or tour pickup.',
+    description: 'Assigned driver fails to arrive for airport transfer or tour pickup, leaving guest stranded.',
     levels: [
-      { level: 1, title: 'Immediate Backup', responseTime: '< 5 minutes', contacts: [{ name: 'Fleet Coordinator', role: 'Transport', phone: '+212 6XX-XXXXXX', email: 'fleet@riadroutes.com' }], actions: ['Call backup driver from roster', 'Contact guest with updated ETA', 'If airport: call taxi service as emergency backup', 'Apologize and offer compensation'] },
-      { level: 2, title: 'Operations Review', responseTime: '< 1 hour', contacts: [{ name: 'Operations Manager', role: 'Ops', phone: '+212 6XX-XXXXXX', email: 'ops@riadroutes.com' }], actions: ['Investigate no-show reason', 'Document for driver performance file', 'Ensure guest receives complimentary service', 'Update fleet availability for rest of day'] }
+      { level: 1, title: 'Immediate Backup', responseTime: '< 5 minutes', contacts: [{ name: 'Fleet Coordinator', role: 'Transport', phone: '+212 6XX-XXXXXX', email: 'fleet@riadroutes.com' }], actions: ['Call backup driver from roster', 'Contact guest with updated ETA and apology', 'If airport: dispatch emergency taxi as bridge', 'Notify provider if guest will arrive late'] },
+      { level: 2, title: 'Operations Review', responseTime: '< 1 hour', contacts: [{ name: 'Operations Director', role: 'Director', phone: '+212 6XX-XXXXXX', email: 'ops@riadroutes.com' }], actions: ['Investigate no-show reason', 'Document for driver performance file', 'Offer guest complimentary experience as apology', 'Update fleet availability and backup protocols'] }
     ]
   }
 ];

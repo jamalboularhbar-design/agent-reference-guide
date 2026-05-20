@@ -19,18 +19,18 @@ interface KPIMetric {
 }
 
 const RR_KPIS: KPIMetric[] = [
-  { id: 'rr-occ', name: 'Occupancy Rate', value: '78', target: '85', unit: '%', trend: 'up', trendValue: '+3% vs last month', status: 'at-risk', category: 'Revenue' },
-  { id: 'rr-adr', name: 'Average Daily Rate', value: '2,450', target: '2,200', unit: 'MAD', trend: 'up', trendValue: '+12% vs target', status: 'on-track', category: 'Revenue' },
-  { id: 'rr-revpar', name: 'RevPAR', value: '1,911', target: '1,870', unit: 'MAD', trend: 'up', trendValue: '+2.2% vs target', status: 'on-track', category: 'Revenue' },
+  { id: 'rr-bookings', name: 'Monthly Bookings', value: '47', target: '50', unit: 'trips', trend: 'up', trendValue: '+8% vs last month', status: 'at-risk', category: 'Revenue' },
+  { id: 'rr-commission', name: 'Avg Commission/Booking', value: '3,200', target: '3,000', unit: 'MAD', trend: 'up', trendValue: '+7% vs target', status: 'on-track', category: 'Revenue' },
+  { id: 'rr-revenue', name: 'Monthly Revenue', value: '150K', target: '150K', unit: 'MAD', trend: 'up', trendValue: 'On target', status: 'on-track', category: 'Revenue' },
   { id: 'rr-nps', name: 'Guest Satisfaction (NPS)', value: '72', target: '75', unit: 'score', trend: 'stable', trendValue: 'Stable vs last quarter', status: 'at-risk', category: 'Guest Experience' },
   { id: 'rr-review', name: 'Online Review Score', value: '4.7', target: '4.8', unit: '/5', trend: 'up', trendValue: '+0.1 vs last month', status: 'at-risk', category: 'Guest Experience' },
   { id: 'rr-response', name: 'Inquiry Response Time', value: '12', target: '15', unit: 'min', trend: 'down', trendValue: '-3 min improvement', status: 'on-track', category: 'Guest Experience' },
-  { id: 'rr-complaint', name: 'Complaint Resolution', value: '94', target: '95', unit: '%', trend: 'up', trendValue: '+2% vs last month', status: 'at-risk', category: 'Operations' },
-  { id: 'rr-checkin', name: 'Check-in Time', value: '8', target: '10', unit: 'min', trend: 'down', trendValue: '-2 min faster', status: 'on-track', category: 'Operations' },
-  { id: 'rr-housekeeping', name: 'Room Turnaround', value: '42', target: '45', unit: 'min', trend: 'down', trendValue: '-3 min improvement', status: 'on-track', category: 'Operations' },
+  { id: 'rr-provider-response', name: 'Provider Response Time', value: '25', target: '30', unit: 'min', trend: 'down', trendValue: '-5 min improvement', status: 'on-track', category: 'Provider Collaboration' },
+  { id: 'rr-provider-quality', name: 'Provider Quality Score', value: '4.5', target: '4.6', unit: '/5', trend: 'up', trendValue: '+0.2 vs last quarter', status: 'at-risk', category: 'Provider Collaboration' },
+  { id: 'rr-prearrivals', name: 'Pre-Arrival Coordination', value: '91', target: '95', unit: '%', trend: 'up', trendValue: '+3% vs last month', status: 'at-risk', category: 'Provider Collaboration' },
   { id: 'rr-repeat', name: 'Repeat Guest Rate', value: '28', target: '30', unit: '%', trend: 'up', trendValue: '+4% vs last year', status: 'at-risk', category: 'Loyalty' },
-  { id: 'rr-upsell', name: 'Upsell Conversion', value: '35', target: '30', unit: '%', trend: 'up', trendValue: '+5% above target', status: 'on-track', category: 'Revenue' },
-  { id: 'rr-staff', name: 'Staff Retention', value: '88', target: '90', unit: '%', trend: 'stable', trendValue: 'Stable', status: 'at-risk', category: 'Team' },
+  { id: 'rr-upsell', name: 'Experience Upsell Rate', value: '35', target: '30', unit: '%', trend: 'up', trendValue: '+5% above target', status: 'on-track', category: 'Revenue' },
+  { id: 'rr-anticipatory', name: 'Anticipatory Actions Taken', value: '82', target: '85', unit: '%', trend: 'up', trendValue: '+6% vs last month', status: 'at-risk', category: 'Service Excellence' },
 ];
 
 const AK_KPIS: KPIMetric[] = [

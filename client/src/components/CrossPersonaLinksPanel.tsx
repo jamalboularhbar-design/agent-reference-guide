@@ -10,7 +10,7 @@ const CROSS_LINKS: Record<string, string[]> = {
   // RR doc keywords -> AK related keywords
   'check-in': ['client onboarding', 'project kickoff'],
   'guest complaint': ['client feedback', 'revision management'],
-  'housekeeping': ['quality assurance', 'pre-flight'],
+  'provider coordination': ['quality assurance', 'pre-flight'],
   'tour booking': ['creative brief', 'brief intake'],
   'vip guest': ['brand identity', 'client onboarding'],
   'procurement': ['freelancer management', 'contractor'],
@@ -18,7 +18,7 @@ const CROSS_LINKS: Record<string, string[]> = {
   'pricing': ['pricing', 'quotation'],
   'whatsapp': ['social media', 'content pipeline'],
   'reputation': ['portfolio', 'case study'],
-  'night audit': ['financial management', 'invoicing'],
+  'commission reconciliation': ['financial management', 'invoicing'],
   'staff training': ['daily operations', 'time management'],
   'driver dispatch': ['print production', 'production'],
   'checkout': ['file management', 'digital asset'],
@@ -26,7 +26,7 @@ const CROSS_LINKS: Record<string, string[]> = {
   'medina tour': ['lead generation', 'new business'],
   // AK doc keywords -> RR related keywords
   'creative brief': ['tour booking', 'booking confirmation'],
-  'design review': ['housekeeping', 'quality'],
+  'design review': ['provider coordination', 'quality'],
   'client onboarding': ['check-in', 'guest check-in'],
   'brand identity': ['vip guest', 'vip handling'],
   'print production': ['driver dispatch', 'fleet'],
@@ -37,8 +37,8 @@ const CROSS_LINKS: Record<string, string[]> = {
   'client feedback': ['guest complaint', 'complaint resolution'],
   'file management': ['checkout', 'departure'],
   'portfolio': ['reputation', 'review management'],
-  'quality assurance': ['housekeeping', 'room inspection'],
-  'financial management': ['night audit', 'security'],
+  'quality assurance': ['provider coordination', 'quality check'],
+  'financial management': ['commission reconciliation', 'finance'],
   'lead generation': ['medina tour', 'tour guide'],
   'photography': ['food & beverage', 'f&b'],
 };

@@ -1371,3 +1371,65 @@ export const workflowSlaBreaches = mysqlTable("workflow_sla_breaches", {
   maxHours: int("max_hours").notNull(),
 });
 export type WorkflowSlaBreach = typeof workflowSlaBreaches.$inferSelect;
+
+// Daily checklist completions - persists which items were completed per day
+export const checklistCompletions = mysqlTable("checklist_completions", {
+  id: int("id").autoincrement().primaryKey(),
+  visitorId: varchar("visitor_id", { length: 100 }).notNull(),
+  persona: varchar("persona", { length: 50 }).notNull(),
+  itemId: varchar("item_id", { length: 50 }).notNull(),
+  completedDate: varchar("completed_date", { length: 10 }).notNull(), // YYYY-MM-DD
+  completedAt: timestamp("completed_at").notNull().defaultNow(),
+});
+export type ChecklistCompletion = typeof checklistCompletions.$inferSelect;
+
+// Shift handover notes - persists handover notes between shifts
+export const shiftHandoverNotes = mysqlTable("shift_handover_notes", {
+  id: int("id").autoincrement().primaryKey(),
+  visitorId: varchar("visitor_id", { length: 100 }).notNull(),
+  persona: varchar("persona", { length: 50 }).notNull(),
+  priority: varchar("priority", { length: 20 }).notNull(),
+  category: varchar("category", { length: 50 }).notNull(),
+  content: text("content").notNull(),
+  shiftDate: varchar("shift_date", { length: 10 }).notNull(), // YYYY-MM-DD
+  shiftType: varchar("shift_type", { length: 20 }).notNull(), // morning, afternoon, evening
+  resolved: int("resolved").notNull().default(0),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+export type ShiftHandoverNote = typeof shiftHandoverNotes.$inferSelect;
+
+// Provider partners - luxury riads/hotels we collaborate with
+export const providers = mysqlTable("providers", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  type: varchar("type", { length: 50 }).notNull(), // riad, hotel, villa, guesthouse
+  tier: varchar("tier", { length: 20 }).notNull(), // platinum, gold, silver
+  location: varchar("location", { length: 255 }),
+  contactName: varchar("contact_name", { length: 255 }),
+  contactPhone: varchar("contact_phone", { length: 50 }),
+  contactEmail: varchar("contact_email", { length: 255 }),
+  roomCount: int("room_count"),
+  priceRange: varchar("price_range", { length: 100 }),
+  specialties: text("specialties"), // JSON array of specialties
+  qualityScore: float("quality_score").default(0),
+  responseTimeAvg: int("response_time_avg"), // minutes
+  notes: text("notes"),
+  status: mysqlEnum("status", ["active", "probation", "suspended", "inactive"]).default("active").notNull(),
+  lastAuditDate: timestamp("last_audit_date"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
+});
+export type Provider = typeof providers.$inferSelect;
+export type InsertProvider = typeof providers.$inferInsert;
+
+// Provider quality logs - track interactions and quality observations
+export const providerQualityLogs = mysqlTable("provider_quality_logs", {
+  id: int("id").autoincrement().primaryKey(),
+  providerId: int("provider_id").notNull(),
+  visitorId: varchar("visitor_id", { length: 100 }).notNull(),
+  type: varchar("type", { length: 50 }).notNull(), // feedback, issue, praise, audit
+  content: text("content").notNull(),
+  rating: int("rating"), // 1-5
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+export type ProviderQualityLog = typeof providerQualityLogs.$inferSelect;

@@ -187,6 +187,12 @@ import ShiftHandoverPage from "./pages/ShiftHandoverPage";
 import EscalationMatrixPage from "./pages/EscalationMatrixPage";
 import SeasonalCalendarPage from "./pages/SeasonalCalendarPage";
 import OperationalKPIPage from "./pages/OperationalKPIPage";
+import ProviderDirectoryPage from "./pages/ProviderDirectoryPage";
+import ProviderQualityPage from "./pages/ProviderQualityPage";
+import GuestAnticipationPage from "./pages/GuestAnticipationPage";
+import ProviderSLAPage from "./pages/ProviderSLAPage";
+import ProviderCommissionsPage from "./pages/ProviderCommissionsPage";
+import ProviderOnboardingPage from "./pages/ProviderOnboardingPage";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -367,6 +373,12 @@ function Router() {
       <Route path="/escalation-matrix" component={EscalationMatrixPage} />
       <Route path="/seasonal-calendar" component={SeasonalCalendarPage} />
       <Route path="/operational-kpis" component={OperationalKPIPage} />
+      <Route path="/provider-directory" component={ProviderDirectoryPage} />
+      <Route path="/provider-quality/:id" component={ProviderQualityPage} />
+      <Route path="/guest-anticipation" component={GuestAnticipationPage} />
+      <Route path="/provider-sla" component={ProviderSLAPage} />
+      <Route path="/provider-commissions" component={ProviderCommissionsPage} />
+      <Route path="/provider-onboarding" component={ProviderOnboardingPage} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />

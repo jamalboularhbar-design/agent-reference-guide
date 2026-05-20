@@ -562,3 +562,16 @@
 - [x] Build cross-persona document linking (CrossPersonaLinksPanel component showing related processes from the other persona when viewing RR/AK documents)
 - [x] Add operational KPI scorecards per persona (/operational-kpis — 12 KPIs per persona with targets, trends, and status indicators)
 - [x] Push Batch 16-17 results to Notion ARG-Builder hub (sync new document titles, categories, and summaries to Notion workspace)
+
+## Batch 18: RR Reframe + Provider Collaboration + Persistence
+
+- [x] Reframe RR housekeeping/accommodation content: RR is a travel concierge working WITH luxury riad/hotel providers, not operating them — update seeded docs, checklist items, escalation scenarios, KPIs, and seasonal calendar to reflect anticipatory concierge-provider collaboration
+- [x] Add DB persistence for daily checklist completions (save/load per user per day)
+- [x] Add DB persistence for shift handover notes (save/load history)
+- [x] Push Batch 17-18 summary to Notion ARG-Builder hub
+- [x] Build Provider Partner Directory (/provider-directory — CRUD for luxury riad/hotel partners with tier, quality score, contact info)
+- [x] Build Guest Anticipation Playbook (/guest-anticipation — 14 proactive actions across pre-arrival/during-stay/pre-departure coordinated with providers)
+- [x] Build Provider Quality Tracking (/provider-quality/:id — quality observations, ratings, and history per provider)
+- [x] Build Provider Onboarding Checklist (/provider-onboarding — 12-step partner onboarding process with deliverables and timelines)
+- [x] Build Provider SLA Dashboard (/provider-sla — 12 service level metrics with target/performance tracking and status indicators)
+- [x] Build Provider Commissions page (/provider-commissions — commission tiers, seasonal rates, payment tracking)
