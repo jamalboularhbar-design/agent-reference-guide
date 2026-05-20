@@ -132,6 +132,10 @@ import CaseStudiesPage from "./pages/CaseStudiesPage";
 import ReferralPage from "./pages/ReferralPage";
 import ChangelogPage from "./pages/ChangelogPage";
 import AdminEmailTemplatesPage from "./pages/AdminEmailTemplatesPage";
+import RequestDemoPage from "./pages/RequestDemoPage";
+import AdminGrowthDashboardPage from "./pages/AdminGrowthDashboardPage";
+import AdminBattleCardsPage from "./pages/AdminBattleCardsPage";
+import SuccessMetricsPage from "./pages/SuccessMetricsPage";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -258,6 +262,10 @@ function Router() {
       <Route path="/referral" component={ReferralPage} />
       <Route path="/changelog" component={ChangelogPage} />
       <Route path="/admin/email-templates" component={AdminEmailTemplatesPage} />
+      <Route path="/request-demo" component={RequestDemoPage} />
+      <Route path="/admin/growth" component={AdminGrowthDashboardPage} />
+      <Route path="/admin/battle-cards" component={AdminBattleCardsPage} />
+      <Route path="/success-metrics" component={SuccessMetricsPage} />
       <Route path="/admin/team" component={AdminTeamPage} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}

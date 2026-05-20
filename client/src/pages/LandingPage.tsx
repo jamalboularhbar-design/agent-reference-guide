@@ -14,7 +14,10 @@ import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import ChatWidget from '@/components/ChatWidget';
 import SocialProof from '@/components/SocialProof';
+import Footer from '@/components/Footer';
+import TestimonialVideos from '@/components/TestimonialVideos';
 import { ExitIntentModal, ComparisonSection } from '@/components/ConversionModals';
+import ProductTour from '@/components/ProductTour';
 import DemoBookingModal from '@/components/DemoBookingModal';
 import { useABTest, HERO_CTA_EXPERIMENT } from '@/hooks/useABTest';
 
@@ -557,6 +560,7 @@ export default function LandingPage() {
 
       {/* Social Proof */}
       <SocialProof />
+      <TestimonialVideos />
 
       {/* Pricing Section */}
       <section id="pricing" className="py-24 px-4">
@@ -821,55 +825,13 @@ export default function LandingPage() {
 
       {/* Exit Intent Modal */}
       <ExitIntentModal />
+      <ProductTour />
 
       {/* Demo Booking Modal */}
       <DemoBookingModal open={showDemoModal} onClose={() => setShowDemoModal(false)} />
 
       {/* Footer */}
-      <footer className="py-16 px-4 border-t border-white/5">
-        <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-10 mb-10">
-            <div className="md:col-span-2">
-              <div className="flex items-center gap-3 mb-4">
-                <img src={LOGO_IMG} alt="ARG Builder" className="w-8 h-8 rounded-lg" />
-                <span className="text-xl font-bold">ARG Builder</span>
-              </div>
-              <p className="text-sm text-gray-400 leading-relaxed mb-4 max-w-md">
-                AI-powered operational intelligence platforms tailored to every industry vertical. We build the systems that run your operations — from hospitality to healthcare, SaaS to manufacturing.
-              </p>
-              <p className="text-xs text-gray-600">argbuilder.io</p>
-            </div>
-            <div>
-              <h4 className="font-semibold text-sm mb-4 text-gray-300">Platform</h4>
-              <div className="flex flex-col gap-2 text-sm text-gray-500">
-                <a href="#platform" className="hover:text-white transition-colors">Features</a>
-                <a href="#verticals" className="hover:text-white transition-colors">Verticals</a>
-                <a href="#pricing" className="hover:text-white transition-colors">Pricing</a>
-                <Link href="/roi" className="hover:text-white transition-colors">ROI Calculator</Link>
-              </div>
-            </div>
-            <div>
-              <h4 className="font-semibold text-sm mb-4 text-gray-300">Company</h4>
-              <div className="flex flex-col gap-2 text-sm text-gray-500">
-                <a href="#vision" className="hover:text-white transition-colors">Our Vision</a>
-                <a href="#contact" className="hover:text-white transition-colors">Request Demo</a>
-                <Link href="/" className="hover:text-white transition-colors">Reference Guide</Link>
-                <span className="text-gray-600 cursor-default">Careers (Coming Soon)</span>
-              </div>
-            </div>
-          </div>
-          <div className="pt-8 border-t border-white/5 flex flex-col md:flex-row items-center justify-between gap-4">
-            <p className="text-sm text-gray-600">
-              &copy; {new Date().getFullYear()} ARG Builder. All rights reserved.
-            </p>
-            <div className="flex items-center gap-6 text-xs text-gray-600">
-              <span>hello@argbuilder.io</span>
-              <span>·</span>
-              <span>New York · San Francisco</span>
-            </div>
-          </div>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }

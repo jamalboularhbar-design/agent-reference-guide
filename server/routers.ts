@@ -2478,13 +2478,26 @@ export const appRouter = router({
         console.error("[Close CRM] Background lead creation failed:", err)
       );
 
-      // Notify owner about new demo request (non-blocking)
+      // Notify owner about new lead (non-blocking)
       notifyOwner({
-        title: `New Demo Request: ${input.fullName}`,
+        title: `New Lead: ${input.fullName}`,
         content: `Name: ${input.fullName}\nEmail: ${input.email}\nCompany: ${input.company || 'N/A'}\nJob Title: ${input.jobTitle || 'N/A'}\nTeam Size: ${input.teamSize || 'N/A'}\nMessage: ${input.message || 'None'}\nSource: ${input.source || 'direct'}`,
       }).catch((err) =>
         console.error("[Notification] Failed to notify owner of new lead:", err)
       );
+
+      // Fire conversion event webhook for demo requests
+      if (input.source === 'demo_request_form') {
+        import('./webhookNotifications').then(({ notifyConversionEvent }) => {
+          notifyConversionEvent({
+            event: 'demo_requested',
+            email: input.email,
+            name: input.fullName,
+            company: input.company || undefined,
+            details: input.message || undefined,
+          }).catch(() => {});
+        }).catch(() => {});
+      }
 
       return { success: true, id };
     }),
@@ -2493,6 +2506,18 @@ export const appRouter = router({
     updateStatus: adminProcedure.input(z.object({ id: z.number(), status: z.string() })).mutation(async ({ input }) => {
       await updateLeadStatus(input.id, input.status);
       return { success: true };
+    }),
+    scores: adminProcedure.query(async () => {
+      const { scoreLeadFromRecord } = await import('./leadScoring');
+      const allLeads = await getLeads();
+      return allLeads.map((l: any) => ({
+        id: l.id,
+        fullName: l.fullName,
+        email: l.email,
+        company: l.company,
+        source: l.source,
+        ...scoreLeadFromRecord(l),
+      }));
     }),
     exportCsv: adminProcedure.query(async () => {
       const allLeads = await getLeads();
@@ -2540,6 +2565,17 @@ export const appRouter = router({
           company: input.companyName || undefined,
           teamSize: input.teamSize || undefined,
           source: 'trial_signup',
+        });
+      } catch {}
+      // Notify owner of new trial
+      try {
+        const { notifyConversionEvent } = await import('./webhookNotifications');
+        await notifyConversionEvent({
+          event: 'trial_started',
+          email: input.email,
+          name: input.fullName,
+          company: input.companyName || undefined,
+          details: input.planTier ? `Plan: ${input.planTier}` : undefined,
         });
       } catch {}
       return { success: true, trial };

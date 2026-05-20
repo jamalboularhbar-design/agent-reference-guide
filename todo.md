@@ -453,3 +453,15 @@
 - [x] Create changelog/product updates page (/changelog with timeline, 8 version entries, type badges, CTA)
 - [x] Add A/B testing for hero CTA (useABTest hook, sticky localStorage assignment, analytics tracking, 50/50 split)
 - [x] Build admin email template editor (/admin/email-templates with 5 templates, edit/preview/reset, variable reference)
+
+## Batch 9: Growth & Conversion Optimization
+- [x] Activate nurture heartbeat scheduled job (task_uid: 83gVzPoow39LA7YmuRzuzf, daily 9am UTC)
+- [x] Build custom demo request form (/request-demo with team size, industry, pain points, timeline qualification, CRM lead)
+- [x] Build admin analytics dashboard (/admin/growth with KPIs, trial funnel, lead sources, UTM attribution, A/B test results)
+- [x] Add interactive product tour for new visitors (7-step walkthrough overlay, auto-triggers for new visitors, localStorage persistence)
+- [x] Add testimonial video embed section (4 industry testimonials with metrics, ratings, expandable quotes)
+- [x] Build smart lead scoring system (0-100 score, hot/warm/cool/cold tiers, company fit + engagement + behavioral factors, /api endpoint)
+- [x] Create competitive battle cards for sales team (/admin/battle-cards: Notion, Confluence, Guru with objections + responses)
+- [x] Build customer success metrics page (/success-metrics with 6 KPIs, before/after benchmarks, industry results)
+- [x] Add webhook notifications for key conversion events (trial_started, demo_requested, hot_lead, chat_escalation, referral via notifyOwner)
+- [x] Add footer with sitemap links across all public pages (4-column: Product, Solutions, Company, Legal)
