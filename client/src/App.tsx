@@ -147,6 +147,14 @@ import AdminCompliancePage from "./pages/AdminCompliancePage";
 import AdminPermissionsPage from "./pages/AdminPermissionsPage";
 import IntegrationsPage from "./pages/IntegrationsPage";
 import AdminOnboardingWizardPage from "./pages/AdminOnboardingWizardPage";
+import WizardRedirectGuard from "./components/WizardRedirectGuard";
+import AdminHomeKPIPage from "./pages/AdminHomeKPIPage";
+import AdminDocApprovalPage from "./pages/AdminDocApprovalPage";
+import AdminBulkUserImportPage from "./pages/AdminBulkUserImportPage";
+import AdminScheduledReportsPage from "./pages/AdminScheduledReportsPage";
+import AdminRateLimitingPage from "./pages/AdminRateLimitingPage";
+import AdminWebhookBuilderPage from "./pages/AdminWebhookBuilderPage";
+import AdminHealthMonitorPage from "./pages/AdminHealthMonitorPage";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -289,6 +297,13 @@ function Router() {
       <Route path="/admin/performance" component={AdminPerformanceDashboardPage} />
       <Route path="/admin/lead-scores" component={AdminLeadScoresPage} />
       <Route path="/admin/team" component={AdminTeamPage} />
+      <Route path="/admin/home" component={AdminHomeKPIPage} />
+      <Route path="/admin/doc-approvals" component={AdminDocApprovalPage} />
+      <Route path="/admin/bulk-user-import" component={AdminBulkUserImportPage} />
+      <Route path="/admin/reports/scheduled" component={AdminScheduledReportsPage} />
+      <Route path="/admin/rate-limits" component={AdminRateLimitingPage} />
+      <Route path="/admin/webhooks/builder" component={AdminWebhookBuilderPage} />
+      <Route path="/admin/health" component={AdminHealthMonitorPage} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />
@@ -323,6 +338,7 @@ function App() {
           <ScrollToTop />
           <MobileBottomNav />
           <AdminQuickActionToolbar />
+          <WizardRedirectGuard />
         </TooltipProvider>
       </ThemeProvider>
     </ErrorBoundary>

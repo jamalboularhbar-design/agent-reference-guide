@@ -124,6 +124,7 @@ export default function AdminOnboardingWizardPage() {
 
   // Load saved state from backend
   const { data: savedState, isLoading } = trpc.onboardingWizard.getState.useQuery();
+  const utils = trpc.useUtils();
   const saveMutation = trpc.onboardingWizard.saveState.useMutation({
     onSuccess: () => {
       setHasUnsavedChanges(false);
@@ -132,6 +133,24 @@ export default function AdminOnboardingWizardPage() {
     onError: () => {
       toast.error('Failed to save progress');
     },
+  });
+  const resetMutation = trpc.onboardingWizard.resetState.useMutation({
+    onSuccess: () => {
+      setCurrentStep(0);
+      setFormData({});
+      setCompletedSteps(new Set());
+      setHasUnsavedChanges(false);
+      setInitialized(false);
+      utils.onboardingWizard.getState.invalidate();
+      toast.success('Onboarding wizard has been reset. You can start fresh.');
+    },
+    onError: () => toast.error('Failed to reset onboarding'),
+  });
+  const inviteMutation = trpc.onboardingWizard.sendInvites.useMutation({
+    onSuccess: (data) => {
+      toast.success(`${data.invited} invitation(s) sent successfully!`);
+    },
+    onError: () => toast.error('Failed to send invitations'),
   });
 
   // Restore state from DB on load
@@ -162,6 +181,22 @@ export default function AdminOnboardingWizardPage() {
       setHasUnsavedChanges(true);
       return next;
     });
+  };
+
+  const handleSendInvites = (role: 'admin' | 'user', fieldId: string) => {
+    const emailsRaw = (formData[fieldId] as string) || '';
+    const emails = emailsRaw.split(/[\n,]+/).map(e => e.trim()).filter(e => e && e.includes('@'));
+    if (emails.length === 0) {
+      toast.error('No valid emails found. Enter one email per line.');
+      return;
+    }
+    inviteMutation.mutate({ emails, role });
+  };
+
+  const handleReset = () => {
+    if (window.confirm('Are you sure you want to reset the onboarding wizard? All progress will be lost.')) {
+      resetMutation.mutate();
+    }
   };
 
   const handleNext = () => {
@@ -385,6 +420,20 @@ export default function AdminOnboardingWizardPage() {
                 </p>
               </div>
             )}
+
+            {/* Reset Onboarding Button */}
+            <div className="mt-4">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-full text-xs text-muted-foreground hover:text-destructive"
+                onClick={handleReset}
+                disabled={resetMutation.isPending}
+              >
+                {resetMutation.isPending ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : null}
+                Reset Onboarding
+              </Button>
+            </div>
           </div>
 
           {/* Step Content */}
@@ -405,6 +454,27 @@ export default function AdminOnboardingWizardPage() {
                 <div className="space-y-5">
                   {step.fields.map(field => renderField(field))}
                 </div>
+
+                {/* Send Invites Actions (Step 2 only) */}
+                {currentStep === 1 && (
+                  <div className="mt-4 pt-4 border-t border-border space-y-2">
+                    <p className="text-xs text-muted-foreground mb-2">Send invitations to the emails listed above:</p>
+                    <div className="flex gap-2 flex-wrap">
+                      <Button size="sm" variant="outline" onClick={() => handleSendInvites('admin', 'adminEmails')} disabled={inviteMutation.isPending}>
+                        {inviteMutation.isPending ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <Users className="w-3 h-3 mr-1" />}
+                        Send Admin Invites
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={() => handleSendInvites('user', 'editorEmails')} disabled={inviteMutation.isPending}>
+                        {inviteMutation.isPending ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <Users className="w-3 h-3 mr-1" />}
+                        Send Editor Invites
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={() => handleSendInvites('user', 'viewerEmails')} disabled={inviteMutation.isPending}>
+                        {inviteMutation.isPending ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <Users className="w-3 h-3 mr-1" />}
+                        Send Viewer Invites
+                      </Button>
+                    </div>
+                  </div>
+                )}
 
                 {/* Navigation Buttons */}
                 <div className="flex items-center justify-between mt-8 pt-6 border-t border-border">

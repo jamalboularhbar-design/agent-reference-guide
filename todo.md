@@ -492,3 +492,16 @@
 - [x] Create integration marketplace page (/integrations with 18 connectors, categories, search, connect/manage buttons)
 - [x] Build enterprise onboarding wizard (/admin/onboarding-wizard with 7-step setup: org profile, team invites, auth/SSO, import, branding, integrations, go-live checklist)
 - [x] Wire enterprise onboarding wizard to backend tRPC procedure (onboarding_wizard_state table, getWizardState/saveWizardState helpers, onboardingWizard.getState/saveState tRPC procedures, auto-load/auto-save on frontend)
+
+## Batch 12: Operational Depth & Revenue Readiness
+
+- [x] Auto-redirect new admins to onboarding wizard (detect incomplete setup on login, redirect to /admin/onboarding-wizard)
+- [x] Wire onboarding wizard Step 2 to invite system (dispatch real invite tokens from team invite step)
+- [x] Add "Reset Onboarding" button in admin settings (clear wizard state, allow re-run)
+- [x] Build admin dashboard home with live KPI cards (active users, docs created this week, pending approvals, system health)
+- [x] Add document approval workflow (submit for review, approve/reject with comments, status badges, admin queue)
+- [x] Build bulk user import via CSV upload (parse CSV, validate emails, assign roles, preview before import, error report)
+- [x] Add scheduled report generation page (/admin/reports/scheduled with weekly/monthly digest config, recipients, format)
+- [x] Build API rate limiting dashboard (/admin/rate-limits with per-endpoint limits, usage meters, throttle config)
+- [x] Create custom webhook builder (/admin/webhooks/builder with event picker, URL config, headers, test fire, delivery log)
+- [x] Add admin system health monitor (/admin/health with DB connection, API latency, storage usage, uptime, alerts config)

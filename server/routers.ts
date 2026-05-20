@@ -2690,6 +2690,34 @@ export const appRouter = router({
       });
       return { success: true };
     }),
+    resetState: adminProcedure.mutation(async ({ ctx }) => {
+      await saveWizardState(ctx.user.id, {
+        currentStep: 0,
+        completedSteps: [],
+        formData: {},
+        isComplete: false,
+      });
+      return { success: true };
+    }),
+    sendInvites: adminProcedure.input(z.object({
+      emails: z.array(z.string().email()),
+      role: z.enum(['user', 'admin']),
+    })).mutation(async ({ ctx, input }) => {
+      const crypto = await import('crypto');
+      const results: { email: string; token: string; inviteUrl: string }[] = [];
+      const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+      const userId = ctx.user.id;
+      for (const email of input.emails) {
+        const token = crypto.randomBytes(32).toString('hex');
+        await createInviteToken({ token, email, role: input.role, invitedBy: userId, expiresAt });
+        const inviteUrl = `${ctx.req.headers.origin || 'https://argbuilder.io'}/invite/${token}`;
+        results.push({ email, token, inviteUrl });
+      }
+      if (results.length > 0) {
+        await notifyOwner({ title: 'Wizard: Team Invites Sent', content: `Invited ${results.length} users as ${input.role}: ${results.map(r => r.email).join(', ')}` });
+      }
+      return { success: true, invited: results.length };
+    }),
   }),
 });
 export type AppRouter = typeof appRouter;
