@@ -2719,5 +2719,187 @@ export const appRouter = router({
       return { success: true, invited: results.length };
     }),
   }),
+
+  // ===== AI-Empowered Services =====
+  ai: router({
+    summarize: protectedProcedure
+      .input(z.object({ text: z.string().min(10).max(50000), format: z.enum(['executive', 'bullets', 'actions']).optional().default('executive') }))
+      .mutation(async ({ input }) => {
+        const formatInstructions: Record<string, string> = {
+          executive: 'Generate a concise executive summary in 3-4 sentences. Focus on key decisions, outcomes, and strategic implications.',
+          bullets: 'Extract the 5-7 most important points as bullet items. Each bullet should be one clear sentence.',
+          actions: 'Extract all action items, deadlines, and responsible parties. Format as a numbered list with owner and due date if mentioned.',
+        };
+        const response = await invokeLLM({
+          messages: [
+            { role: 'system', content: `You are an expert document analyst. ${formatInstructions[input.format]}` },
+            { role: 'user', content: input.text.substring(0, 12000) },
+          ],
+        });
+        return { summary: (response.choices?.[0]?.message?.content as string) || 'Unable to generate summary.' };
+      }),
+
+    recommendations: protectedProcedure
+      .input(z.object({ currentDocSlug: z.string().optional(), userInterests: z.array(z.string()).optional() }))
+      .query(async ({ input }) => {
+        const result = await getDocuments({ limit: 50, offset: 0, status: 'published' });
+        const published = result.documents;
+        const context = input.currentDocSlug
+          ? `User is currently reading document with slug: ${input.currentDocSlug}`
+          : input.userInterests?.length
+            ? `User interests: ${input.userInterests.join(', ')}`
+            : 'Recommend popular and recently updated documents';
+        const docList = published.map((d: any) => `- ${d.title} [${d.category}] (${d.slug})`).join('\n');
+        const response = await invokeLLM({
+          messages: [
+            { role: 'system', content: 'You are a content recommendation engine. Given the user context and available documents, recommend 5 most relevant documents. Return ONLY a JSON array of objects with fields: slug, reason (one sentence why recommended). No markdown formatting.' },
+            { role: 'user', content: `${context}\n\nAvailable documents:\n${docList}` },
+          ],
+        });
+        try {
+          const content = (response.choices?.[0]?.message?.content as string) || '[]';
+          const cleaned = content.replace(/```json?\n?/g, '').replace(/```/g, '').trim();
+          return { recommendations: JSON.parse(cleaned) as { slug: string; reason: string }[] };
+        } catch {
+          return { recommendations: published.slice(0, 5).map((d: any) => ({ slug: d.slug, reason: 'Popular document' })) };
+        }
+      }),
+
+    write: protectedProcedure
+      .input(z.object({
+        prompt: z.string().min(5).max(5000),
+        mode: z.enum(['draft', 'rewrite', 'expand', 'translate', 'simplify']),
+        context: z.string().max(10000).optional(),
+        targetLanguage: z.string().max(20).optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const modeInstructions: Record<string, string> = {
+          draft: 'Generate a well-structured first draft based on the prompt. Use clear headings, professional tone, and actionable content.',
+          rewrite: 'Rewrite the provided text to improve clarity, professionalism, and flow while preserving the original meaning.',
+          expand: 'Expand the provided outline or brief into a detailed, comprehensive document with examples and explanations.',
+          translate: `Translate the following text to ${input.targetLanguage || 'French'}. Maintain professional tone and formatting.`,
+          simplify: 'Simplify the following text for a general audience. Remove jargon, use shorter sentences, and explain complex concepts.',
+        };
+        const response = await invokeLLM({
+          messages: [
+            { role: 'system', content: `You are an expert content writer. ${modeInstructions[input.mode]}` },
+            { role: 'user', content: input.context ? `Context:\n${input.context}\n\nRequest: ${input.prompt}` : input.prompt },
+          ],
+        });
+        return { content: (response.choices?.[0]?.message?.content as string) || 'Unable to generate content.' };
+      }),
+
+    predictLeadScore: protectedProcedure
+      .input(z.object({ leadData: z.object({ name: z.string(), email: z.string(), company: z.string().optional(), source: z.string().optional(), interactions: z.number().optional() }) }))
+      .mutation(async ({ input }) => {
+        const leadInfo = input.leadData;
+        const response = await invokeLLM({
+          messages: [
+            { role: 'system', content: 'You are a lead scoring AI. Analyze the lead data and predict conversion probability. Return ONLY valid JSON with fields: score (0-100), probability (percentage string), factors (array of 3-5 scoring factors with name and impact: positive/negative/neutral), recommendation (one sentence next action). No markdown.' },
+            { role: 'user', content: `Lead: ${leadInfo.name}\nEmail: ${leadInfo.email}\nCompany: ${leadInfo.company || 'Unknown'}\nSource: ${leadInfo.source || 'Direct'}\nInteractions: ${leadInfo.interactions || 0}` },
+          ],
+        });
+        try {
+          const content = (response.choices?.[0]?.message?.content as string) || '{}';
+          const cleaned = content.replace(/```json?\n?/g, '').replace(/```/g, '').trim();
+          return JSON.parse(cleaned) as { score: number; probability: string; factors: { name: string; impact: string }[]; recommendation: string };
+        } catch {
+          return { score: 50, probability: '50%', factors: [{ name: 'Insufficient data', impact: 'neutral' }], recommendation: 'Gather more lead information.' };
+        }
+      }),
+
+    semanticSearch: protectedProcedure
+      .input(z.object({ query: z.string().min(2).max(500) }))
+      .mutation(async ({ input }) => {
+        const result = await getDocuments({ limit: 80, offset: 0, status: 'published' });
+        const docSummaries = result.documents.map((d: any) => `[${d.slug}] ${d.title} - ${d.category}`).join('\n');
+        const response = await invokeLLM({
+          messages: [
+            { role: 'system', content: 'You are a semantic search engine. Given a natural language query and document list, find the most relevant documents. Return ONLY valid JSON array of objects with: slug, title, relevance (0-100), explanation (one sentence why relevant). Max 8 results, sorted by relevance. No markdown.' },
+            { role: 'user', content: `Query: "${input.query}"\n\nDocuments:\n${docSummaries}` },
+          ],
+        });
+        try {
+          const content = (response.choices?.[0]?.message?.content as string) || '[]';
+          const cleaned = content.replace(/```json?\n?/g, '').replace(/```/g, '').trim();
+          return { results: JSON.parse(cleaned) as { slug: string; title: string; relevance: number; explanation: string }[], intent: input.query };
+        } catch {
+          return { results: [], intent: input.query };
+        }
+      }),
+
+    autoTag: protectedProcedure
+      .input(z.object({ text: z.string().min(10).max(20000), existingTags: z.array(z.string()).optional() }))
+      .mutation(async ({ input }) => {
+        const tagContext = input.existingTags?.length ? `\nExisting tag vocabulary: ${input.existingTags.join(', ')}` : '';
+        const response = await invokeLLM({
+          messages: [
+            { role: 'system', content: `You are a content classification AI. Analyze the text and suggest relevant tags/categories. Return ONLY valid JSON with fields: tags (array of objects with name and confidence 0-100), primaryCategory (string), suggestedTitle (string if not obvious). Prefer existing tags when relevant.${tagContext} No markdown.` },
+            { role: 'user', content: input.text.substring(0, 8000) },
+          ],
+        });
+        try {
+          const content = (response.choices?.[0]?.message?.content as string) || '{}';
+          const cleaned = content.replace(/```json?\n?/g, '').replace(/```/g, '').trim();
+          return JSON.parse(cleaned) as { tags: { name: string; confidence: number }[]; primaryCategory: string; suggestedTitle?: string };
+        } catch {
+          return { tags: [{ name: 'uncategorized', confidence: 50 }], primaryCategory: 'General' };
+        }
+      }),
+
+    meetingNotes: protectedProcedure
+      .input(z.object({ transcript: z.string().min(20).max(50000), meetingTitle: z.string().optional() }))
+      .mutation(async ({ input }) => {
+        const response = await invokeLLM({
+          messages: [
+            { role: 'system', content: 'You are a meeting notes AI. Analyze the transcript and extract structured notes. Return ONLY valid JSON with: summary (2-3 sentences), attendees (array of names mentioned), decisions (array of strings), actionItems (array of objects with task, owner, deadline if mentioned), keyTopics (array of strings), followUps (array of strings). No markdown.' },
+            { role: 'user', content: `${input.meetingTitle ? `Meeting: ${input.meetingTitle}\n\n` : ''}Transcript:\n${input.transcript.substring(0, 15000)}` },
+          ],
+        });
+        try {
+          const content = (response.choices?.[0]?.message?.content as string) || '{}';
+          const cleaned = content.replace(/```json?\n?/g, '').replace(/```/g, '').trim();
+          return JSON.parse(cleaned) as { summary: string; attendees: string[]; decisions: string[]; actionItems: { task: string; owner?: string; deadline?: string }[]; keyTopics: string[]; followUps: string[] };
+        } catch {
+          return { summary: 'Unable to parse transcript.', attendees: [], decisions: [], actionItems: [], keyTopics: [], followUps: [] };
+        }
+      }),
+
+    generateWorkflow: protectedProcedure
+      .input(z.object({ description: z.string().min(10).max(2000) }))
+      .mutation(async ({ input }) => {
+        const response = await invokeLLM({
+          messages: [
+            { role: 'system', content: 'You are a workflow automation architect. Convert the plain English description into a structured workflow. Return ONLY valid JSON with: name (workflow name), trigger (what starts it), steps (array of objects with id, action, description, condition if conditional), estimatedTime (string), complexity (low/medium/high). No markdown.' },
+            { role: 'user', content: input.description },
+          ],
+        });
+        try {
+          const content = (response.choices?.[0]?.message?.content as string) || '{}';
+          const cleaned = content.replace(/```json?\n?/g, '').replace(/```/g, '').trim();
+          return JSON.parse(cleaned) as { name: string; trigger: string; steps: { id: number; action: string; description: string; condition?: string }[]; estimatedTime: string; complexity: string };
+        } catch {
+          return { name: 'Custom Workflow', trigger: 'Manual', steps: [{ id: 1, action: 'Review', description: input.description }], estimatedTime: 'Unknown', complexity: 'medium' };
+        }
+      }),
+
+    analyzeSentiment: protectedProcedure
+      .input(z.object({ texts: z.array(z.string().max(2000)).min(1).max(20) }))
+      .mutation(async ({ input }) => {
+        const response = await invokeLLM({
+          messages: [
+            { role: 'system', content: 'You are a sentiment analysis AI. Analyze each text for sentiment. Return ONLY valid JSON with: results (array of objects with text (first 50 chars), sentiment (positive/negative/neutral/mixed), confidence (0-100), keywords (array of emotion words)), overall (object with positive/negative/neutral counts, averageConfidence). No markdown.' },
+            { role: 'user', content: `Analyze sentiment for these ${input.texts.length} texts:\n${input.texts.map((t, i) => `${i + 1}. ${t}`).join('\n')}` },
+          ],
+        });
+        try {
+          const content = (response.choices?.[0]?.message?.content as string) || '{}';
+          const cleaned = content.replace(/```json?\n?/g, '').replace(/```/g, '').trim();
+          return JSON.parse(cleaned) as { results: { text: string; sentiment: string; confidence: number; keywords: string[] }[]; overall: { positive: number; negative: number; neutral: number; averageConfidence: number } };
+        } catch {
+          return { results: input.texts.map(t => ({ text: t.substring(0, 50), sentiment: 'neutral', confidence: 50, keywords: [] as string[] })), overall: { positive: 0, negative: 0, neutral: input.texts.length, averageConfidence: 50 } };
+        }
+      }),
+  }),
 });
 export type AppRouter = typeof appRouter;

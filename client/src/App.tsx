@@ -155,6 +155,16 @@ import AdminScheduledReportsPage from "./pages/AdminScheduledReportsPage";
 import AdminRateLimitingPage from "./pages/AdminRateLimitingPage";
 import AdminWebhookBuilderPage from "./pages/AdminWebhookBuilderPage";
 import AdminHealthMonitorPage from "./pages/AdminHealthMonitorPage";
+import AISummarizerPage from "./pages/AISummarizerPage";
+import AIWriterPage from "./pages/AIWriterPage";
+import AIRecommendationsPage from "./pages/AIRecommendationsPage";
+import AILeadScoringPage from "./pages/AILeadScoringPage";
+import AISemanticSearchPage from "./pages/AISemanticSearchPage";
+import AIAutoTagPage from "./pages/AIAutoTagPage";
+import AIMeetingNotesPage from "./pages/AIMeetingNotesPage";
+import AIWorkflowPage from "./pages/AIWorkflowPage";
+import AISentimentPage from "./pages/AISentimentPage";
+import AIConfigPage from "./pages/AIConfigPage";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -304,6 +314,16 @@ function Router() {
       <Route path="/admin/rate-limits" component={AdminRateLimitingPage} />
       <Route path="/admin/webhooks/builder" component={AdminWebhookBuilderPage} />
       <Route path="/admin/health" component={AdminHealthMonitorPage} />
+      <Route path="/ai/summarize" component={AISummarizerPage} />
+      <Route path="/ai/writer" component={AIWriterPage} />
+      <Route path="/ai/recommendations" component={AIRecommendationsPage} />
+      <Route path="/ai/lead-scoring" component={AILeadScoringPage} />
+      <Route path="/ai/search" component={AISemanticSearchPage} />
+      <Route path="/ai/auto-tag" component={AIAutoTagPage} />
+      <Route path="/ai/meeting-notes" component={AIMeetingNotesPage} />
+      <Route path="/ai/workflows" component={AIWorkflowPage} />
+      <Route path="/ai/sentiment" component={AISentimentPage} />
+      <Route path="/admin/ai-config" component={AIConfigPage} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />
