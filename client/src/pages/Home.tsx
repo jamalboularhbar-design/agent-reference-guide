@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'wouter';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Plane, Palette, ChevronRight } from 'lucide-react';
+import { Plane, Palette, ChevronRight, CheckSquare, ClipboardList, Shield, Calendar, BarChart3, FolderOpen } from 'lucide-react';
 import TravelConcierge from '@/components/personas/TravelConcierge';
 import CreativeStudio from '@/components/personas/CreativeStudio';
 import Header from '@/components/Header';
@@ -315,6 +316,57 @@ export default function Home() {
 
             <TabsContent value="travel" className="mt-8 space-y-8">
               <TravelConcierge />
+              {/* Persona Operations Quick Access */}
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                <Link href="/persona/riad-routes">
+                  <Card className="cursor-pointer hover:border-accent/50 transition-colors h-full">
+                    <CardContent className="p-4 flex items-center gap-3">
+                      <FolderOpen className="w-5 h-5 text-sky-400" />
+                      <div><p className="text-sm font-medium">Browse SOPs</p><p className="text-xs text-muted-foreground">16 process docs</p></div>
+                    </CardContent>
+                  </Card>
+                </Link>
+                <Link href="/daily-checklist">
+                  <Card className="cursor-pointer hover:border-accent/50 transition-colors h-full">
+                    <CardContent className="p-4 flex items-center gap-3">
+                      <CheckSquare className="w-5 h-5 text-green-400" />
+                      <div><p className="text-sm font-medium">Daily Checklist</p><p className="text-xs text-muted-foreground">18 daily tasks</p></div>
+                    </CardContent>
+                  </Card>
+                </Link>
+                <Link href="/shift-handover">
+                  <Card className="cursor-pointer hover:border-accent/50 transition-colors h-full">
+                    <CardContent className="p-4 flex items-center gap-3">
+                      <ClipboardList className="w-5 h-5 text-amber-400" />
+                      <div><p className="text-sm font-medium">Shift Handover</p><p className="text-xs text-muted-foreground">Notes & priorities</p></div>
+                    </CardContent>
+                  </Card>
+                </Link>
+                <Link href="/escalation-matrix">
+                  <Card className="cursor-pointer hover:border-accent/50 transition-colors h-full">
+                    <CardContent className="p-4 flex items-center gap-3">
+                      <Shield className="w-5 h-5 text-red-400" />
+                      <div><p className="text-sm font-medium">Escalation Matrix</p><p className="text-xs text-muted-foreground">Emergency protocols</p></div>
+                    </CardContent>
+                  </Card>
+                </Link>
+                <Link href="/seasonal-calendar">
+                  <Card className="cursor-pointer hover:border-accent/50 transition-colors h-full">
+                    <CardContent className="p-4 flex items-center gap-3">
+                      <Calendar className="w-5 h-5 text-purple-400" />
+                      <div><p className="text-sm font-medium">Seasonal Calendar</p><p className="text-xs text-muted-foreground">Events & peaks</p></div>
+                    </CardContent>
+                  </Card>
+                </Link>
+                <Link href="/operational-kpis">
+                  <Card className="cursor-pointer hover:border-accent/50 transition-colors h-full">
+                    <CardContent className="p-4 flex items-center gap-3">
+                      <BarChart3 className="w-5 h-5 text-cyan-400" />
+                      <div><p className="text-sm font-medium">KPI Scorecards</p><p className="text-xs text-muted-foreground">12 key metrics</p></div>
+                    </CardContent>
+                  </Card>
+                </Link>
+              </div>
               <Card className="card-premium">
                 <CardHeader>
                   <CardTitle>Process Timeline</CardTitle>
@@ -328,6 +380,57 @@ export default function Home() {
 
             <TabsContent value="artkech" className="mt-8 space-y-8">
               <CreativeStudio />
+              {/* Persona Operations Quick Access */}
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                <Link href="/persona/artkech">
+                  <Card className="cursor-pointer hover:border-accent/50 transition-colors h-full">
+                    <CardContent className="p-4 flex items-center gap-3">
+                      <FolderOpen className="w-5 h-5 text-purple-400" />
+                      <div><p className="text-sm font-medium">Browse SOPs</p><p className="text-xs text-muted-foreground">16 process docs</p></div>
+                    </CardContent>
+                  </Card>
+                </Link>
+                <Link href="/daily-checklist">
+                  <Card className="cursor-pointer hover:border-accent/50 transition-colors h-full">
+                    <CardContent className="p-4 flex items-center gap-3">
+                      <CheckSquare className="w-5 h-5 text-green-400" />
+                      <div><p className="text-sm font-medium">Daily Checklist</p><p className="text-xs text-muted-foreground">18 daily tasks</p></div>
+                    </CardContent>
+                  </Card>
+                </Link>
+                <Link href="/shift-handover">
+                  <Card className="cursor-pointer hover:border-accent/50 transition-colors h-full">
+                    <CardContent className="p-4 flex items-center gap-3">
+                      <ClipboardList className="w-5 h-5 text-amber-400" />
+                      <div><p className="text-sm font-medium">Shift Handover</p><p className="text-xs text-muted-foreground">Notes & priorities</p></div>
+                    </CardContent>
+                  </Card>
+                </Link>
+                <Link href="/escalation-matrix">
+                  <Card className="cursor-pointer hover:border-accent/50 transition-colors h-full">
+                    <CardContent className="p-4 flex items-center gap-3">
+                      <Shield className="w-5 h-5 text-red-400" />
+                      <div><p className="text-sm font-medium">Escalation Matrix</p><p className="text-xs text-muted-foreground">Emergency protocols</p></div>
+                    </CardContent>
+                  </Card>
+                </Link>
+                <Link href="/seasonal-calendar">
+                  <Card className="cursor-pointer hover:border-accent/50 transition-colors h-full">
+                    <CardContent className="p-4 flex items-center gap-3">
+                      <Calendar className="w-5 h-5 text-purple-400" />
+                      <div><p className="text-sm font-medium">Seasonal Calendar</p><p className="text-xs text-muted-foreground">Events & peaks</p></div>
+                    </CardContent>
+                  </Card>
+                </Link>
+                <Link href="/operational-kpis">
+                  <Card className="cursor-pointer hover:border-accent/50 transition-colors h-full">
+                    <CardContent className="p-4 flex items-center gap-3">
+                      <BarChart3 className="w-5 h-5 text-cyan-400" />
+                      <div><p className="text-sm font-medium">KPI Scorecards</p><p className="text-xs text-muted-foreground">12 key metrics</p></div>
+                    </CardContent>
+                  </Card>
+                </Link>
+              </div>
               <Card className="card-premium">
                 <CardHeader>
                   <CardTitle>Process Timeline</CardTitle>

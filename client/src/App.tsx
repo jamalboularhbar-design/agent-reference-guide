@@ -181,6 +181,12 @@ import AdminImpersonationPage from "./pages/AdminImpersonationPage";
 import CustomFieldsPage from "./pages/CustomFieldsPage";
 import WorkflowSlaPage from "./pages/WorkflowSlaPage";
 import PlatformChangelogPage from "./pages/PlatformChangelogPage";
+import PersonaDocsBrowserPage from "./pages/PersonaDocsBrowserPage";
+import DailyChecklistPage from "./pages/DailyChecklistPage";
+import ShiftHandoverPage from "./pages/ShiftHandoverPage";
+import EscalationMatrixPage from "./pages/EscalationMatrixPage";
+import SeasonalCalendarPage from "./pages/SeasonalCalendarPage";
+import OperationalKPIPage from "./pages/OperationalKPIPage";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -355,6 +361,12 @@ function Router() {
       <Route path="/admin/custom-fields" component={CustomFieldsPage} />
       <Route path="/admin/workflow-sla" component={WorkflowSlaPage} />
       <Route path="/platform/changelog" component={PlatformChangelogPage} />
+      <Route path="/persona/:persona" component={PersonaDocsBrowserPage} />
+      <Route path="/daily-checklist" component={DailyChecklistPage} />
+      <Route path="/shift-handover" component={ShiftHandoverPage} />
+      <Route path="/escalation-matrix" component={EscalationMatrixPage} />
+      <Route path="/seasonal-calendar" component={SeasonalCalendarPage} />
+      <Route path="/operational-kpis" component={OperationalKPIPage} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />

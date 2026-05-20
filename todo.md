@@ -549,3 +549,16 @@
 
 - [x] Seed 16 detailed Riad & Routes day-to-day process documents (guest check-in, housekeeping, tour booking, driver dispatch, VIP handling, complaints, procurement, F&B, pricing, WhatsApp concierge, hammam/spa, night audit, staff training, reputation management, medina tours, checkout)
 - [x] Seed 16 detailed ArtKech Design Studio day-to-day process documents (creative brief intake, design review, client onboarding, brand identity, print production, social media pipeline, pricing/quotation, daily operations, freelancer management, client feedback, file management, portfolio/case studies, QA/preflight, financial management, lead generation, photography)
+
+## Batch 17: Persona-Linked Operations & Real-World Usability
+
+- [x] Link persona pages to their seeded documents (TravelConcierge shows RR docs, CreativeStudio shows AK docs with quick-access cards and category tabs)
+- [x] Build persona-specific document browser (/persona/riad-routes and /persona/artkech — filtered views showing only that persona's process docs)
+- [x] Add process timeline visualization component (visual step-by-step flowchart rendering for any process document, auto-parsed from markdown headers)
+- [x] Create daily operational checklist generator (/daily-checklist — 18-item daily ops checklist per persona with time-of-day filters and progress tracking)
+- [x] Build shift handover notes system (/shift-handover — structured handover note creator with priority/category tagging)
+- [x] Add emergency escalation matrix page (/escalation-matrix — 5-scenario emergency escalation matrix per persona with 3-level protocols)
+- [x] Create seasonal operations calendar (/seasonal-calendar — month view showing seasonal events, peak periods, deadlines, and preparation periods per persona)
+- [x] Build cross-persona document linking (CrossPersonaLinksPanel component showing related processes from the other persona when viewing RR/AK documents)
+- [x] Add operational KPI scorecards per persona (/operational-kpis — 12 KPIs per persona with targets, trends, and status indicators)
+- [x] Push Batch 16-17 results to Notion ARG-Builder hub (sync new document titles, categories, and summaries to Notion workspace)

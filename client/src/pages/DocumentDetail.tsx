@@ -52,6 +52,8 @@ import RelatedByTags from '@/components/RelatedByTags';
 import TextToSpeech from '@/components/TextToSpeech';
 import QuickEditInline from '@/components/QuickEditInline';
 import SmartRecommendations from '@/components/SmartRecommendations';
+import ProcessTimelineVisualization from '@/components/ProcessTimelineVisualization';
+import CrossPersonaLinksPanel from '@/components/CrossPersonaLinksPanel';
 import DocumentSnapshots from '@/components/DocumentSnapshots';
 import AddToCollectionButton from '@/components/AddToCollectionButton';
 import ReadingTimeEstimate from '@/components/ReadingTimeEstimate';
@@ -608,6 +610,16 @@ export default function DocumentDetail() {
                 {interpolateTemplateVars(document.content || '')}
               </ReactMarkdown>
             </article>
+
+            {/* Process Timeline (for persona process docs) */}
+            {(document.category === 'Riad & Routes' || document.category === 'ArtKech Design Studio') && (
+              <ProcessTimelineVisualization content={document.content || ''} />
+            )}
+
+            {/* Cross-Persona Related Documents */}
+            {(document.category === 'Riad & Routes' || document.category === 'ArtKech Design Studio') && (
+              <CrossPersonaLinksPanel currentDocTitle={document.title} currentCategory={document.category} />
+            )}
 
             {/* Document Dependencies */}
             <DocumentDependencies slug={document.slug} />
