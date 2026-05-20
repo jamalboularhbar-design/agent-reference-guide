@@ -131,6 +131,7 @@ import {
   createLead, getLeads, updateLeadStatus, getLeadStats,
   createInviteToken, getInviteByToken, markInviteAccepted, getTeamInvites, deleteInviteToken, getTeamMembers, updateUserRoleById,
   createTrial, getTrialByEmail, getAllTrials, updateTrialStatus, getTrialStats, recordNurtureEmail, getNurtureEmailsForTrial,
+  createReferral, getReferralByCode, getReferralsByUser, markReferralSignedUp, getReferralStats,
 } from "./db";
 import { invokeLLM } from "./_core/llm";
 import { notifyOwner } from "./_core/notification";
@@ -2590,6 +2591,38 @@ export const appRouter = router({
     processNurture: adminProcedure.mutation(async () => {
       const { processNurtureEmails } = await import('./nurtureSequence');
       return processNurtureEmails();
+    }),
+  }),
+
+  // ─── Referral Program ─────────────────────────────────────────────────────
+  referrals: router({
+    getMyCode: protectedProcedure.query(async ({ ctx }) => {
+      const existing = await getReferralsByUser(ctx.user.id);
+      if (existing.length > 0) {
+        return { code: existing[0].referralCode };
+      }
+      // Generate a unique code
+      const code = `ARG-${ctx.user.id.toString(36).toUpperCase()}-${Date.now().toString(36).slice(-4).toUpperCase()}`;
+      await createReferral(ctx.user.id, code);
+      return { code };
+    }),
+
+    getStats: protectedProcedure.query(async ({ ctx }) => {
+      return getReferralStats(ctx.user.id);
+    }),
+
+    getMyReferrals: protectedProcedure.query(async ({ ctx }) => {
+      return getReferralsByUser(ctx.user.id);
+    }),
+
+    validateCode: publicProcedure.input(z.object({ code: z.string() })).query(async ({ input }) => {
+      const ref = await getReferralByCode(input.code);
+      return { valid: !!ref, referrerName: ref ? 'ARG Builder User' : null };
+    }),
+
+    trackSignup: publicProcedure.input(z.object({ code: z.string(), email: z.string() })).mutation(async ({ input }) => {
+      await markReferralSignedUp(input.code, input.email);
+      return { success: true };
     }),
   }),
 });

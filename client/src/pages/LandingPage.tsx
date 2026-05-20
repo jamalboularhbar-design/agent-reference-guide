@@ -15,6 +15,8 @@ import { toast } from 'sonner';
 import ChatWidget from '@/components/ChatWidget';
 import SocialProof from '@/components/SocialProof';
 import { ExitIntentModal, ComparisonSection } from '@/components/ConversionModals';
+import DemoBookingModal from '@/components/DemoBookingModal';
+import { useABTest, HERO_CTA_EXPERIMENT } from '@/hooks/useABTest';
 
 const HERO_IMG = '/manus-storage/hero-dashboard_9f31bf62.png';
 const KNOWLEDGE_GRAPH_IMG = '/manus-storage/feature-knowledge-graph_ed196875.png';
@@ -31,8 +33,78 @@ const VERTICALS = [
   { icon: Building2, name: 'SaaS & Technology', desc: 'Product, engineering, and CS teams', color: 'text-cyan-400' },
 ];
 
+// UTM-aware hero content variants
+interface HeroVariant {
+  badge: string;
+  headlinePart1: string;
+  headlinePart2: string;
+  subheadline: string;
+}
+
+function getHeroVariant(utmSource: string): HeroVariant {
+  switch (utmSource.toLowerCase()) {
+    case 'travel':
+    case 'hospitality':
+      return {
+        badge: 'Built for Travel & Hospitality Teams',
+        headlinePart1: 'Your travel ops,',
+        headlinePart2: 'powered by AI',
+        subheadline: 'Turn scattered itineraries, supplier contacts, and guest preferences into a living operational system. From boutique riads to luxury tour operators — ARG Builder keeps your entire team aligned.',
+      };
+    case 'healthcare':
+    case 'medical':
+      return {
+        badge: 'HIPAA-Ready Operational Intelligence',
+        headlinePart1: 'Clinical workflows,',
+        headlinePart2: 'instantly accessible',
+        subheadline: 'Consolidate protocols, care pathways, and compliance docs into one searchable AI-powered system. Your staff finds answers in seconds, not hours.',
+      };
+    case 'saas':
+    case 'tech':
+    case 'software':
+      return {
+        badge: 'Scale Your Engineering & CS Knowledge',
+        headlinePart1: 'Ship faster with',
+        headlinePart2: 'AI-powered docs',
+        subheadline: 'Runbooks, architecture decisions, onboarding guides — all searchable by your entire org. Reduce onboarding time by 60% and eliminate repeated questions.',
+      };
+    case 'manufacturing':
+    case 'industrial':
+      return {
+        badge: 'Operational Excellence for Manufacturing',
+        headlinePart1: 'Factory floor wisdom,',
+        headlinePart2: 'digitized & searchable',
+        subheadline: 'SOPs, quality checklists, maintenance procedures — accessible to every shift, every line. Reduce errors and accelerate training across your facilities.',
+      };
+    case 'linkedin':
+    case 'social':
+      return {
+        badge: 'Trusted by 200+ Operations Teams',
+        headlinePart1: 'Stop losing knowledge',
+        headlinePart2: 'when people leave',
+        subheadline: 'ARG Builder captures tribal knowledge, SOPs, and best practices into AI-searchable systems. Your team stays productive even during turnover.',
+      };
+    case 'google':
+    case 'search':
+      return {
+        badge: 'AI-Powered Operational Intelligence for Every Vertical',
+        headlinePart1: 'We build the AI that',
+        headlinePart2: 'runs your operations',
+        subheadline: 'ARG Builder creates AI-powered operational intelligence platforms tailored to your industry. We turn scattered SOPs, playbooks, and tribal knowledge into living systems your entire team can trust.',
+      };
+    default:
+      return {
+        badge: 'AI-Powered Operational Intelligence for Every Vertical',
+        headlinePart1: 'We build the AI that',
+        headlinePart2: 'runs your operations',
+        subheadline: 'ARG Builder creates AI-powered operational intelligence platforms tailored to your industry. We turn scattered SOPs, playbooks, and tribal knowledge into living systems your entire team can trust — from hospitality to healthcare, SaaS to manufacturing.',
+      };
+  }
+}
+
 export default function LandingPage() {
   const { user } = useAuth({ redirectOnUnauthenticated: false });
+  const { variantId: ctaVariant, trackConversion: trackCtaConversion } = useABTest(HERO_CTA_EXPERIMENT);
   const submitLead = trpc.leads.submit.useMutation();
   const { data: stripeConfig } = trpc.stripe.isConfigured.useQuery();
   const createCheckout = trpc.stripe.createCheckoutSession.useMutation({
@@ -52,6 +124,11 @@ export default function LandingPage() {
   });
   const [submitted, setSubmitted] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [showDemoModal, setShowDemoModal] = useState(false);
+
+  // UTM-aware hero variants
+  const utmSource = new URLSearchParams(window.location.search).get('utm_source') || '';
+  const heroVariant = getHeroVariant(utmSource);
   const [touched, setTouched] = useState<Record<string, boolean>>({});
 
   const validateField = (name: string, value: string) => {
@@ -219,28 +296,32 @@ export default function LandingPage() {
           <div className="text-center mb-12">
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-teal-500/10 border border-teal-500/20 mb-8">
               <Sparkles className="w-4 h-4 text-teal-400" />
-              <span className="text-sm font-medium text-teal-300">AI-Powered Operational Intelligence for Every Vertical</span>
+              <span className="text-sm font-medium text-teal-300">{heroVariant.badge}</span>
             </div>
             <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold leading-[1.1] mb-6 tracking-tight">
-              We build the AI that<br />
+              {heroVariant.headlinePart1}<br />
               <span className="bg-gradient-to-r from-teal-400 via-cyan-400 to-teal-300 bg-clip-text text-transparent">
-                runs your operations
+                {heroVariant.headlinePart2}
               </span>
             </h1>
             <p className="text-lg sm:text-xl text-gray-400 max-w-3xl mx-auto mb-10 leading-relaxed">
-              ARG Builder creates AI-powered operational intelligence platforms tailored to your industry. We turn scattered SOPs, playbooks, and tribal knowledge into living systems your entire team can trust — from hospitality to healthcare, SaaS to manufacturing.
+              {heroVariant.subheadline}
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link href="/start-trial?plan=professional">
-                <Button size="lg" className="bg-teal-500 hover:bg-teal-400 text-black font-semibold px-8 py-6 text-lg">
-                  Start Free Trial <ArrowRight className="w-5 h-5 ml-2" />
+                <Button
+                  size="lg"
+                  className="bg-teal-500 hover:bg-teal-400 text-black font-semibold px-8 py-6 text-lg"
+                  onClick={() => trackCtaConversion('cta_click')}
+                >
+                  {ctaVariant === 'see_action' ? 'See It In Action' : 'Start Free Trial'} <ArrowRight className="w-5 h-5 ml-2" />
                 </Button>
               </Link>
-              <a href="#contact">
+              <button onClick={() => setShowDemoModal(true)}>
                 <Button size="lg" variant="outline" className="border-white/20 text-white hover:bg-white/5 px-8 py-6 text-lg">
                   Book a Demo
                 </Button>
-              </a>
+              </button>
             </div>
             <p className="text-sm text-gray-500 mt-4">14-day free trial &middot; No credit card required &middot; Cancel anytime</p>
           </div>
@@ -740,6 +821,9 @@ export default function LandingPage() {
 
       {/* Exit Intent Modal */}
       <ExitIntentModal />
+
+      {/* Demo Booking Modal */}
+      <DemoBookingModal open={showDemoModal} onClose={() => setShowDemoModal(false)} />
 
       {/* Footer */}
       <footer className="py-16 px-4 border-t border-white/5">

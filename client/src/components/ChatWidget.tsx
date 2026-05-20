@@ -25,10 +25,18 @@ export default function ChatWidget() {
     return () => clearTimeout(timer);
   }, []);
 
+  // Detect sales-intent keywords for CRM escalation
+  const SALES_KEYWORDS = ['pricing', 'price', 'cost', 'enterprise', 'demo', 'contract', 'discount', 'quote', 'plan', 'subscription', 'buy', 'purchase', 'upgrade', 'team size', 'how much', 'free trial'];
+
+  const isSalesQuestion = (text: string) => {
+    const lower = text.toLowerCase();
+    return SALES_KEYWORDS.some(kw => lower.includes(kw));
+  };
+
   const handleSend = () => {
     if (!message.trim() || !email.trim()) return;
-    // In production, this would send to your backend or chat service
-    // For now, we'll use the existing leads.submit endpoint
+    const escalate = isSalesQuestion(message);
+    // Submit to leads endpoint - source indicates chat escalation for CRM priority
     fetch('/api/trpc/leads.submit', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -39,8 +47,8 @@ export default function ChatWidget() {
           company: '',
           jobTitle: '',
           industry: '',
-          challenge: `[Chat Widget] ${message}`,
-          source: 'chat_widget',
+          challenge: `[Chat Widget${escalate ? ' - SALES ESCALATION' : ''}] ${message}`,
+          source: escalate ? 'chat_sales_escalation' : 'chat_widget',
         },
       }),
     });

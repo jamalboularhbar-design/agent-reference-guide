@@ -442,3 +442,14 @@
 - [x] Build case study / use case pages (travel ops, creative studio, enterprise SaaS compliance) at /case-studies
 - [x] Add exit-intent modal (20% off offer on mouse leave) + trial expiry banner (countdown for last 3 days)
 - [x] Add comparison section (ARG Builder vs Notion/Confluence/Guru) with 12-feature matrix on /product page
+
+## Batch 8: Growth Engine & Automation (All except Stripe)
+- [x] Embed Cal.com demo booking directly on "Book a Demo" CTA (modal with iframe embed, dark theme)
+- [x] Wire nurture heartbeat job at /api/scheduled/nurture (handler registered, ready for manus-heartbeat create after deploy)
+- [x] Build onboarding checklist for trial users (already exists with tRPC backend: read docs, complete quiz, bookmark, create reading list, set preferences, search)
+- [x] Add UTM-aware landing page hero variants (travel, healthcare, saas, manufacturing, linkedin, google + default)
+- [x] Build referral/affiliate program (unique code, /referral page with stats, history, share link, track signups)
+- [x] Add chat-to-CRM escalation (keyword detection for sales intent, auto-flags lead as 'chat_sales_escalation' in Close CRM)
+- [x] Create changelog/product updates page (/changelog with timeline, 8 version entries, type badges, CTA)
+- [x] Add A/B testing for hero CTA (useABTest hook, sticky localStorage assignment, analytics tracking, 50/50 split)
+- [x] Build admin email template editor (/admin/email-templates with 5 templates, edit/preview/reset, variable reference)

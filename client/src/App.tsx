@@ -129,6 +129,9 @@ import PricingPage from "./pages/PricingPage";
 import StartTrialPage from "./pages/StartTrialPage";
 import AdminTrialDashboardPage from "./pages/AdminTrialDashboardPage";
 import CaseStudiesPage from "./pages/CaseStudiesPage";
+import ReferralPage from "./pages/ReferralPage";
+import ChangelogPage from "./pages/ChangelogPage";
+import AdminEmailTemplatesPage from "./pages/AdminEmailTemplatesPage";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -252,6 +255,9 @@ function Router() {
       <Route path="/admin/settings" component={AdminSettingsPage} />
       <Route path="/admin/trials" component={AdminTrialDashboardPage} />
       <Route path="/case-studies" component={CaseStudiesPage} />
+      <Route path="/referral" component={ReferralPage} />
+      <Route path="/changelog" component={ChangelogPage} />
+      <Route path="/admin/email-templates" component={AdminEmailTemplatesPage} />
       <Route path="/admin/team" component={AdminTeamPage} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}

@@ -1200,3 +1200,18 @@ export const nurturEmails = mysqlTable("nurture_emails", {
   clickedAt: timestamp("clickedAt"),
 });
 export type NurtureEmail = typeof nurturEmails.$inferSelect;
+
+
+// ─── Referral Program ────────────────────────────────────────────────────────
+export const referrals = mysqlTable("referrals", {
+  id: int("id").autoincrement().primaryKey(),
+  referrerId: int("referrerId").notNull(), // user who referred
+  referralCode: varchar("referralCode", { length: 20 }).notNull().unique(),
+  referredEmail: varchar("referredEmail", { length: 255 }),
+  referredUserId: int("referredUserId"),
+  status: varchar("status", { length: 20 }).notNull().default("pending"), // pending, signed_up, converted
+  creditApplied: int("creditApplied").default(0).notNull(), // 0 or 1
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  convertedAt: timestamp("convertedAt"),
+});
+export type Referral = typeof referrals.$inferSelect;

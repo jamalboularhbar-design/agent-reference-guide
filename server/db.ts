@@ -1,6 +1,6 @@
 import { eq, like, or, sql, desc, asc, count, and } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, documents, documentRatings, readingLists, readingListItems, searchAnalytics, documentTags, documentComments, documentVersions, customCategories, downloadHistory, announcements, activityLog, documentAuditTrail, bookmarkNotes, shareLinks, scheduledPublish, inlineComments, brandingSettings, webhooks, recentlyViewed, documentFeedback, categoryOrdering, documentSubscriptions, subscriptionNotifications, userReadingPosition, searchHistory, aiSummaries, documentTranslations, userPreferences, readingStreakLeaderboard, glossaryTerms, documentDependencies, readingGoals, readingProgress, documentTemplates, savedFilters, documentQuizzes, reviewReminders, documentAnnotations, documentCollections, collectionItems, workflowStatuses, workflowTransitions, documentWorkflowStatus, archivalPolicies, archivedDocuments, contentGapSuggestions, duplicateContentPairs, activityFeed, documentSnapshots, readingCorrelations, quizResults, documentSeoMeta, systemNotificationLog, adminPermissions, approvalSlaConfig, webhookEventLog, documentAccessRequests, onboardingProgress, documentCitations, readingSessions, documentQualityAudits, emailDigestConfig, documentMedia, workspaces, workspaceMembers, reviewSchedules, coAuthorActivity, migrationJobs, sentimentScores, retentionPolicies, accessibilityChecks, customReports, pushNotifications, templateMarketplace, templateRatings, complianceReports, documentChangeLog, userLandingPreference, bulkExportJobs, documentCrossReferences, userEngagementScorecard, scheduledAnnouncements, dashboardWidgetConfig, brokenLinkScans, savedSearchFilters, duplicateContentScans, userDocCollections, userDocCollectionItems, performanceBenchmarks, leads, inviteTokens, trials, nurturEmails } from "../drizzle/schema";
+import { InsertUser, users, documents, documentRatings, readingLists, readingListItems, searchAnalytics, documentTags, documentComments, documentVersions, customCategories, downloadHistory, announcements, activityLog, documentAuditTrail, bookmarkNotes, shareLinks, scheduledPublish, inlineComments, brandingSettings, webhooks, recentlyViewed, documentFeedback, categoryOrdering, documentSubscriptions, subscriptionNotifications, userReadingPosition, searchHistory, aiSummaries, documentTranslations, userPreferences, readingStreakLeaderboard, glossaryTerms, documentDependencies, readingGoals, readingProgress, documentTemplates, savedFilters, documentQuizzes, reviewReminders, documentAnnotations, documentCollections, collectionItems, workflowStatuses, workflowTransitions, documentWorkflowStatus, archivalPolicies, archivedDocuments, contentGapSuggestions, duplicateContentPairs, activityFeed, documentSnapshots, readingCorrelations, quizResults, documentSeoMeta, systemNotificationLog, adminPermissions, approvalSlaConfig, webhookEventLog, documentAccessRequests, onboardingProgress, documentCitations, readingSessions, documentQualityAudits, emailDigestConfig, documentMedia, workspaces, workspaceMembers, reviewSchedules, coAuthorActivity, migrationJobs, sentimentScores, retentionPolicies, accessibilityChecks, customReports, pushNotifications, templateMarketplace, templateRatings, complianceReports, documentChangeLog, userLandingPreference, bulkExportJobs, documentCrossReferences, userEngagementScorecard, scheduledAnnouncements, dashboardWidgetConfig, brokenLinkScans, savedSearchFilters, duplicateContentScans, userDocCollections, userDocCollectionItems, performanceBenchmarks, leads, inviteTokens, trials, nurturEmails, referrals } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -4747,4 +4747,55 @@ export async function getLastNurtureStep(trialId: number): Promise<string | null
     .limit(1);
 
   return result[0]?.sequenceStep || null;
+}
+
+// ─── Referral Program ────────────────────────────────────────────────────────
+export async function createReferral(referrerId: number, referralCode: string) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+  await db.insert(referrals).values({ referrerId, referralCode });
+}
+
+export async function getReferralByCode(code: string) {
+  const db = await getDb();
+  if (!db) return null;
+  const result = await db.select().from(referrals).where(eq(referrals.referralCode, code)).limit(1);
+  return result[0] || null;
+}
+
+export async function getReferralsByUser(userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(referrals).where(eq(referrals.referrerId, userId)).orderBy(desc(referrals.createdAt));
+}
+
+export async function markReferralSignedUp(code: string, email: string, userId?: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(referrals).set({
+    status: 'signed_up',
+    referredEmail: email,
+    referredUserId: userId || null,
+  }).where(eq(referrals.referralCode, code));
+}
+
+export async function markReferralConverted(code: string) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(referrals).set({
+    status: 'converted',
+    creditApplied: 1,
+    convertedAt: new Date(),
+  }).where(eq(referrals.referralCode, code));
+}
+
+export async function getReferralStats(userId: number) {
+  const db = await getDb();
+  if (!db) return { total: 0, signedUp: 0, converted: 0 };
+  const all = await db.select().from(referrals).where(eq(referrals.referrerId, userId));
+  return {
+    total: all.length,
+    signedUp: all.filter(r => r.status === 'signed_up' || r.status === 'converted').length,
+    converted: all.filter(r => r.status === 'converted').length,
+  };
 }
