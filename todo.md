@@ -518,3 +518,16 @@
 - [x] Add intelligent workflow automation builder (/ai/workflows — describe workflow in plain English, AI generates trigger-action sequences)
 - [x] Create sentiment analysis dashboard (/ai/sentiment — analyze feedback, comments, support tickets for sentiment trends and alerts)
 - [x] Build AI model configuration panel (/admin/ai-config — select models, set temperature/tokens, manage prompts, usage tracking, cost estimates)
+
+## Batch 14: Platform Maturity & Client-Facing Intelligence
+
+- [x] Build AI Services Hub page (/ai — central navigation listing all 9 AI tools with descriptions, icons, usage stats, quick-launch cards)
+- [x] Persist AI model configs to database (wire /admin/ai-config to tRPC procedures, save temperature/prompt/model per service, apply to LLM calls)
+- [x] Add AI Chat Assistant (/ai/chat — conversational interface using AIChatBox component, context-aware about all docs, streaming responses)
+- [x] Build client-facing portal (/portal — branded read-only view for external clients with shared docs, progress updates, filtered access)
+- [x] Create team collaboration workspace (/team — shared tasks, discussions, file sharing, member status, real-time presence)
+- [x] Add AI template generator (/ai/templates — describe desired doc type in plain English, AI generates full document template with sections)
+- [x] Build usage analytics & billing dashboard (/settings/usage — API calls per service, token usage, cost estimates, plan tiers, billing history)
+- [x] Create API key management page (/settings/api-keys — generate/revoke keys, set scopes, usage tracking per key, expiry dates)
+- [x] Add notification preferences center (/settings/notifications — per-channel toggles, digest frequency, quiet hours, 8 categories)
+- [x] Build admin command center (/admin/command-center — unified searchable quick-actions panel, 18 actions, keyboard shortcut ⌘K)

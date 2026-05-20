@@ -1,6 +1,6 @@
 import { eq, like, or, sql, desc, asc, count, and } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, documents, documentRatings, readingLists, readingListItems, searchAnalytics, documentTags, documentComments, documentVersions, customCategories, downloadHistory, announcements, activityLog, documentAuditTrail, bookmarkNotes, shareLinks, scheduledPublish, inlineComments, brandingSettings, webhooks, recentlyViewed, documentFeedback, categoryOrdering, documentSubscriptions, subscriptionNotifications, userReadingPosition, searchHistory, aiSummaries, documentTranslations, userPreferences, readingStreakLeaderboard, glossaryTerms, documentDependencies, readingGoals, readingProgress, documentTemplates, savedFilters, documentQuizzes, reviewReminders, documentAnnotations, documentCollections, collectionItems, workflowStatuses, workflowTransitions, documentWorkflowStatus, archivalPolicies, archivedDocuments, contentGapSuggestions, duplicateContentPairs, activityFeed, documentSnapshots, readingCorrelations, quizResults, documentSeoMeta, systemNotificationLog, adminPermissions, approvalSlaConfig, webhookEventLog, documentAccessRequests, onboardingProgress, documentCitations, readingSessions, documentQualityAudits, emailDigestConfig, documentMedia, workspaces, workspaceMembers, reviewSchedules, coAuthorActivity, migrationJobs, sentimentScores, retentionPolicies, accessibilityChecks, customReports, pushNotifications, templateMarketplace, templateRatings, complianceReports, documentChangeLog, userLandingPreference, bulkExportJobs, documentCrossReferences, userEngagementScorecard, scheduledAnnouncements, dashboardWidgetConfig, brokenLinkScans, savedSearchFilters, duplicateContentScans, userDocCollections, userDocCollectionItems, performanceBenchmarks, leads, inviteTokens, trials, nurturEmails, referrals, onboardingWizardState } from "../drizzle/schema";
+import { InsertUser, users, documents, documentRatings, readingLists, readingListItems, searchAnalytics, documentTags, documentComments, documentVersions, customCategories, downloadHistory, announcements, activityLog, documentAuditTrail, bookmarkNotes, shareLinks, scheduledPublish, inlineComments, brandingSettings, webhooks, recentlyViewed, documentFeedback, categoryOrdering, documentSubscriptions, subscriptionNotifications, userReadingPosition, searchHistory, aiSummaries, documentTranslations, userPreferences, readingStreakLeaderboard, glossaryTerms, documentDependencies, readingGoals, readingProgress, documentTemplates, savedFilters, documentQuizzes, reviewReminders, documentAnnotations, documentCollections, collectionItems, workflowStatuses, workflowTransitions, documentWorkflowStatus, archivalPolicies, archivedDocuments, contentGapSuggestions, duplicateContentPairs, activityFeed, documentSnapshots, readingCorrelations, quizResults, documentSeoMeta, systemNotificationLog, adminPermissions, approvalSlaConfig, webhookEventLog, documentAccessRequests, onboardingProgress, documentCitations, readingSessions, documentQualityAudits, emailDigestConfig, documentMedia, workspaces, workspaceMembers, reviewSchedules, coAuthorActivity, migrationJobs, sentimentScores, retentionPolicies, accessibilityChecks, customReports, pushNotifications, templateMarketplace, templateRatings, complianceReports, documentChangeLog, userLandingPreference, bulkExportJobs, documentCrossReferences, userEngagementScorecard, scheduledAnnouncements, dashboardWidgetConfig, brokenLinkScans, savedSearchFilters, duplicateContentScans, userDocCollections, userDocCollectionItems, performanceBenchmarks, leads, inviteTokens, trials, nurturEmails, referrals, onboardingWizardState, aiConfig, apiKeys } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -4830,4 +4830,88 @@ export async function saveWizardState(userId: number, data: { currentStep: numbe
     });
     return result[0].insertId;
   }
+}
+
+// ─── AI Config Helpers ───────────────────────────────────────────────────────
+
+export async function getAllAiConfigs() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(aiConfig).orderBy(asc(aiConfig.serviceName));
+}
+
+export async function getAiConfigByService(serviceName: string) {
+  const db = await getDb();
+  if (!db) return null;
+  const result = await db.select().from(aiConfig).where(eq(aiConfig.serviceName, serviceName)).limit(1);
+  return result.length > 0 ? result[0] : null;
+}
+
+export async function upsertAiConfig(data: { serviceName: string; model?: string; temperature?: number; maxTokens?: number; systemPrompt?: string | null; isEnabled?: number }) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+  const existing = await db.select().from(aiConfig).where(eq(aiConfig.serviceName, data.serviceName)).limit(1);
+  if (existing.length > 0) {
+    const updateSet: Record<string, unknown> = {};
+    if (data.model !== undefined) updateSet.model = data.model;
+    if (data.temperature !== undefined) updateSet.temperature = data.temperature;
+    if (data.maxTokens !== undefined) updateSet.maxTokens = data.maxTokens;
+    if (data.systemPrompt !== undefined) updateSet.systemPrompt = data.systemPrompt;
+    if (data.isEnabled !== undefined) updateSet.isEnabled = data.isEnabled;
+    await db.update(aiConfig).set(updateSet).where(eq(aiConfig.serviceName, data.serviceName));
+    return existing[0].id;
+  } else {
+    const result = await db.insert(aiConfig).values({
+      serviceName: data.serviceName,
+      model: data.model || 'default',
+      temperature: data.temperature ?? 0.7,
+      maxTokens: data.maxTokens ?? 2000,
+      systemPrompt: data.systemPrompt || null,
+      isEnabled: data.isEnabled ?? 1,
+    });
+    return result[0].insertId;
+  }
+}
+
+export async function incrementAiUsage(serviceName: string, tokensUsed: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(aiConfig).set({
+    totalCalls: sql`${aiConfig.totalCalls} + 1`,
+    totalTokensUsed: sql`${aiConfig.totalTokensUsed} + ${tokensUsed}`,
+  }).where(eq(aiConfig.serviceName, serviceName));
+}
+
+// ─── API Key Helpers ─────────────────────────────────────────────────────────
+
+export async function getApiKeysByUser(userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(apiKeys).where(eq(apiKeys.userId, userId)).orderBy(desc(apiKeys.createdAt));
+}
+
+export async function createApiKey(data: { userId: number; name: string; keyHash: string; keyPrefix: string; scopes: string[]; expiresAt?: Date | null }) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+  const result = await db.insert(apiKeys).values({
+    userId: data.userId,
+    name: data.name,
+    keyHash: data.keyHash,
+    keyPrefix: data.keyPrefix,
+    scopes: data.scopes,
+    expiresAt: data.expiresAt || null,
+  });
+  return result[0].insertId;
+}
+
+export async function revokeApiKey(keyId: number, userId: number) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+  await db.update(apiKeys).set({ isRevoked: 1 }).where(and(eq(apiKeys.id, keyId), eq(apiKeys.userId, userId)));
+}
+
+export async function getAllApiKeys() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(apiKeys).orderBy(desc(apiKeys.createdAt));
 }

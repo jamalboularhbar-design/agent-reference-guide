@@ -165,6 +165,15 @@ import AIMeetingNotesPage from "./pages/AIMeetingNotesPage";
 import AIWorkflowPage from "./pages/AIWorkflowPage";
 import AISentimentPage from "./pages/AISentimentPage";
 import AIConfigPage from "./pages/AIConfigPage";
+import AIHubPage from "./pages/AIHubPage";
+import AIChatPage from "./pages/AIChatPage";
+import ClientPortalPage from "./pages/ClientPortalPage";
+import TeamWorkspacePage from "./pages/TeamWorkspacePage";
+import AITemplatesPage from "./pages/AITemplatesPage";
+import UsageBillingPage from "./pages/UsageBillingPage";
+import ApiKeyManagementPage from "./pages/ApiKeyManagementPage";
+import NotificationPrefsPage from "./pages/NotificationPrefsPage";
+import AdminCommandCenterPage from "./pages/AdminCommandCenterPage";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -324,6 +333,15 @@ function Router() {
       <Route path="/ai/workflows" component={AIWorkflowPage} />
       <Route path="/ai/sentiment" component={AISentimentPage} />
       <Route path="/admin/ai-config" component={AIConfigPage} />
+      <Route path="/ai" component={AIHubPage} />
+      <Route path="/ai/chat" component={AIChatPage} />
+      <Route path="/ai/templates" component={AITemplatesPage} />
+      <Route path="/portal" component={ClientPortalPage} />
+      <Route path="/team" component={TeamWorkspacePage} />
+      <Route path="/settings/usage" component={UsageBillingPage} />
+      <Route path="/settings/api-keys" component={ApiKeyManagementPage} />
+      <Route path="/settings/notifications" component={NotificationPrefsPage} />
+      <Route path="/admin/command-center" component={AdminCommandCenterPage} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />

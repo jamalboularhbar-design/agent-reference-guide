@@ -1229,3 +1229,34 @@ export const onboardingWizardState = mysqlTable("onboarding_wizard_state", {
 });
 export type OnboardingWizardState = typeof onboardingWizardState.$inferSelect;
 export type InsertOnboardingWizardState = typeof onboardingWizardState.$inferInsert;
+
+// ─── AI Model Configuration ──────────────────────────────────────────────────
+export const aiConfig = mysqlTable("ai_config", {
+  id: int("id").autoincrement().primaryKey(),
+  serviceName: varchar("serviceName", { length: 100 }).notNull(),
+  model: varchar("model", { length: 100 }).default("default").notNull(),
+  temperature: float("temperature").default(0.7).notNull(),
+  maxTokens: int("maxTokens").default(2000).notNull(),
+  systemPrompt: text("systemPrompt"),
+  isEnabled: int("isEnabled").default(1).notNull(),
+  totalCalls: int("totalCalls").default(0).notNull(),
+  totalTokensUsed: int("totalTokensUsed").default(0).notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type AiConfig = typeof aiConfig.$inferSelect;
+
+// ─── API Keys ────────────────────────────────────────────────────────────────
+export const apiKeys = mysqlTable("api_keys", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  name: varchar("name", { length: 200 }).notNull(),
+  keyHash: varchar("keyHash", { length: 255 }).notNull(),
+  keyPrefix: varchar("keyPrefix", { length: 12 }).notNull(),
+  scopes: json("scopes").$type<string[]>().default([]).notNull(),
+  lastUsedAt: timestamp("lastUsedAt"),
+  expiresAt: timestamp("expiresAt"),
+  isRevoked: int("isRevoked").default(0).notNull(),
+  totalRequests: int("totalRequests").default(0).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+export type ApiKey = typeof apiKeys.$inferSelect;

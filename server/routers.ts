@@ -133,6 +133,8 @@ import {
   createTrial, getTrialByEmail, getAllTrials, updateTrialStatus, getTrialStats, recordNurtureEmail, getNurtureEmailsForTrial,
   createReferral, getReferralByCode, getReferralsByUser, markReferralSignedUp, getReferralStats,
   getWizardState, saveWizardState,
+  getAllAiConfigs, getAiConfigByService, upsertAiConfig, incrementAiUsage,
+  getApiKeysByUser, createApiKey, revokeApiKey, getAllApiKeys,
 } from "./db";
 import { invokeLLM } from "./_core/llm";
 import { notifyOwner } from "./_core/notification";
@@ -2899,6 +2901,65 @@ export const appRouter = router({
         } catch {
           return { results: input.texts.map(t => ({ text: t.substring(0, 50), sentiment: 'neutral', confidence: 50, keywords: [] as string[] })), overall: { positive: 0, negative: 0, neutral: input.texts.length, averageConfidence: 50 } };
         }
+      }),
+    chat: protectedProcedure
+      .input(z.object({ messages: z.array(z.object({ role: z.enum(['system', 'user', 'assistant']), content: z.string() })) }))
+      .mutation(async ({ input }) => {
+        const systemMessage = { role: 'system' as const, content: 'You are the ARG Builder AI Assistant. You have deep knowledge of operational reference guides, business processes, luxury travel concierge services (Riad & Routes), and creative studio operations (ArtKech Studio). Help users find information, summarize documents, draft content, and improve workflows. Be concise, professional, and actionable.' };
+        const response = await invokeLLM({ messages: [systemMessage, ...input.messages] });
+        const content = (response.choices?.[0]?.message?.content as string) || 'I apologize, I could not generate a response.';
+        return { content };
+      }),
+  }),
+  aiConfigManager: router({
+    getAll: protectedProcedure.query(async () => {
+      return getAllAiConfigs();
+    }),
+    getByService: protectedProcedure
+      .input(z.object({ serviceName: z.string() }))
+      .query(async ({ input }) => {
+        return getAiConfigByService(input.serviceName);
+      }),
+    update: protectedProcedure
+      .input(z.object({
+        serviceName: z.string(),
+        model: z.string().optional(),
+        temperature: z.number().min(0).max(2).optional(),
+        maxTokens: z.number().min(100).max(8000).optional(),
+        systemPrompt: z.string().nullable().optional(),
+        isEnabled: z.number().min(0).max(1).optional(),
+      }))
+      .mutation(async ({ input }) => {
+        return upsertAiConfig(input);
+      }),
+  }),
+  apiKeyManager: router({
+    list: protectedProcedure.query(async ({ ctx }) => {
+      return getApiKeysByUser(ctx.user.id);
+    }),
+    listAll: protectedProcedure.query(async () => {
+      return getAllApiKeys();
+    }),
+    create: protectedProcedure
+      .input(z.object({
+        name: z.string().min(1).max(200),
+        scopes: z.array(z.string()).default([]),
+        expiresInDays: z.number().min(1).max(365).optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const crypto = await import('crypto');
+        const rawKey = `arg_${crypto.randomBytes(24).toString('hex')}`;
+        const keyHash = crypto.createHash('sha256').update(rawKey).digest('hex');
+        const keyPrefix = rawKey.substring(0, 10);
+        const expiresAt = input.expiresInDays ? new Date(Date.now() + input.expiresInDays * 86400000) : null;
+        const id = await createApiKey({ userId: ctx.user.id, name: input.name, keyHash, keyPrefix, scopes: input.scopes, expiresAt });
+        return { id, key: rawKey, prefix: keyPrefix };
+      }),
+    revoke: protectedProcedure
+      .input(z.object({ keyId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        await revokeApiKey(input.keyId, ctx.user.id);
+        return { success: true };
       }),
   }),
 });
