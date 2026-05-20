@@ -544,3 +544,8 @@
 - [x] Create custom field definitions system (/admin/custom-fields — define custom metadata fields per category, CRUD with DB persistence)
 - [x] Add document workflow SLA tracking (/admin/workflow-sla — set max time per stage, breach alerts, resolve breaches, compliance dashboard)
 - [x] Build platform changelog with release notes (/platform/changelog — version timeline, type filters, 8 releases documented)
+
+## Batch 16: Detailed Process Document Seeding (Riad & Routes + ArtKech Design Studio)
+
+- [x] Seed 16 detailed Riad & Routes day-to-day process documents (guest check-in, housekeeping, tour booking, driver dispatch, VIP handling, complaints, procurement, F&B, pricing, WhatsApp concierge, hammam/spa, night audit, staff training, reputation management, medina tours, checkout)
+- [x] Seed 16 detailed ArtKech Design Studio day-to-day process documents (creative brief intake, design review, client onboarding, brand identity, print production, social media pipeline, pricing/quotation, daily operations, freelancer management, client feedback, file management, portfolio/case studies, QA/preflight, financial management, lead generation, photography)
