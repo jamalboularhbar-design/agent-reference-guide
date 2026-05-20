@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
+import SEO, { PAGE_SEO } from '@/components/SEO';
 import { Check, X, Zap, Building2, Crown, ArrowRight } from "lucide-react";
 
 const PLANS = [
@@ -81,6 +82,7 @@ export default function PricingPage() {
 
   return (
     <div className="min-h-screen bg-background">
+      <SEO {...PAGE_SEO.pricing} />
       {/* Header */}
       <div className="max-w-7xl mx-auto px-4 pt-16 pb-12 text-center">
         <button

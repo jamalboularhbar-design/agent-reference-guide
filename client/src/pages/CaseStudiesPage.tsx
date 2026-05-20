@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { ArrowRight, ArrowLeft, Clock, TrendingUp, Users, CheckCircle } from "lucide-react";
+import SEO, { PAGE_SEO } from '@/components/SEO';
 
 const CASE_STUDIES = [
   {
@@ -155,6 +156,7 @@ export default function CaseStudiesPage() {
 
   return (
     <div className="min-h-screen bg-background">
+      <SEO {...PAGE_SEO.caseStudies} />
       <div className="max-w-6xl mx-auto px-4 py-16">
         <button
           onClick={() => navigate("/product")}

@@ -2,6 +2,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Link } from 'wouter';
+import SEO, { PAGE_SEO } from '@/components/SEO';
 import {
   TrendingUp, Clock, Users, BookOpen, Brain, Shield,
   ArrowRight, CheckCircle2, BarChart3
@@ -111,6 +112,7 @@ const INDUSTRY_RESULTS = [
 export default function SuccessMetricsPage() {
   return (
     <div className="min-h-screen bg-background">
+      <SEO {...PAGE_SEO.successMetrics} />
       {/* Header */}
       <header className="border-b border-border bg-background/95 backdrop-blur sticky top-0 z-10">
         <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">

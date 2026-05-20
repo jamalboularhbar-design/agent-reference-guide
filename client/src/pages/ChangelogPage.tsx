@@ -2,6 +2,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Sparkles, Zap, Shield, BarChart3, Users, Brain, Globe, Rocket } from 'lucide-react';
 import { Link } from 'wouter';
+import SEO, { PAGE_SEO } from '@/components/SEO';
 
 interface ChangelogEntry {
   date: string;
@@ -145,6 +146,7 @@ const TYPE_LABELS = {
 export default function ChangelogPage() {
   return (
     <div className="min-h-screen bg-background">
+      <SEO {...PAGE_SEO.changelog} />
       {/* Header */}
       <header className="border-b border-border bg-background/95 backdrop-blur sticky top-0 z-10">
         <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">

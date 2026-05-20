@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { Link } from 'wouter';
+import SEO, { PAGE_SEO } from '@/components/SEO';
 import { trpc } from '@/lib/trpc';
 import { CheckCircle2, Calendar, Users, Building2, Clock, ArrowRight } from 'lucide-react';
 
@@ -125,6 +126,7 @@ export default function RequestDemoPage() {
 
   return (
     <div className="min-h-screen bg-background">
+      <SEO {...PAGE_SEO.requestDemo} />
       {/* Header */}
       <header className="border-b border-border bg-background/95 backdrop-blur sticky top-0 z-10">
         <div className="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between">

@@ -465,3 +465,16 @@
 - [x] Build customer success metrics page (/success-metrics with 6 KPIs, before/after benchmarks, industry results)
 - [x] Add webhook notifications for key conversion events (trial_started, demo_requested, hot_lead, chat_escalation, referral via notifyOwner)
 - [x] Add footer with sitemap links across all public pages (4-column: Product, Solutions, Company, Legal)
+
+## Batch 10: Enterprise Polish & Engagement
+
+- [x] Build Resources hub page (/resources with 12 resources, type filters, search, featured section, category badges)
+- [x] Build admin lead scoring dashboard (/admin/lead-scores with sortable table, tier cards, score bars, email/call actions)
+- [x] Add SEO meta tags and Open Graph for all public pages (SEO component with react-helmet-async, applied to 8 public pages)
+- [x] Build admin notification center (already exists at /admin/notifications with status icons, retry, channel badges, timestamps)
+- [x] Create knowledge base FAQ page (/faq with 21 questions, 5 categories, search, accordion, contact CTA)
+- [x] Add team activity feed for admin (already exists at /admin/activity with action types, downloads tab, visitor tracking)
+- [x] Build document templates gallery (already exists at /templates/gallery with tRPC CRUD, preview, category sections, admin create/delete)
+- [x] Add smart search suggestions (already exists: SearchAutocomplete with recent searches, 8-result suggestions, keyboard nav, search history)
+- [x] Add performance monitoring dashboard (/admin/performance with 6 KPIs, API endpoint table, P95 latency, insights)
+- [x] Create API documentation page (already exists at /api-docs with 9 endpoint groups, auth guide, tRPC-over-HTTP examples, clipboard copy)

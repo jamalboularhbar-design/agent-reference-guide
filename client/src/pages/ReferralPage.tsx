@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { Gift, Copy, Users, CheckCircle, Share2, ArrowRight } from 'lucide-react';
+import SEO, { PAGE_SEO } from '@/components/SEO';
 
 export default function ReferralPage() {
   const { user, isAuthenticated } = useAuth({ redirectOnUnauthenticated: false });
@@ -46,6 +47,7 @@ export default function ReferralPage() {
 
   return (
     <div className="min-h-screen bg-background p-6">
+      <SEO {...PAGE_SEO.referral} />
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="text-center mb-10">

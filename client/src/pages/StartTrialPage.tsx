@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useLocation, useSearch } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { Check, ArrowRight, Sparkles } from "lucide-react";
+import SEO, { PAGE_SEO } from '@/components/SEO';
 
 export default function StartTrialPage() {
   const [, navigate] = useLocation();
@@ -109,6 +110,7 @@ export default function StartTrialPage() {
 
   return (
     <div className="min-h-screen bg-background">
+      <SEO {...PAGE_SEO.startTrial} />
       <div className="max-w-6xl mx-auto px-4 py-16 grid md:grid-cols-2 gap-12 items-start">
         {/* Left: Form */}
         <div>
