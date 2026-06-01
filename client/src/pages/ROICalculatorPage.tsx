@@ -6,7 +6,7 @@ import { Slider } from '@/components/ui/slider';
 import { trpc } from '@/lib/trpc';
 import { toast } from 'sonner';
 
-const LOGO_IMG = '/storage/logo-icon_7cc98e89.png';
+const LOGO_IMG = 'https://argbuilder.io/logo-icon_7cc98e89.png';
 
 export default function ROICalculatorPage() {
   const submitLead = trpc.leads.submit.useMutation();
