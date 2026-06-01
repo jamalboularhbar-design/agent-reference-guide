@@ -1,20 +1,44 @@
-// Preconfigured storage helpers for Manus WebDev templates
-// Uploads via Forge Server presigned URL to S3 (PUT direct).
-// Downloads return /manus-storage/{key} paths served via 307 redirect.
+/**
+ * S3-compatible storage helpers (AWS S3 or Cloudflare R2)
+ *
+ * Replaces the Manus Forge storage proxy.
+ *
+ * Configure via env vars:
+ *   S3_BUCKET          — bucket name
+ *   S3_REGION          — e.g. "us-east-1" (AWS) or "auto" (R2)
+ *   S3_ACCESS_KEY_ID   — access key
+ *   S3_SECRET_ACCESS_KEY — secret key
+ *   S3_ENDPOINT        — Cloudflare R2: https://<ACCOUNT_ID>.r2.cloudflarestorage.com
+ *                        AWS S3: leave empty
+ *   S3_PUBLIC_URL      — public base URL for serving files
+ *                        e.g. https://pub-abc123.r2.dev  or  https://files.argbuilder.io
+ */
 
+import { S3Client, PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { ENV } from "./_core/env";
 
-function getForgeConfig() {
-  const forgeUrl = ENV.forgeApiUrl;
-  const forgeKey = ENV.forgeApiKey;
+let _s3: S3Client | null = null;
 
-  if (!forgeUrl || !forgeKey) {
+function getS3Client(): S3Client {
+  if (_s3) return _s3;
+
+  if (!ENV.s3Bucket || !ENV.s3AccessKeyId || !ENV.s3SecretAccessKey) {
     throw new Error(
-      "Storage config missing: set BUILT_IN_FORGE_API_URL and BUILT_IN_FORGE_API_KEY",
+      "Storage not configured. Set S3_BUCKET, S3_ACCESS_KEY_ID, and S3_SECRET_ACCESS_KEY."
     );
   }
 
-  return { forgeUrl: forgeUrl.replace(/\/+$/, ""), forgeKey };
+  _s3 = new S3Client({
+    region: ENV.s3Region || "auto",
+    credentials: {
+      accessKeyId: ENV.s3AccessKeyId,
+      secretAccessKey: ENV.s3SecretAccessKey,
+    },
+    ...(ENV.s3Endpoint ? { endpoint: ENV.s3Endpoint } : {}),
+  });
+
+  return _s3;
 }
 
 function normalizeKey(relKey: string): string {
@@ -28,70 +52,59 @@ function appendHashSuffix(relKey: string): string {
   return `${relKey.slice(0, lastDot)}_${hash}${relKey.slice(lastDot)}`;
 }
 
+function buildPublicUrl(key: string): string {
+  if (ENV.s3PublicUrl) {
+    return `${ENV.s3PublicUrl.replace(/\/$/, "")}/${key}`;
+  }
+  // Fallback: serve through the local proxy route
+  return `/storage/${key}`;
+}
+
+/**
+ * Upload a file to S3/R2.
+ * Returns { key, url } where url is the public-facing URL.
+ */
 export async function storagePut(
   relKey: string,
   data: Buffer | Uint8Array | string,
-  contentType = "application/octet-stream",
+  contentType = "application/octet-stream"
 ): Promise<{ key: string; url: string }> {
-  const { forgeUrl, forgeKey } = getForgeConfig();
+  const s3 = getS3Client();
   const key = appendHashSuffix(normalizeKey(relKey));
 
-  // 1. Get presigned PUT URL from Forge
-  const presignUrl = new URL("v1/storage/presign/put", forgeUrl + "/");
-  presignUrl.searchParams.set("path", key);
+  const body = typeof data === "string" ? Buffer.from(data, "utf-8") : data;
 
-  const presignResp = await fetch(presignUrl, {
-    headers: { Authorization: `Bearer ${forgeKey}` },
-  });
+  await s3.send(
+    new PutObjectCommand({
+      Bucket: ENV.s3Bucket,
+      Key: key,
+      Body: body,
+      ContentType: contentType,
+    })
+  );
 
-  if (!presignResp.ok) {
-    const msg = await presignResp.text().catch(() => presignResp.statusText);
-    throw new Error(`Storage presign failed (${presignResp.status}): ${msg}`);
-  }
-
-  const { url: s3Url } = (await presignResp.json()) as { url: string };
-  if (!s3Url) throw new Error("Forge returned empty presign URL");
-
-  // 2. PUT file directly to S3
-  const blob =
-    typeof data === "string"
-      ? new Blob([data], { type: contentType })
-      : new Blob([data as any], { type: contentType });
-
-  const uploadResp = await fetch(s3Url, {
-    method: "PUT",
-    headers: { "Content-Type": contentType },
-    body: blob,
-  });
-
-  if (!uploadResp.ok) {
-    throw new Error(`Storage upload to S3 failed (${uploadResp.status})`);
-  }
-
-  return { key, url: `/manus-storage/${key}` };
+  return { key, url: buildPublicUrl(key) };
 }
 
+/**
+ * Get the public URL for an existing file.
+ */
 export async function storageGet(relKey: string): Promise<{ key: string; url: string }> {
   const key = normalizeKey(relKey);
-  return { key, url: `/manus-storage/${key}` };
+  return { key, url: buildPublicUrl(key) };
 }
 
+/**
+ * Generate a short-lived signed URL for private file access (1 hour TTL).
+ */
 export async function storageGetSignedUrl(relKey: string): Promise<string> {
-  const { forgeUrl, forgeKey } = getForgeConfig();
+  const s3 = getS3Client();
   const key = normalizeKey(relKey);
 
-  const getUrl = new URL("v1/storage/presign/get", forgeUrl + "/");
-  getUrl.searchParams.set("path", key);
-
-  const resp = await fetch(getUrl, {
-    headers: { Authorization: `Bearer ${forgeKey}` },
+  const command = new GetObjectCommand({
+    Bucket: ENV.s3Bucket,
+    Key: key,
   });
 
-  if (!resp.ok) {
-    const msg = await resp.text().catch(() => resp.statusText);
-    throw new Error(`Storage signed URL failed (${resp.status}): ${msg}`);
-  }
-
-  const { url } = (await resp.json()) as { url: string };
-  return url;
+  return getSignedUrl(s3, command, { expiresIn: 3600 });
 }

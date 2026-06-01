@@ -1,3 +1,12 @@
+/**
+ * LLM helper — OpenAI-compatible API (Google AI / OpenAI / any compatible endpoint)
+ *
+ * Configure via env vars:
+ *   LLM_API_URL  — e.g. https://generativelanguage.googleapis.com/v1beta/openai  (Google AI)
+ *                      or https://api.openai.com/v1  (OpenAI)
+ *   LLM_API_KEY  — your API key
+ *   LLM_MODEL    — model name, default: gemini-2.5-flash
+ */
 import { ENV } from "./env";
 
 export type Role = "system" | "user" | "assistant" | "tool" | "function";
@@ -19,7 +28,7 @@ export type FileContent = {
   type: "file_url";
   file_url: {
     url: string;
-    mime_type?: "audio/mpeg" | "audio/wav" | "application/pdf" | "audio/mp4" | "video/mp4" ;
+    mime_type?: "audio/mpeg" | "audio/wav" | "application/pdf" | "audio/mp4" | "video/mp4";
   };
 };
 
@@ -45,15 +54,26 @@ export type ToolChoicePrimitive = "none" | "auto" | "required";
 export type ToolChoiceByName = { name: string };
 export type ToolChoiceExplicit = {
   type: "function";
-  function: {
-    name: string;
-  };
+  function: { name: string };
 };
+export type ToolChoice = ToolChoicePrimitive | ToolChoiceByName | ToolChoiceExplicit;
 
-export type ToolChoice =
-  | ToolChoicePrimitive
-  | ToolChoiceByName
-  | ToolChoiceExplicit;
+export type JsonSchema = {
+  name: string;
+  schema: Record<string, unknown>;
+  strict?: boolean;
+};
+export type OutputSchema = JsonSchema;
+export type ResponseFormat =
+  | { type: "text" }
+  | { type: "json_object" }
+  | { type: "json_schema"; json_schema: JsonSchema };
+
+export type ToolCall = {
+  id: string;
+  type: "function";
+  function: { name: string; arguments: string };
+};
 
 export type InvokeParams = {
   messages: Message[];
@@ -66,15 +86,6 @@ export type InvokeParams = {
   output_schema?: OutputSchema;
   responseFormat?: ResponseFormat;
   response_format?: ResponseFormat;
-};
-
-export type ToolCall = {
-  id: string;
-  type: "function";
-  function: {
-    name: string;
-    arguments: string;
-  };
 };
 
 export type InvokeResult = {
@@ -97,77 +108,30 @@ export type InvokeResult = {
   };
 };
 
-export type JsonSchema = {
-  name: string;
-  schema: Record<string, unknown>;
-  strict?: boolean;
-};
+// ── Normalizers ───────────────────────────────────────────────────────────────
 
-export type OutputSchema = JsonSchema;
+const ensureArray = (value: MessageContent | MessageContent[]): MessageContent[] =>
+  Array.isArray(value) ? value : [value];
 
-export type ResponseFormat =
-  | { type: "text" }
-  | { type: "json_object" }
-  | { type: "json_schema"; json_schema: JsonSchema };
-
-const ensureArray = (
-  value: MessageContent | MessageContent[]
-): MessageContent[] => (Array.isArray(value) ? value : [value]);
-
-const normalizeContentPart = (
-  part: MessageContent
-): TextContent | ImageContent | FileContent => {
-  if (typeof part === "string") {
-    return { type: "text", text: part };
-  }
-
-  if (part.type === "text") {
-    return part;
-  }
-
-  if (part.type === "image_url") {
-    return part;
-  }
-
-  if (part.type === "file_url") {
-    return part;
-  }
-
+const normalizeContentPart = (part: MessageContent): TextContent | ImageContent | FileContent => {
+  if (typeof part === "string") return { type: "text", text: part };
+  if (part.type === "text" || part.type === "image_url" || part.type === "file_url") return part;
   throw new Error("Unsupported message content part");
 };
 
 const normalizeMessage = (message: Message) => {
   const { role, name, tool_call_id } = message;
-
   if (role === "tool" || role === "function") {
     const content = ensureArray(message.content)
-      .map(part => (typeof part === "string" ? part : JSON.stringify(part)))
+      .map(p => (typeof p === "string" ? p : JSON.stringify(p)))
       .join("\n");
-
-    return {
-      role,
-      name,
-      tool_call_id,
-      content,
-    };
+    return { role, name, tool_call_id, content };
   }
-
-  const contentParts = ensureArray(message.content).map(normalizeContentPart);
-
-  // If there's only text content, collapse to a single string for compatibility
-  if (contentParts.length === 1 && contentParts[0].type === "text") {
-    return {
-      role,
-      name,
-      content: contentParts[0].text,
-    };
+  const parts = ensureArray(message.content).map(normalizeContentPart);
+  if (parts.length === 1 && parts[0].type === "text") {
+    return { role, name, content: (parts[0] as TextContent).text };
   }
-
-  return {
-    role,
-    name,
-    content: contentParts,
-  };
+  return { role, name, content: parts };
 };
 
 const normalizeToolChoice = (
@@ -175,49 +139,14 @@ const normalizeToolChoice = (
   tools: Tool[] | undefined
 ): "none" | "auto" | ToolChoiceExplicit | undefined => {
   if (!toolChoice) return undefined;
-
-  if (toolChoice === "none" || toolChoice === "auto") {
-    return toolChoice;
-  }
-
+  if (toolChoice === "none" || toolChoice === "auto") return toolChoice;
   if (toolChoice === "required") {
-    if (!tools || tools.length === 0) {
-      throw new Error(
-        "tool_choice 'required' was provided but no tools were configured"
-      );
-    }
-
-    if (tools.length > 1) {
-      throw new Error(
-        "tool_choice 'required' needs a single tool or specify the tool name explicitly"
-      );
-    }
-
-    return {
-      type: "function",
-      function: { name: tools[0].function.name },
-    };
+    if (!tools?.length) throw new Error("tool_choice 'required' but no tools provided");
+    if (tools.length > 1) throw new Error("tool_choice 'required' needs a single tool or explicit name");
+    return { type: "function", function: { name: tools[0].function.name } };
   }
-
-  if ("name" in toolChoice) {
-    return {
-      type: "function",
-      function: { name: toolChoice.name },
-    };
-  }
-
+  if ("name" in toolChoice) return { type: "function", function: { name: toolChoice.name } };
   return toolChoice;
-};
-
-const resolveApiUrl = () =>
-  ENV.forgeApiUrl && ENV.forgeApiUrl.trim().length > 0
-    ? `${ENV.forgeApiUrl.replace(/\/$/, "")}/v1/chat/completions`
-    : "https://forge.manus.im/v1/chat/completions";
-
-const assertApiKey = () => {
-  if (!ENV.forgeApiKey) {
-    throw new Error("OPENAI_API_KEY is not configured");
-  }
 };
 
 const normalizeResponseFormat = ({
@@ -225,107 +154,55 @@ const normalizeResponseFormat = ({
   response_format,
   outputSchema,
   output_schema,
-}: {
-  responseFormat?: ResponseFormat;
-  response_format?: ResponseFormat;
-  outputSchema?: OutputSchema;
-  output_schema?: OutputSchema;
-}):
-  | { type: "json_schema"; json_schema: JsonSchema }
-  | { type: "text" }
-  | { type: "json_object" }
-  | undefined => {
-  const explicitFormat = responseFormat || response_format;
-  if (explicitFormat) {
-    if (
-      explicitFormat.type === "json_schema" &&
-      !explicitFormat.json_schema?.schema
-    ) {
-      throw new Error(
-        "responseFormat json_schema requires a defined schema object"
-      );
-    }
-    return explicitFormat;
-  }
-
+}: Pick<InvokeParams, "responseFormat" | "response_format" | "outputSchema" | "output_schema">) => {
+  const explicit = responseFormat || response_format;
+  if (explicit) return explicit;
   const schema = outputSchema || output_schema;
   if (!schema) return undefined;
-
-  if (!schema.name || !schema.schema) {
-    throw new Error("outputSchema requires both name and schema");
-  }
-
+  if (!schema.name || !schema.schema) throw new Error("outputSchema requires name and schema");
   return {
-    type: "json_schema",
-    json_schema: {
-      name: schema.name,
-      schema: schema.schema,
-      ...(typeof schema.strict === "boolean" ? { strict: schema.strict } : {}),
-    },
+    type: "json_schema" as const,
+    json_schema: { name: schema.name, schema: schema.schema, ...(typeof schema.strict === "boolean" ? { strict: schema.strict } : {}) },
   };
 };
 
-export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
-  assertApiKey();
+// ── Main export ───────────────────────────────────────────────────────────────
 
-  const {
-    messages,
-    tools,
-    toolChoice,
-    tool_choice,
-    outputSchema,
-    output_schema,
-    responseFormat,
-    response_format,
-  } = params;
+export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
+  if (!ENV.llmApiKey) {
+    throw new Error("LLM_API_KEY is not configured. Set it in your environment variables.");
+  }
+
+  const { messages, tools, toolChoice, tool_choice, outputSchema, output_schema, responseFormat, response_format } = params;
+
+  const apiUrl = `${ENV.llmApiUrl.replace(/\/$/, "")}/chat/completions`;
 
   const payload: Record<string, unknown> = {
-    model: "gemini-2.5-flash",
+    model: ENV.llmModel,
     messages: messages.map(normalizeMessage),
+    max_tokens: params.maxTokens ?? params.max_tokens ?? 8192,
   };
 
-  if (tools && tools.length > 0) {
-    payload.tools = tools;
-  }
+  if (tools?.length) payload.tools = tools;
 
-  const normalizedToolChoice = normalizeToolChoice(
-    toolChoice || tool_choice,
-    tools
-  );
-  if (normalizedToolChoice) {
-    payload.tool_choice = normalizedToolChoice;
-  }
+  const normalizedToolChoice = normalizeToolChoice(toolChoice || tool_choice, tools);
+  if (normalizedToolChoice) payload.tool_choice = normalizedToolChoice;
 
-  payload.max_tokens = 32768
-  payload.thinking = {
-    "budget_tokens": 128
-  }
+  const normalizedResponseFormat = normalizeResponseFormat({ responseFormat, response_format, outputSchema, output_schema });
+  if (normalizedResponseFormat) payload.response_format = normalizedResponseFormat;
 
-  const normalizedResponseFormat = normalizeResponseFormat({
-    responseFormat,
-    response_format,
-    outputSchema,
-    output_schema,
-  });
-
-  if (normalizedResponseFormat) {
-    payload.response_format = normalizedResponseFormat;
-  }
-
-  const response = await fetch(resolveApiUrl(), {
+  const response = await fetch(apiUrl, {
     method: "POST",
     headers: {
       "content-type": "application/json",
-      authorization: `Bearer ${ENV.forgeApiKey}`,
+      authorization: `Bearer ${ENV.llmApiKey}`,
     },
     body: JSON.stringify(payload),
   });
 
   if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(
-      `LLM invoke failed: ${response.status} ${response.statusText} – ${errorText}`
-    );
+    const errorText = await response.text().catch(() => "");
+    throw new Error(`LLM invoke failed: ${response.status} ${response.statusText} – ${errorText}`);
   }
 
   return (await response.json()) as InvokeResult;

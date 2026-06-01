@@ -21,11 +21,11 @@ import ProductTour from '@/components/ProductTour';
 import DemoBookingModal from '@/components/DemoBookingModal';
 import { useABTest, HERO_CTA_EXPERIMENT } from '@/hooks/useABTest';
 
-const HERO_IMG = '/manus-storage/hero-dashboard_9f31bf62.png';
-const KNOWLEDGE_GRAPH_IMG = '/manus-storage/feature-knowledge-graph_ed196875.png';
-const ANALYTICS_IMG = '/manus-storage/feature-analytics_315c687f.png';
-const AI_ASSISTANT_IMG = '/manus-storage/feature-ai-assistant_1c6d801e.png';
-const LOGO_IMG = '/manus-storage/logo-icon_7cc98e89.png';
+const HERO_IMG = '/storage/hero-dashboard_9f31bf62.png';
+const KNOWLEDGE_GRAPH_IMG = '/storage/feature-knowledge-graph_ed196875.png';
+const ANALYTICS_IMG = '/storage/feature-analytics_315c687f.png';
+const AI_ASSISTANT_IMG = '/storage/feature-ai-assistant_1c6d801e.png';
+const LOGO_IMG = '/storage/logo-icon_7cc98e89.png';
 
 const VERTICALS = [
   { icon: Hotel, name: 'Hospitality', desc: 'Hotels, resorts, and restaurant groups', color: 'text-amber-400' },
