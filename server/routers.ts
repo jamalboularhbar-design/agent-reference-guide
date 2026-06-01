@@ -145,6 +145,9 @@ import {
   getShiftHandovers, createShiftHandover, resolveShiftHandover,
   getProviders, getProviderById, createProvider, updateProvider, deleteProvider,
   getProviderQualityLogs, addProviderQualityLog,
+  getGuests, getGuestById, createGuest, updateGuest, deleteGuest,
+  getIncidents, createIncident, updateIncident, resolveIncident,
+  getGuestFeedbackList, createGuestFeedbackEntry,
 } from "./db";
 import { invokeLLM } from "./_core/llm";
 import { notifyOwner } from "./_core/notification";
@@ -3187,6 +3190,70 @@ export const appRouter = router({
       .input(z.object({ providerId: z.number(), visitorId: z.string(), type: z.string(), content: z.string(), rating: z.number().optional() }))
       .mutation(async ({ input }) => {
         return addProviderQualityLog(input);
+      }),
+  }),
+  // ========== Guest CRM (Batch 20) ==========
+  guestCrm: router({
+    list: publicProcedure
+      .input(z.object({ persona: z.string().default('riad-routes') }))
+      .query(async ({ input }) => {
+        return getGuests(input.persona);
+      }),
+    getById: publicProcedure
+      .input(z.object({ id: z.number() }))
+      .query(async ({ input }) => {
+        return getGuestById(input.id);
+      }),
+    create: publicProcedure
+      .input(z.object({ name: z.string(), email: z.string().optional(), phone: z.string().optional(), nationality: z.string().optional(), language: z.string().optional(), vipLevel: z.string().optional(), preferences: z.string().optional(), dietaryRestrictions: z.string().optional(), roomPreferences: z.string().optional(), specialOccasions: z.string().optional(), preferredProviderId: z.number().optional(), notes: z.string().optional(), persona: z.string().default('riad-routes') }))
+      .mutation(async ({ input }) => {
+        return createGuest(input);
+      }),
+    update: publicProcedure
+      .input(z.object({ id: z.number(), data: z.object({ name: z.string().optional(), email: z.string().optional(), phone: z.string().optional(), nationality: z.string().optional(), language: z.string().optional(), vipLevel: z.string().optional(), preferences: z.string().optional(), dietaryRestrictions: z.string().optional(), roomPreferences: z.string().optional(), specialOccasions: z.string().optional(), totalStays: z.number().optional(), preferredProviderId: z.number().optional(), notes: z.string().optional() }) }))
+      .mutation(async ({ input }) => {
+        return updateGuest(input.id, input.data);
+      }),
+    delete: adminProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        return deleteGuest(input.id);
+      }),
+  }),
+  // ========== Incident Log (Batch 20) ==========
+  incidents: router({
+    list: publicProcedure
+      .input(z.object({ persona: z.string().optional() }))
+      .query(async ({ input }) => {
+        return getIncidents(input.persona);
+      }),
+    create: publicProcedure
+      .input(z.object({ title: z.string(), description: z.string(), severity: z.string().optional(), persona: z.string().default('riad-routes'), category: z.string().optional(), providerId: z.number().optional(), providerName: z.string().optional(), assignedTo: z.string().optional() }))
+      .mutation(async ({ input }) => {
+        return createIncident(input);
+      }),
+    update: publicProcedure
+      .input(z.object({ id: z.number(), data: z.object({ title: z.string().optional(), description: z.string().optional(), severity: z.string().optional(), status: z.string().optional(), category: z.string().optional(), assignedTo: z.string().optional(), resolution: z.string().optional() }) }))
+      .mutation(async ({ input }) => {
+        return updateIncident(input.id, input.data);
+      }),
+    resolve: publicProcedure
+      .input(z.object({ id: z.number(), resolution: z.string() }))
+      .mutation(async ({ input }) => {
+        return resolveIncident(input.id, input.resolution);
+      }),
+  }),
+  // ========== Guest Feedback (Batch 20) ==========
+  guestFeedback: router({
+    list: publicProcedure
+      .input(z.object({ persona: z.string().optional() }))
+      .query(async ({ input }) => {
+        return getGuestFeedbackList(input.persona);
+      }),
+    create: publicProcedure
+      .input(z.object({ guestId: z.number().optional(), guestName: z.string(), providerId: z.number().optional(), providerName: z.string().optional(), rating: z.number(), category: z.string().optional(), comment: z.string().optional(), source: z.string().optional(), stayDate: z.date().optional(), persona: z.string().default('riad-routes') }))
+      .mutation(async ({ input }) => {
+        return createGuestFeedbackEntry(input);
       }),
   }),
 });

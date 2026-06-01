@@ -3,7 +3,7 @@ import { Link } from 'wouter';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Plane, Palette, ChevronRight, CheckSquare, ClipboardList, Shield, Calendar, BarChart3, FolderOpen } from 'lucide-react';
+import { Plane, Palette, ChevronRight, CheckSquare, ClipboardList, Shield, Calendar, BarChart3, FolderOpen, Building2, MessageSquare, Users, TrendingUp } from 'lucide-react';
 import TravelConcierge from '@/components/personas/TravelConcierge';
 import CreativeStudio from '@/components/personas/CreativeStudio';
 import Header from '@/components/Header';
@@ -366,6 +366,44 @@ export default function Home() {
                     </CardContent>
                   </Card>
                 </Link>
+              </div>
+              {/* Provider Tools Quick Access */}
+              <div className="mt-2">
+                <p className="text-xs uppercase tracking-wider text-muted-foreground mb-3 font-medium">Provider Tools</p>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <Link href="/provider-directory">
+                    <Card className="cursor-pointer hover:border-accent/50 transition-colors h-full">
+                      <CardContent className="p-3 flex items-center gap-2">
+                        <Building2 className="w-4 h-4 text-orange-400" />
+                        <p className="text-xs font-medium">Provider Directory</p>
+                      </CardContent>
+                    </Card>
+                  </Link>
+                  <Link href="/provider-compare">
+                    <Card className="cursor-pointer hover:border-accent/50 transition-colors h-full">
+                      <CardContent className="p-3 flex items-center gap-2">
+                        <TrendingUp className="w-4 h-4 text-emerald-400" />
+                        <p className="text-xs font-medium">Compare Providers</p>
+                      </CardContent>
+                    </Card>
+                  </Link>
+                  <Link href="/whatsapp-templates">
+                    <Card className="cursor-pointer hover:border-accent/50 transition-colors h-full">
+                      <CardContent className="p-3 flex items-center gap-2">
+                        <MessageSquare className="w-4 h-4 text-green-400" />
+                        <p className="text-xs font-medium">WhatsApp Templates</p>
+                      </CardContent>
+                    </Card>
+                  </Link>
+                  <Link href="/guest-matching">
+                    <Card className="cursor-pointer hover:border-accent/50 transition-colors h-full">
+                      <CardContent className="p-3 flex items-center gap-2">
+                        <Users className="w-4 h-4 text-violet-400" />
+                        <p className="text-xs font-medium">Guest Matching</p>
+                      </CardContent>
+                    </Card>
+                  </Link>
+                </div>
               </div>
               <Card className="card-premium">
                 <CardHeader>

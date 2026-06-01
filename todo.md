@@ -589,3 +589,16 @@
 - [x] Build Incident Log page (/incident-log — track and resolve operational incidents per persona with severity/status)
 - [x] Build Team Contact Directory (/team-directory — searchable team member list with roles, contacts, availability per persona)
 - [x] Push Batch 19 results to Notion ARG-Builder hub
+
+## Batch 20: Guest CRM + Incident Persistence + Operational Depth
+
+- [x] Add provider quick-links to Home page RR persona tab (direct shortcuts to provider tools)
+- [x] Build Guest CRM page (/guest-crm — track returning guests with preferences, stay history, provider assignments)
+- [x] Wire Incident Log to DB persistence (/incidents — create/resolve incidents stored in database)
+- [x] Build Provider Communication Hub (/provider-comm-hub — log all provider comms with quick templates)
+- [x] Build Booking Pipeline page (/booking-pipeline — Kanban-style booking tracker from inquiry to checkout)
+- [x] Build Guest Feedback Aggregator (/guest-feedback — collect and analyze reviews across providers)
+- [x] Build Seasonal Pricing Matrix (/pricing-matrix — provider rate cards by season with markup calculations)
+- [x] Build Operations Dashboard (/ops-dashboard — real-time overview of incidents, providers, guests, KPIs)
+- [x] Build Quality Audit Checklist (/quality-audit — structured property inspection with 25-item scoring)
+- [x] Push Batch 20 results to Notion ARG-Builder hub

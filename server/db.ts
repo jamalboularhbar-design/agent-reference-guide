@@ -1,6 +1,6 @@
 import { eq, like, or, sql, desc, asc, count, and } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, documents, documentRatings, readingLists, readingListItems, searchAnalytics, documentTags, documentComments, documentVersions, customCategories, downloadHistory, announcements, activityLog, documentAuditTrail, bookmarkNotes, shareLinks, scheduledPublish, inlineComments, brandingSettings, webhooks, recentlyViewed, documentFeedback, categoryOrdering, documentSubscriptions, subscriptionNotifications, userReadingPosition, searchHistory, aiSummaries, documentTranslations, userPreferences, readingStreakLeaderboard, glossaryTerms, documentDependencies, readingGoals, readingProgress, documentTemplates, savedFilters, documentQuizzes, reviewReminders, documentAnnotations, documentCollections, collectionItems, workflowStatuses, workflowTransitions, documentWorkflowStatus, archivalPolicies, archivedDocuments, contentGapSuggestions, duplicateContentPairs, activityFeed, documentSnapshots, readingCorrelations, quizResults, documentSeoMeta, systemNotificationLog, adminPermissions, approvalSlaConfig, webhookEventLog, documentAccessRequests, onboardingProgress, documentCitations, readingSessions, documentQualityAudits, emailDigestConfig, documentMedia, workspaces, workspaceMembers, reviewSchedules, coAuthorActivity, migrationJobs, sentimentScores, retentionPolicies, accessibilityChecks, customReports, pushNotifications, templateMarketplace, templateRatings, complianceReports, documentChangeLog, userLandingPreference, bulkExportJobs, documentCrossReferences, userEngagementScorecard, scheduledAnnouncements, dashboardWidgetConfig, brokenLinkScans, savedSearchFilters, duplicateContentScans, userDocCollections, userDocCollectionItems, performanceBenchmarks, leads, inviteTokens, trials, nurturEmails, referrals, onboardingWizardState, aiConfig, apiKeys, teamTasks, teamDiscussions, teamDiscussionReplies, webhookDeliveries, aiUsageLog, customFieldDefinitions, customFieldValues, workflowSlaConfig, workflowSlaBreaches, checklistCompletions, shiftHandoverNotes, providers, providerQualityLogs } from "../drizzle/schema";
+import { InsertUser, users, documents, documentRatings, readingLists, readingListItems, searchAnalytics, documentTags, documentComments, documentVersions, customCategories, downloadHistory, announcements, activityLog, documentAuditTrail, bookmarkNotes, shareLinks, scheduledPublish, inlineComments, brandingSettings, webhooks, recentlyViewed, documentFeedback, categoryOrdering, documentSubscriptions, subscriptionNotifications, userReadingPosition, searchHistory, aiSummaries, documentTranslations, userPreferences, readingStreakLeaderboard, glossaryTerms, documentDependencies, readingGoals, readingProgress, documentTemplates, savedFilters, documentQuizzes, reviewReminders, documentAnnotations, documentCollections, collectionItems, workflowStatuses, workflowTransitions, documentWorkflowStatus, archivalPolicies, archivedDocuments, contentGapSuggestions, duplicateContentPairs, activityFeed, documentSnapshots, readingCorrelations, quizResults, documentSeoMeta, systemNotificationLog, adminPermissions, approvalSlaConfig, webhookEventLog, documentAccessRequests, onboardingProgress, documentCitations, readingSessions, documentQualityAudits, emailDigestConfig, documentMedia, workspaces, workspaceMembers, reviewSchedules, coAuthorActivity, migrationJobs, sentimentScores, retentionPolicies, accessibilityChecks, customReports, pushNotifications, templateMarketplace, templateRatings, complianceReports, documentChangeLog, userLandingPreference, bulkExportJobs, documentCrossReferences, userEngagementScorecard, scheduledAnnouncements, dashboardWidgetConfig, brokenLinkScans, savedSearchFilters, duplicateContentScans, userDocCollections, userDocCollectionItems, performanceBenchmarks, leads, inviteTokens, trials, nurturEmails, referrals, onboardingWizardState, aiConfig, apiKeys, teamTasks, teamDiscussions, teamDiscussionReplies, webhookDeliveries, aiUsageLog, customFieldDefinitions, customFieldValues, workflowSlaConfig, workflowSlaBreaches, checklistCompletions, shiftHandoverNotes, providers, providerQualityLogs, guests, incidents, guestFeedback } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -5195,5 +5195,93 @@ export async function addProviderQualityLog(data: { providerId: number; visitorI
   const db = await getDb();
   if (!db) return { success: false };
   await db.insert(providerQualityLogs).values(data);
+  return { success: true };
+}
+
+
+// ========== Guest CRM Helpers ==========
+export async function getGuests(persona: string) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(guests).where(eq(guests.persona, persona)).orderBy(desc(guests.updatedAt));
+}
+
+export async function getGuestById(id: number) {
+  const db = await getDb();
+  if (!db) return null;
+  const rows = await db.select().from(guests).where(eq(guests.id, id));
+  return rows[0] || null;
+}
+
+export async function createGuest(data: { name: string; email?: string; phone?: string; nationality?: string; language?: string; vipLevel?: string; preferences?: string; dietaryRestrictions?: string; roomPreferences?: string; specialOccasions?: string; preferredProviderId?: number; notes?: string; persona: string }) {
+  const db = await getDb();
+  if (!db) return { success: false };
+  await db.insert(guests).values(data as any);
+  return { success: true };
+}
+
+export async function updateGuest(id: number, data: Partial<{ name: string; email: string; phone: string; nationality: string; language: string; vipLevel: string; preferences: string; dietaryRestrictions: string; roomPreferences: string; specialOccasions: string; totalStays: number; preferredProviderId: number; notes: string }>) {
+  const db = await getDb();
+  if (!db) return { success: false };
+  await db.update(guests).set(data as any).where(eq(guests.id, id));
+  return { success: true };
+}
+
+export async function deleteGuest(id: number) {
+  const db = await getDb();
+  if (!db) return { success: false };
+  await db.delete(guests).where(eq(guests.id, id));
+  return { success: true };
+}
+
+// ========== Incident Log Helpers ==========
+export async function getIncidents(persona?: string) {
+  const db = await getDb();
+  if (!db) return [];
+  if (persona) {
+    return db.select().from(incidents).where(eq(incidents.persona, persona)).orderBy(desc(incidents.createdAt));
+  }
+  return db.select().from(incidents).orderBy(desc(incidents.createdAt));
+}
+
+export async function createIncident(data: { title: string; description: string; severity?: string; persona: string; category?: string; providerId?: number; providerName?: string; assignedTo?: string }) {
+  const db = await getDb();
+  if (!db) return { success: false };
+  await db.insert(incidents).values(data as any);
+  return { success: true };
+}
+
+export async function updateIncident(id: number, data: Partial<{ title: string; description: string; severity: string; status: string; category: string; assignedTo: string; resolution: string }>) {
+  const db = await getDb();
+  if (!db) return { success: false };
+  const updateData: any = { ...data };
+  if (data.status === 'resolved' || data.status === 'closed') {
+    updateData.resolvedAt = new Date();
+  }
+  await db.update(incidents).set(updateData).where(eq(incidents.id, id));
+  return { success: true };
+}
+
+export async function resolveIncident(id: number, resolution: string) {
+  const db = await getDb();
+  if (!db) return { success: false };
+  await db.update(incidents).set({ status: 'resolved' as any, resolution, resolvedAt: new Date() }).where(eq(incidents.id, id));
+  return { success: true };
+}
+
+// ========== Guest Feedback Helpers ==========
+export async function getGuestFeedbackList(persona?: string) {
+  const db = await getDb();
+  if (!db) return [];
+  if (persona) {
+    return db.select().from(guestFeedback).where(eq(guestFeedback.persona, persona)).orderBy(desc(guestFeedback.createdAt));
+  }
+  return db.select().from(guestFeedback).orderBy(desc(guestFeedback.createdAt));
+}
+
+export async function createGuestFeedbackEntry(data: { guestId?: number; guestName: string; providerId?: number; providerName?: string; rating: number; category?: string; comment?: string; source?: string; stayDate?: Date; persona: string }) {
+  const db = await getDb();
+  if (!db) return { success: false };
+  await db.insert(guestFeedback).values(data as any);
   return { success: true };
 }

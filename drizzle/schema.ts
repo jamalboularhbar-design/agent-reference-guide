@@ -1433,3 +1433,63 @@ export const providerQualityLogs = mysqlTable("provider_quality_logs", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 export type ProviderQualityLog = typeof providerQualityLogs.$inferSelect;
+
+
+// Guests table - CRM for tracking returning guests
+export const guests = mysqlTable("guests", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  email: varchar("email", { length: 320 }),
+  phone: varchar("phone", { length: 50 }),
+  nationality: varchar("nationality", { length: 100 }),
+  language: varchar("language", { length: 50 }),
+  vipLevel: mysqlEnum("vip_level", ["standard", "silver", "gold", "platinum"]).default("standard").notNull(),
+  preferences: text("preferences"), // JSON string of preferences
+  dietaryRestrictions: text("dietary_restrictions"),
+  roomPreferences: text("room_preferences"),
+  specialOccasions: text("special_occasions"), // birthdays, anniversaries
+  totalStays: int("total_stays").default(0).notNull(),
+  lastStayDate: timestamp("last_stay_date"),
+  preferredProviderId: int("preferred_provider_id"),
+  notes: text("notes"),
+  persona: varchar("persona", { length: 50 }).default("riad-routes").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow().onUpdateNow(),
+});
+export type Guest = typeof guests.$inferSelect;
+
+// Incidents table - operational incident tracking
+export const incidents = mysqlTable("incidents", {
+  id: int("id").autoincrement().primaryKey(),
+  title: varchar("title", { length: 500 }).notNull(),
+  description: text("description").notNull(),
+  severity: mysqlEnum("severity", ["low", "medium", "high", "critical"]).default("medium").notNull(),
+  status: mysqlEnum("status", ["open", "investigating", "resolved", "closed"]).default("open").notNull(),
+  persona: varchar("persona", { length: 50 }).default("riad-routes").notNull(),
+  category: varchar("category", { length: 100 }),
+  providerId: int("provider_id"),
+  providerName: varchar("provider_name", { length: 255 }),
+  assignedTo: varchar("assigned_to", { length: 255 }),
+  resolution: text("resolution"),
+  resolvedAt: timestamp("resolved_at"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow().onUpdateNow(),
+});
+export type Incident = typeof incidents.$inferSelect;
+
+// Guest feedback table - aggregated guest reviews
+export const guestFeedback = mysqlTable("guest_feedback", {
+  id: int("id").autoincrement().primaryKey(),
+  guestId: int("guest_id"),
+  guestName: varchar("guest_name", { length: 255 }).notNull(),
+  providerId: int("provider_id"),
+  providerName: varchar("provider_name", { length: 255 }),
+  rating: int("rating").notNull(), // 1-5
+  category: varchar("category", { length: 100 }), // service, cleanliness, location, value, food
+  comment: text("comment"),
+  source: varchar("source", { length: 100 }), // tripadvisor, google, booking, direct
+  stayDate: timestamp("stay_date"),
+  persona: varchar("persona", { length: 50 }).default("riad-routes").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+export type GuestFeedbackEntry = typeof guestFeedback.$inferSelect;

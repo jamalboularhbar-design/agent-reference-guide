@@ -200,6 +200,14 @@ import PreArrivalChecklistPage from "./pages/PreArrivalChecklistPage";
 import RevenueAnalyticsPage from "./pages/RevenueAnalyticsPage";
 import IncidentLogPage from "./pages/IncidentLogPage";
 import TeamDirectoryPage from "./pages/TeamDirectoryPage";
+import GuestCrmPage from "./pages/GuestCrmPage";
+import GuestFeedbackPage from "./pages/GuestFeedbackPage";
+import BookingPipelinePage from "./pages/BookingPipelinePage";
+import PricingMatrixPage from "./pages/PricingMatrixPage";
+import OpsDashboardPage from "./pages/OpsDashboardPage";
+import IncidentLogDbPage from "./pages/IncidentLogDbPage";
+import ProviderCommHubPage from "./pages/ProviderCommHubPage";
+import QualityAuditPage from "./pages/QualityAuditPage";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -393,6 +401,14 @@ function Router() {
       <Route path="/revenue-analytics" component={RevenueAnalyticsPage} />
       <Route path="/incident-log" component={IncidentLogPage} />
       <Route path="/team-directory" component={TeamDirectoryPage} />
+      <Route path="/guest-crm" component={GuestCrmPage} />
+      <Route path="/guest-feedback" component={GuestFeedbackPage} />
+      <Route path="/booking-pipeline" component={BookingPipelinePage} />
+      <Route path="/pricing-matrix" component={PricingMatrixPage} />
+      <Route path="/ops-dashboard" component={OpsDashboardPage} />
+      <Route path="/incidents" component={IncidentLogDbPage} />
+      <Route path="/provider-comm-hub" component={ProviderCommHubPage} />
+      <Route path="/quality-audit" component={QualityAuditPage} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />
