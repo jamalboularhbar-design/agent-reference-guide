@@ -92,7 +92,7 @@ async function main() {
       values.push(slug, title, category, filename, content, wordCount);
     }
 
-    const sql = `INSERT INTO documents (slug, title, category, filename, content, wordCount) VALUES ${placeholders.join(', ')}`;
+    const sql = `INSERT IGNORE INTO documents (slug, title, category, filename, content, wordCount) VALUES ${placeholders.join(', ')}`;
     await connection.execute(sql, values);
     inserted += batch.length;
     process.stdout.write(`\rInserted ${inserted}/${files.length} documents`);
