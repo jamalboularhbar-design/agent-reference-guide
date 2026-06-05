@@ -208,6 +208,15 @@ import OpsDashboardPage from "./pages/OpsDashboardPage";
 import IncidentLogDbPage from "./pages/IncidentLogDbPage";
 import ProviderCommHubPage from "./pages/ProviderCommHubPage";
 import QualityAuditPage from "./pages/QualityAuditPage";
+import GuestPreferenceInferencePage from "./pages/GuestPreferenceInferencePage";
+import ProviderScoreboardPage from "./pages/ProviderScoreboardPage";
+import AlertSystemPage from "./pages/AlertSystemPage";
+import GuestLifecycleTimelinePage from "./pages/GuestLifecycleTimelinePage";
+import ProviderRecommendationPage from "./pages/ProviderRecommendationPage";
+import PricingOptimizerPage from "./pages/PricingOptimizerPage";
+import RevenueForecastPage from "./pages/RevenueForecastPage";
+import CompetitorIntelPage from "./pages/CompetitorIntelPage";
+import OperationalInsightsPage from "./pages/OperationalInsightsPage";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -409,6 +418,15 @@ function Router() {
       <Route path="/incidents" component={IncidentLogDbPage} />
       <Route path="/provider-comm-hub" component={ProviderCommHubPage} />
       <Route path="/quality-audit" component={QualityAuditPage} />
+      <Route path="/guest-preference-inference" component={GuestPreferenceInferencePage} />
+      <Route path="/provider-scoreboard" component={ProviderScoreboardPage} />
+      <Route path="/alert-system" component={AlertSystemPage} />
+      <Route path="/guest-lifecycle" component={GuestLifecycleTimelinePage} />
+      <Route path="/provider-recommendations" component={ProviderRecommendationPage} />
+      <Route path="/pricing-optimizer" component={PricingOptimizerPage} />
+      <Route path="/revenue-forecast" component={RevenueForecastPage} />
+      <Route path="/competitor-intel" component={CompetitorIntelPage} />
+      <Route path="/operational-insights" component={OperationalInsightsPage} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />

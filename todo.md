@@ -602,3 +602,17 @@
 - [x] Build Operations Dashboard (/ops-dashboard — real-time overview of incidents, providers, guests, KPIs)
 - [x] Build Quality Audit Checklist (/quality-audit — structured property inspection with 25-item scoring)
 - [x] Push Batch 20 results to Notion ARG-Builder hub
+
+## Batch 21: AI Guest Inference + Provider Scoreboard + Integrations
+
+- [x] Build AI-powered guest preference inference (/guest-preference-inference — analyze guest feedback + stay history → auto-populate Guest CRM preference fields)
+- [x] Build Provider Performance Scoreboard (/provider-scoreboard — real-time metrics: response time, guest satisfaction, SLA compliance with alerts)
+- [x] Add WhatsApp Business API integration (connect Provider Communication Hub templates to WhatsApp for one-click sending)
+- [x] Build Automated Alert System (/alert-system — configurable alerts for SLA breaches, quality drops, capacity issues, booking anomalies)
+- [x] Build Guest Lifecycle Timeline (/guest-lifecycle — visual timeline of guest interactions, stays, feedback, preferences across all visits)
+- [x] Create Provider Recommendation Engine (/provider-recommendations — AI-powered matching of new guests to best-fit providers based on preferences + history)
+- [x] Build Dynamic Pricing Optimizer (/pricing-optimizer — suggest optimal pricing per provider per season based on demand, occupancy, competition)
+- [x] Add Revenue Forecasting Dashboard (/revenue-forecast — predict monthly/quarterly revenue based on booking pipeline + historical trends)
+- [x] Build Competitor Intelligence page (/competitor-intel — track competitor providers' offerings, pricing, guest reviews, market positioning)
+- [x] Create Operational Insights Dashboard (/operational-insights — AI-generated insights: trends, anomalies, recommendations for improving operations)
+- [x] Push Batch 21 results to Notion ARG-Builder hub
