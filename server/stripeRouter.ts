@@ -23,7 +23,7 @@ export const stripeRouter = router({
   createCheckoutSession: protectedProcedure
     .input(
       z.object({
-        tierId: z.enum(["starter", "professional", "enterprise"]),
+        tierId: z.enum(["membership"]),
         billingPeriod: z.enum(["monthly", "annual"]).default("monthly"),
       })
     )

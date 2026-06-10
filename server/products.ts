@@ -1,124 +1,82 @@
 /**
- * ARG Builder Pricing Products
+ * ARG-Builder Pricing Products — Bootstrap Positioning (June 2026)
  *
- * Hybrid pricing model:
- * - Starter: Flat $299/month (up to 25 users) — PLG self-serve entry
- * - Professional: $15/user/month (25-user minimum) — mid-market per-seat scaling
- * - Enterprise: Custom (starting $2,500/month) — sales-led, large orgs
+ * One plan, two billing periods:
+ *  - Membership: $39/month
+ *  - Founding Member: $290/year (~38% off, price locked, first 100 seats)
  *
- * Annual discount: 20% off (Starter $239/mo, Professional $12/user/mo)
+ * Stripe Dashboard setup:
+ *  - Product "ARG-Builder Membership" with two prices:
+ *    $39.00 USD recurring monthly  → env STRIPE_PRICE_MEMBERSHIP_MONTHLY
+ *    $290.00 USD recurring yearly  → env STRIPE_PRICE_MEMBERSHIP_ANNUAL
  *
- * Competitive positioning:
- * - 40% below Guru ($25/seat)
- * - More value than Trainual ($249/mo for 10 seats)
- * - AI features included (Confluence/Notion charge extra)
+ * Founding cap: enforced manually — when 100 Founding (annual) subscriptions
+ * exist, archive the $290 yearly price in Stripe and create the post-founding
+ * yearly price. Existing subscribers keep $290 permanently (Stripe keeps
+ * legacy prices on active subscriptions).
  */
 
 export interface ProductTier {
   id: string;
   name: string;
   description: string;
-  pricingModel: "flat" | "per_seat" | "custom";
-  monthlyPrice: number; // in cents (flat price or per-seat price)
-  annualPrice: number; // in cents (per month equivalent, billed annually)
-  includedSeats: number; // seats included in the base price
-  minSeats: number; // minimum seats required
+  monthlyPrice: number; // in cents
+  annualPrice: number; // in cents (per month, billed annually)
   features: string[];
   targetTeamSize: string;
   stripePriceIdMonthly: string | null;
   stripePriceIdAnnual: string | null;
 }
 
+/** Founding Member annual total, in cents — $290/year, price locked permanently. */
+export const FOUNDING_ANNUAL_TOTAL = 29000;
+
+/** Founding seats cap — a real commitment. When reached, retire the price in Stripe. */
+export const FOUNDING_SEAT_CAP = 100;
+
 export const PRODUCTS: Record<string, ProductTier> = {
-  starter: {
-    id: "starter",
-    name: "Starter",
-    description: "For small teams and departments getting organized",
-    pricingModel: "flat",
-    monthlyPrice: 29900, // $299/month flat
-    annualPrice: 23900, // $239/month billed annually (20% off)
-    includedSeats: 25,
-    minSeats: 1,
+  membership: {
+    id: "membership",
+    name: "Membership",
+    description: "Full access to the complete operating reference",
+    monthlyPrice: 3900, // $39/month
+    annualPrice: 2417, // $290/year ≈ $24.17/month equivalent (Founding Member)
     features: [
-      "Up to 25 users",
-      "AI-powered document generation",
-      "Full-text search with relevance scoring",
-      "Basic analytics dashboard",
-      "3 custom workflows",
-      "Knowledge graph (read-only)",
-      "Email support",
-      "14-day free trial",
+      "All operating documents",
+      "Full-text search across the library",
+      "Collections & reading paths",
+      "Annotations & bookmarks",
+      "Version history & freshness status",
+      "PDF, DOCX & zip export",
+      "Every update as the library grows",
+      "Founding (annual): price locked at $290 permanently",
+      "Founding (annual): direct line to the founder",
+      "Cancel anytime",
     ],
-    targetTeamSize: "1–25 employees",
-    stripePriceIdMonthly: process.env.STRIPE_PRICE_STARTER_MONTHLY || null,
-    stripePriceIdAnnual: process.env.STRIPE_PRICE_STARTER_ANNUAL || null,
-  },
-  professional: {
-    id: "professional",
-    name: "Professional",
-    description: "For growing mid-market operations teams",
-    pricingModel: "per_seat",
-    monthlyPrice: 1500, // $15/user/month
-    annualPrice: 1200, // $12/user/month billed annually (20% off)
-    includedSeats: 25,
-    minSeats: 25,
-    features: [
-      "Unlimited users (25 minimum)",
-      "Everything in Starter",
-      "Interactive knowledge graph",
-      "Duplicate content detection",
-      "Approval workflows",
-      "Advanced analytics & reporting",
-      "SSO / SAML integration",
-      "Custom branding",
-      "Priority support",
-      "Dedicated CSM (100+ seats)",
-    ],
-    targetTeamSize: "25–500 employees",
-    stripePriceIdMonthly: process.env.STRIPE_PRICE_PRO_MONTHLY || null,
-    stripePriceIdAnnual: process.env.STRIPE_PRICE_PRO_ANNUAL || null,
-  },
-  enterprise: {
-    id: "enterprise",
-    name: "Enterprise",
-    description: "For large organizations requiring full operational intelligence",
-    pricingModel: "custom",
-    monthlyPrice: 250000, // Starting at $2,500/month (display only)
-    annualPrice: 250000, // Custom — negotiated
-    includedSeats: 0, // Unlimited
-    minSeats: 100,
-    features: [
-      "Unlimited users",
-      "Everything in Professional",
-      "Custom AI model training",
-      "On-premise deployment option",
-      "Custom integrations & API access",
-      "Compliance reporting (SOC 2, HIPAA)",
-      "Multi-workspace support",
-      "24/7 white-glove support",
-      "Quarterly business reviews",
-      "Dedicated implementation team",
-    ],
-    targetTeamSize: "500+ employees",
-    stripePriceIdMonthly: process.env.STRIPE_PRICE_ENTERPRISE_MONTHLY || null,
-    stripePriceIdAnnual: process.env.STRIPE_PRICE_ENTERPRISE_ANNUAL || null,
+    targetTeamSize: "Solo founders, teams of 1–20, fractional operators",
+    stripePriceIdMonthly: process.env.STRIPE_PRICE_MEMBERSHIP_MONTHLY || null,
+    stripePriceIdAnnual: process.env.STRIPE_PRICE_MEMBERSHIP_ANNUAL || null,
   },
 };
 
+/**
+ * No implementation fees in the bootstrap model — white-label and teams are
+ * conversations, not SKUs, until demand proves otherwise. Keys are kept so
+ * stripeRouter's createImplementationCheckout fails with a clear "not
+ * configured" error instead of a crash if ever called.
+ */
 export const IMPLEMENTATION_FEES = {
   standard: {
-    name: "Standard Implementation",
-    price: 500000, // $5,000 one-time
-    description:
-      "AI-powered operational audit, system configuration, and team onboarding (1–2 weeks)",
-    stripePriceId: process.env.STRIPE_PRICE_IMPL_STANDARD || null,
+    name: "Standard Implementation (retired)",
+    price: 0,
+    description: "Not offered in the bootstrap model",
+    stripePriceId: null as string | null,
   },
   custom: {
-    name: "Custom Implementation",
-    price: 1500000, // $15,000–$50,000 (starting price)
-    description:
-      "Multi-department deployment with custom integrations, data migration, and dedicated project manager",
-    stripePriceId: process.env.STRIPE_PRICE_IMPL_CUSTOM || null,
+    name: "Custom Implementation (retired)",
+    price: 0,
+    description: "Not offered in the bootstrap model",
+    stripePriceId: null as string | null,
   },
 };
 
@@ -134,28 +92,4 @@ export function getProduct(tierId: string): ProductTier | undefined {
  */
 export function getAllProducts(): ProductTier[] {
   return Object.values(PRODUCTS);
-}
-
-/**
- * Calculate monthly cost for a given tier and seat count
- */
-export function calculateMonthlyCost(
-  tierId: string,
-  seats: number,
-  annual: boolean = false
-): number | null {
-  const product = PRODUCTS[tierId];
-  if (!product) return null;
-
-  const price = annual ? product.annualPrice : product.monthlyPrice;
-
-  switch (product.pricingModel) {
-    case "flat":
-      return price;
-    case "per_seat":
-      const effectiveSeats = Math.max(seats, product.minSeats);
-      return price * effectiveSeats;
-    case "custom":
-      return null; // Contact sales
-  }
 }
