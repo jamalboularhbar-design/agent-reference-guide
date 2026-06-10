@@ -9,10 +9,16 @@ import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { totalDocuments, categoryCounts } from '@/lib/documentCatalog';
 
-const LOGO_IMG = '/manus-storage/logo-icon_7cc98e89.png';
-const HERO_IMG = '/manus-storage/hero-dashboard_9f31bf62.png';
-
 const FUNCTION_COUNT = Object.keys(categoryCounts).length;
+
+function LogoMark({ size = 'md' }: { size?: 'sm' | 'md' }) {
+  const cls = size === 'sm' ? 'w-7 h-7 text-[10px]' : 'w-8 h-8 text-[11px]';
+  return (
+    <div className={`${cls} rounded-lg bg-teal-500 text-black font-bold flex items-center justify-center tracking-tight shrink-0`}>
+      ARG
+    </div>
+  );
+}
 
 const STATS = [
   { n: String(totalDocuments), label: 'structured operating documents, each one decision-ready' },
@@ -83,7 +89,7 @@ export default function LandingPage() {
       <nav className="fixed top-0 left-0 right-0 z-50 bg-[#0B1120]/80 backdrop-blur-xl border-b border-white/5">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <img src={LOGO_IMG} alt="ARG-Builder" className="w-8 h-8 rounded-lg" />
+            <LogoMark />
             <span className="text-xl font-bold tracking-tight">ARG-Builder</span>
           </div>
           <div className="hidden md:flex items-center gap-8 text-sm text-gray-400">
@@ -145,8 +151,26 @@ export default function LandingPage() {
           <p className="mt-5 text-sm text-gray-600 font-mono">{totalDocuments} documents · {FUNCTION_COUNT} functions · one decision</p>
           <div className="relative mt-16 mx-auto max-w-5xl">
             <div className="absolute -inset-4 bg-gradient-to-r from-teal-500/20 via-cyan-500/10 to-teal-500/20 rounded-2xl blur-3xl" />
-            <div className="relative rounded-xl overflow-hidden border border-white/10 shadow-2xl">
-              <img src={HERO_IMG} alt="ARG-Builder platform" className="w-full object-contain" />
+            <div className="relative rounded-xl overflow-hidden border border-white/10 shadow-2xl bg-[#0E1628] p-6 sm:p-8 text-left">
+              {/* Mock search bar */}
+              <div className="flex items-center gap-3 px-4 py-3 rounded-lg bg-white/[0.04] border border-white/10 mb-6">
+                <Search className="w-4 h-4 text-teal-400 shrink-0" />
+                <span className="text-sm text-gray-500">Search {totalDocuments} documents — pricing, hiring, incident response…</span>
+              </div>
+              {/* Mock document cards */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                {[
+                  { cat: 'Revenue & Pricing', title: 'Pricing Strategy & Financial Models', meta: 'Frameworks · Decision tables · Templates' },
+                  { cat: 'Strategy & Operations', title: 'Annual Planning & OKR System', meta: 'Cadence · Metrics · Review templates' },
+                  { cat: 'Engineering', title: 'Incident Response Playbook', meta: 'Severity levels · Escalation · Postmortems' },
+                ].map((d) => (
+                  <div key={d.title} className="p-5 rounded-lg bg-white/[0.03] border border-white/5">
+                    <span className="inline-block text-[11px] text-teal-400 font-medium px-2 py-0.5 rounded-full bg-teal-500/10 border border-teal-500/20 mb-3">{d.cat}</span>
+                    <p className="text-sm font-semibold text-white leading-snug mb-2">{d.title}</p>
+                    <p className="text-xs text-gray-500">{d.meta}</p>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </div>
@@ -351,7 +375,7 @@ export default function LandingPage() {
       <footer className="py-12 px-4 border-t border-white/5">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <img src={LOGO_IMG} alt="ARG-Builder" className="w-7 h-7 rounded-lg" />
+            <LogoMark size="sm" />
             <span className="text-sm text-gray-500">ARG-Builder — the operating reference for companies that run on structure.</span>
           </div>
           <div className="flex items-center gap-6 text-xs text-gray-600">
