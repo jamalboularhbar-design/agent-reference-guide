@@ -1,114 +1,55 @@
-import { useState, useEffect } from 'react';
 import { trpc } from '@/lib/trpc';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { Link } from 'wouter';
 import {
-  BookOpen, Brain, BarChart3, Shield, Users, Zap,
-  CheckCircle2, ArrowRight, Star, ChevronRight, Sparkles, Loader2,
-  Network, Clock, Search, FileText, Lock, Globe,
-  Building2, Hotel, Stethoscope, ShoppingBag, Factory, Briefcase,
-  Layers, Rocket
+  Search, Layers, History, FolderOpen, Download, Bookmark,
+  CheckCircle2, ArrowRight,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
-import ChatWidget from '@/components/ChatWidget';
-import SocialProof from '@/components/SocialProof';
-import Footer from '@/components/Footer';
-import TestimonialVideos from '@/components/TestimonialVideos';
-import { ExitIntentModal, ComparisonSection } from '@/components/ConversionModals';
-import ProductTour from '@/components/ProductTour';
-import DemoBookingModal from '@/components/DemoBookingModal';
-import { useABTest, HERO_CTA_EXPERIMENT } from '@/hooks/useABTest';
+import { totalDocuments, categoryCounts } from '@/lib/documentCatalog';
 
-const HERO_IMG = 'https://argbuilder.io/hero-dashboard_9f31bf62.png';
-const KNOWLEDGE_GRAPH_IMG = 'https://argbuilder.io/feature-knowledge-graph_ed196875.png';
-const ANALYTICS_IMG = 'https://argbuilder.io/feature-analytics_315c687f.png';
-const AI_ASSISTANT_IMG = 'https://argbuilder.io/feature-ai-assistant_1c6d801e.png';
-const LOGO_IMG = 'https://argbuilder.io/logo-icon_7cc98e89.png';
+const LOGO_IMG = '/manus-storage/logo-icon_7cc98e89.png';
+const HERO_IMG = '/manus-storage/hero-dashboard_9f31bf62.png';
 
-const VERTICALS = [
-  { icon: Hotel, name: 'Hospitality', desc: 'Hotels, resorts, and restaurant groups', color: 'text-amber-400' },
-  { icon: Stethoscope, name: 'Healthcare', desc: 'Clinics, hospitals, and care networks', color: 'text-rose-400' },
-  { icon: Briefcase, name: 'Professional Services', desc: 'Consulting, legal, and accounting firms', color: 'text-blue-400' },
-  { icon: ShoppingBag, name: 'Retail & E-Commerce', desc: 'Multi-location retail and DTC brands', color: 'text-purple-400' },
-  { icon: Factory, name: 'Manufacturing', desc: 'Production, quality, and supply chain', color: 'text-orange-400' },
-  { icon: Building2, name: 'SaaS & Technology', desc: 'Product, engineering, and CS teams', color: 'text-cyan-400' },
+const FUNCTION_COUNT = Object.keys(categoryCounts).length;
+
+const STATS = [
+  { n: String(totalDocuments), label: 'structured operating documents, each one decision-ready' },
+  { n: String(FUNCTION_COUNT), label: 'business functions covered, from pricing to security compliance' },
+  { n: '0', label: 'documents you have to write before your company has an operating manual' },
 ];
 
-// UTM-aware hero content variants
-interface HeroVariant {
-  badge: string;
-  headlinePart1: string;
-  headlinePart2: string;
-  subheadline: string;
-}
+const AUDIENCES = [
+  { title: 'Solo founders', desc: 'Run with the structure of a 50-person company. Reference, decide, execute.' },
+  { title: 'Small teams (2–20)', desc: 'One shared source of truth. Onboard people into documented process, not tribal memory.' },
+  { title: 'Fractional COOs, consultants & agencies', desc: 'Deliver structured operational documentation to clients without writing it from zero.' },
+];
 
-function getHeroVariant(utmSource: string): HeroVariant {
-  switch (utmSource.toLowerCase()) {
-    case 'travel':
-    case 'hospitality':
-      return {
-        badge: 'Built for Travel & Hospitality Teams',
-        headlinePart1: 'Your travel ops,',
-        headlinePart2: 'powered by AI',
-        subheadline: 'Turn scattered itineraries, supplier contacts, and guest preferences into a living operational system. From boutique riads to luxury tour operators — ARG Builder keeps your entire team aligned.',
-      };
-    case 'healthcare':
-    case 'medical':
-      return {
-        badge: 'HIPAA-Ready Operational Intelligence',
-        headlinePart1: 'Clinical workflows,',
-        headlinePart2: 'instantly accessible',
-        subheadline: 'Consolidate protocols, care pathways, and compliance docs into one searchable AI-powered system. Your staff finds answers in seconds, not hours.',
-      };
-    case 'saas':
-    case 'tech':
-    case 'software':
-      return {
-        badge: 'Scale Your Engineering & CS Knowledge',
-        headlinePart1: 'Ship faster with',
-        headlinePart2: 'AI-powered docs',
-        subheadline: 'Runbooks, architecture decisions, onboarding guides — all searchable by your entire org. Reduce onboarding time by 60% and eliminate repeated questions.',
-      };
-    case 'manufacturing':
-    case 'industrial':
-      return {
-        badge: 'Operational Excellence for Manufacturing',
-        headlinePart1: 'Factory floor wisdom,',
-        headlinePart2: 'digitized & searchable',
-        subheadline: 'SOPs, quality checklists, maintenance procedures — accessible to every shift, every line. Reduce errors and accelerate training across your facilities.',
-      };
-    case 'linkedin':
-    case 'social':
-      return {
-        badge: 'Trusted by 200+ Operations Teams',
-        headlinePart1: 'Stop losing knowledge',
-        headlinePart2: 'when people leave',
-        subheadline: 'ARG Builder captures tribal knowledge, SOPs, and best practices into AI-searchable systems. Your team stays productive even during turnover.',
-      };
-    case 'google':
-    case 'search':
-      return {
-        badge: 'AI-Powered Operational Intelligence for Every Vertical',
-        headlinePart1: 'We build the AI that',
-        headlinePart2: 'runs your operations',
-        subheadline: 'ARG Builder creates AI-powered operational intelligence platforms tailored to your industry. We turn scattered SOPs, playbooks, and tribal knowledge into living systems your entire team can trust.',
-      };
-    default:
-      return {
-        badge: 'AI-Powered Operational Intelligence for Every Vertical',
-        headlinePart1: 'We build the AI that',
-        headlinePart2: 'runs your operations',
-        subheadline: 'ARG Builder creates AI-powered operational intelligence platforms tailored to your industry. We turn scattered SOPs, playbooks, and tribal knowledge into living systems your entire team can trust — from hospitality to healthcare, SaaS to manufacturing.',
-      };
-  }
-}
+const FEATURES = [
+  { icon: Search, title: 'Full-text search', desc: `Find the exact framework in seconds, across all ${totalDocuments} documents.` },
+  { icon: Layers, title: 'Structured categories', desc: `${FUNCTION_COUNT} functions, consistently organized. No orphan docs, no duplicates.` },
+  { icon: History, title: 'Versioning & freshness', desc: 'Documents carry version history and review status. You know what’s current.' },
+  { icon: FolderOpen, title: 'Collections & reading paths', desc: 'Sequence documents into onboarding tracks, launch checklists, or client deliverables.' },
+  { icon: Download, title: 'Export', desc: 'PDF, DOCX, and zip export. Your reference travels with you.' },
+  { icon: Bookmark, title: 'Annotations & bookmarks', desc: 'Mark what applies to your company. The reference adapts to you.' },
+];
+
+const STEPS = [
+  { title: 'Join', desc: 'One plan, full library access. No onboarding calls, no configuration.' },
+  { title: 'Search or browse', desc: 'Start from your most urgent function: pricing, hiring, launch, compliance.' },
+  { title: 'Apply', desc: 'Every document ends in templates and decision tables. Take the structure, fill in your company.' },
+];
+
+const FAQS = [
+  { q: 'Is this just a template pack?', a: 'No. Templates are dead files. This is a maintained platform: versioned documents, consistent architecture, search, collections, and updates as the library grows. The difference is the same as between a map PDF and a navigation system.' },
+  { q: 'Who writes the documents?', a: 'The library is built and maintained by the founder with AI-assisted research and drafting, structured under a single editorial architecture. Every document carries its preparation credit and review status.' },
+  { q: 'What if a document I need is missing?', a: 'Founding Members request documents directly. The library grows where its members operate.' },
+  { q: 'Can I use these for client work?', a: 'Yes — consultants and fractional operators use the reference to structure client deliverables. White-label arrangements: ask.' },
+];
 
 export default function LandingPage() {
   const { user } = useAuth({ redirectOnUnauthenticated: false });
-  const { variantId: ctaVariant, trackConversion: trackCtaConversion } = useABTest(HERO_CTA_EXPERIMENT);
-  const submitLead = trpc.leads.submit.useMutation();
   const { data: stripeConfig } = trpc.stripe.isConfigured.useQuery();
   const createCheckout = trpc.stripe.createCheckoutSession.useMutation({
     onSuccess: (data) => {
@@ -122,140 +63,19 @@ export default function LandingPage() {
     },
   });
 
-  const [form, setForm] = useState({
-    fullName: '', email: '', company: '', jobTitle: '', teamSize: '', message: '',
-  });
-  const [submitted, setSubmitted] = useState(false);
-  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-  const [showDemoModal, setShowDemoModal] = useState(false);
-
-  // UTM-aware hero variants
-  const utmSource = new URLSearchParams(window.location.search).get('utm_source') || '';
-  const heroVariant = getHeroVariant(utmSource);
-  const [touched, setTouched] = useState<Record<string, boolean>>({});
-
-  const validateField = (name: string, value: string) => {
-    if (name === 'fullName' && !value.trim()) return 'Full name is required';
-    if (name === 'email') {
-      if (!value.trim()) return 'Email is required';
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) return 'Please enter a valid email address';
-      if (/(@gmail|@yahoo|@hotmail|@outlook)/i.test(value)) return 'Please use your work email';
+  const subscribe = (billingPeriod: 'monthly' | 'annual') => {
+    if (!user) {
+      window.location.href = '/login';
+      return;
     }
-    return '';
+    if (!stripeConfig?.configured) {
+      toast.error('Payments are not enabled yet. Email hello@argbuilder.io and we will set you up directly.');
+      return;
+    }
+    createCheckout.mutate({ tierId: 'membership', billingPeriod });
   };
 
-  const handleBlur = (name: string) => {
-    setTouched(prev => ({ ...prev, [name]: true }));
-    const error = validateField(name, (form as any)[name]);
-    setFieldErrors(prev => ({ ...prev, [name]: error }));
-  };
-
-  const handleFieldChange = (name: string, value: string) => {
-    setForm(prev => ({ ...prev, [name]: value }));
-    if (touched[name]) {
-      const error = validateField(name, value);
-      setFieldErrors(prev => ({ ...prev, [name]: error }));
-    }
-  };
-
-  // SEO meta tags for /product page
-  useEffect(() => {
-    document.title = 'ARG Builder Product — AI Operational Intelligence for Mid-Market';
-
-    // Meta description
-    let metaDesc = document.querySelector('meta[name="description"]') as HTMLMetaElement;
-    if (!metaDesc) {
-      metaDesc = document.createElement('meta');
-      metaDesc.name = 'description';
-      document.head.appendChild(metaDesc);
-    }
-    metaDesc.content = 'ARG Builder delivers AI-powered operational intelligence for mid-market companies across hospitality, healthcare, professional services, retail, manufacturing, and SaaS. Starting at $299/mo.';
-
-    // Meta keywords
-    let metaKeywords = document.querySelector('meta[name="keywords"]') as HTMLMetaElement;
-    if (!metaKeywords) {
-      metaKeywords = document.createElement('meta');
-      metaKeywords.name = 'keywords';
-      document.head.appendChild(metaKeywords);
-    }
-    metaKeywords.content = 'operational intelligence platform, mid-market SaaS, AI knowledge management, workflow automation, ARG Builder pricing, business process AI, operational reference guide';
-
-    // Open Graph meta tags
-    const ogImageUrl = 'https://d2xsxph8kpxj0f.cloudfront.net/310519663609289051/2ZSCuHTjdaVo7h4vqS7dZB/og-image-argbuilder-ZutmaYZHU87mr4cVDB2dma.png';
-    const ogTags: Record<string, string> = {
-      'og:type': 'product',
-      'og:url': `${window.location.origin}/product`,
-      'og:title': 'ARG Builder — AI Operational Intelligence for Mid-Market Companies',
-      'og:description': 'Automate operational processes with AI-powered reference guides, knowledge management, and workflow intelligence. 6 verticals. Starting at $299/mo.',
-      'og:site_name': 'ARG Builder',
-      'og:image': ogImageUrl,
-      'og:image:width': '2560',
-      'og:image:height': '1440',
-    };
-    Object.entries(ogTags).forEach(([property, content]) => {
-      let tag = document.querySelector(`meta[property="${property}"]`) as HTMLMetaElement;
-      if (!tag) {
-        tag = document.createElement('meta');
-        tag.setAttribute('property', property);
-        document.head.appendChild(tag);
-      }
-      tag.content = content;
-    });
-
-    // Twitter Card meta tags
-    const twitterTags: Record<string, string> = {
-      'twitter:card': 'summary_large_image',
-      'twitter:title': 'ARG Builder — AI Operational Intelligence for Mid-Market',
-      'twitter:description': 'AI-powered operational intelligence for mid-market companies. 6 verticals, starting at $299/mo.',
-      'twitter:image': ogImageUrl,
-    };
-    Object.entries(twitterTags).forEach(([name, content]) => {
-      let tag = document.querySelector(`meta[name="${name}"]`) as HTMLMetaElement;
-      if (!tag) {
-        tag = document.createElement('meta');
-        tag.name = name;
-        document.head.appendChild(tag);
-      }
-      tag.content = content;
-    });
-
-    // Canonical URL
-    let canonical = document.querySelector('link[rel="canonical"]') as HTMLLinkElement;
-    if (!canonical) {
-      canonical = document.createElement('link');
-      canonical.rel = 'canonical';
-      document.head.appendChild(canonical);
-    }
-    canonical.href = `${window.location.origin}/product`;
-  }, []);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    // Validate all required fields
-    const errors: Record<string, string> = {};
-    errors.fullName = validateField('fullName', form.fullName);
-    errors.email = validateField('email', form.email);
-    setFieldErrors(errors);
-    setTouched({ fullName: true, email: true });
-    if (errors.fullName || errors.email) return;
-    try {
-      // Capture UTM params and referrer for lead source tracking
-      const params = new URLSearchParams(window.location.search);
-      const utmData = {
-        utmSource: params.get('utm_source') || undefined,
-        utmMedium: params.get('utm_medium') || undefined,
-        utmCampaign: params.get('utm_campaign') || undefined,
-        utmContent: params.get('utm_content') || undefined,
-        referrer: document.referrer || undefined,
-      };
-      await submitLead.mutateAsync({ ...form, source: 'landing_page', ...utmData });
-      setSubmitted(true);
-      setForm({ fullName: '', email: '', company: '', jobTitle: '', teamSize: '', message: '' });
-      toast.success('Demo request submitted successfully!');
-    } catch {
-      toast.error('Something went wrong. Please try again.');
-    }
-  };
+  const sortedCategories = Object.entries(categoryCounts).sort((a, b) => b[1] - a[1]);
 
   return (
     <div className="min-h-screen bg-[#0B1120] text-white overflow-x-hidden">
@@ -263,16 +83,15 @@ export default function LandingPage() {
       <nav className="fixed top-0 left-0 right-0 z-50 bg-[#0B1120]/80 backdrop-blur-xl border-b border-white/5">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <img src={LOGO_IMG} alt="ARG Builder" className="w-8 h-8 rounded-lg" />
-            <span className="text-xl font-bold tracking-tight">ARG Builder</span>
+            <img src={LOGO_IMG} alt="ARG-Builder" className="w-8 h-8 rounded-lg" />
+            <span className="text-xl font-bold tracking-tight">ARG-Builder</span>
           </div>
           <div className="hidden md:flex items-center gap-8 text-sm text-gray-400">
-            <a href="#vision" className="hover:text-white transition-colors">Vision</a>
+            <a href="#why" className="hover:text-white transition-colors">Why</a>
+            <a href="#library" className="hover:text-white transition-colors">Library</a>
             <a href="#platform" className="hover:text-white transition-colors">Platform</a>
-            <a href="#verticals" className="hover:text-white transition-colors">Verticals</a>
-            <Link href="/pricing" className="hover:text-white transition-colors">Pricing</Link>
-            <Link href="/roi" className="hover:text-white transition-colors">ROI Calculator</Link>
-            <a href="#contact" className="hover:text-white transition-colors">Contact</a>
+            <a href="#pricing" className="hover:text-white transition-colors">Pricing</a>
+            <a href="#faq" className="hover:text-white transition-colors">FAQ</a>
           </div>
           <div className="flex items-center gap-3">
             {user ? (
@@ -282,9 +101,9 @@ export default function LandingPage() {
                 </Button>
               </Link>
             ) : (
-              <a href="#contact">
+              <a href="#pricing">
                 <Button size="sm" className="bg-teal-500 hover:bg-teal-400 text-black font-semibold">
-                  Request Demo
+                  Become a Founding Member
                 </Button>
               </a>
             )}
@@ -292,546 +111,256 @@ export default function LandingPage() {
         </div>
       </nav>
 
-      {/* Hero Section */}
+      {/* Hero */}
       <section className="pt-32 pb-20 px-4 relative">
         <div className="absolute inset-0 bg-gradient-to-b from-teal-500/5 via-transparent to-transparent" />
-        <div className="max-w-7xl mx-auto relative">
-          <div className="text-center mb-12">
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-teal-500/10 border border-teal-500/20 mb-8">
-              <Sparkles className="w-4 h-4 text-teal-400" />
-              <span className="text-sm font-medium text-teal-300">{heroVariant.badge}</span>
-            </div>
-            <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold leading-[1.1] mb-6 tracking-tight">
-              {heroVariant.headlinePart1}<br />
-              <span className="bg-gradient-to-r from-teal-400 via-cyan-400 to-teal-300 bg-clip-text text-transparent">
-                {heroVariant.headlinePart2}
-              </span>
-            </h1>
-            <p className="text-lg sm:text-xl text-gray-400 max-w-3xl mx-auto mb-10 leading-relaxed">
-              {heroVariant.subheadline}
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link href="/start-trial?plan=professional">
-                <Button
-                  size="lg"
-                  className="bg-teal-500 hover:bg-teal-400 text-black font-semibold px-8 py-6 text-lg"
-                  onClick={() => trackCtaConversion('cta_click')}
-                >
-                  {ctaVariant === 'see_action' ? 'See It In Action' : 'Start Free Trial'} <ArrowRight className="w-5 h-5 ml-2" />
-                </Button>
-              </Link>
-              <button onClick={() => setShowDemoModal(true)}>
-                <Button size="lg" variant="outline" className="border-white/20 text-white hover:bg-white/5 px-8 py-6 text-lg">
-                  Book a Demo
-                </Button>
-              </button>
-            </div>
-            <p className="text-sm text-gray-500 mt-4">14-day free trial &middot; No credit card required &middot; Cancel anytime</p>
+        <div className="max-w-7xl mx-auto relative text-center">
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-teal-500/10 border border-teal-500/20 mb-8">
+            <span className="w-2 h-2 rounded-full bg-teal-400" />
+            <span className="text-sm font-medium text-teal-300">The complete operating reference for small companies</span>
           </div>
-          {/* Hero Image */}
+          <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold leading-[1.1] mb-6 tracking-tight">
+            Every playbook your company needs.<br />
+            <span className="bg-gradient-to-r from-teal-400 via-cyan-400 to-teal-300 bg-clip-text text-transparent">
+              Already written. Already structured.
+            </span>
+          </h1>
+          <p className="text-lg sm:text-xl text-gray-400 max-w-3xl mx-auto mb-10 leading-relaxed">
+            ARG-Builder is an operating reference platform: {totalDocuments} structured documents covering
+            all {FUNCTION_COUNT} functions of a running company — sales, marketing, engineering, finance,
+            customer success, security, and more. Searchable, versioned, and organized the way a COO would build it.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <a href="#pricing">
+              <Button size="lg" className="bg-teal-500 hover:bg-teal-400 text-black font-semibold px-8 py-6 text-lg">
+                Become a Founding Member <ArrowRight className="w-5 h-5 ml-2" />
+              </Button>
+            </a>
+            <a href="#library">
+              <Button size="lg" variant="outline" className="border-white/20 text-white hover:bg-white/5 px-8 py-6 text-lg">
+                Browse the Library
+              </Button>
+            </a>
+          </div>
+          <p className="mt-5 text-sm text-gray-600 font-mono">{totalDocuments} documents · {FUNCTION_COUNT} functions · one decision</p>
           <div className="relative mt-16 mx-auto max-w-5xl">
-            <div className="absolute -inset-4 bg-gradient-to-r from-teal-500/20 via-cyan-500/10 to-purple-500/20 rounded-2xl blur-3xl" />
+            <div className="absolute -inset-4 bg-gradient-to-r from-teal-500/20 via-cyan-500/10 to-teal-500/20 rounded-2xl blur-3xl" />
             <div className="relative rounded-xl overflow-hidden border border-white/10 shadow-2xl">
-              <img src={HERO_IMG} alt="ARG Builder Platform" className="w-full object-contain" />
+              <img src={HERO_IMG} alt="ARG-Builder platform" className="w-full object-contain" />
             </div>
           </div>
         </div>
       </section>
 
-      {/* Vision Section */}
-      <section id="vision" className="py-24 px-4 bg-gradient-to-b from-transparent to-white/[0.02]">
+      {/* Why */}
+      <section id="why" className="py-24 px-4 bg-gradient-to-b from-transparent to-white/[0.02]">
         <div className="max-w-5xl mx-auto text-center">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-teal-500/10 border border-teal-500/20 text-teal-400 text-xs font-medium mb-6">
-            <Rocket className="w-3 h-3" /> The Big Vision
+            Why this exists
           </div>
           <h2 className="text-3xl sm:text-4xl font-bold mb-6">
-            One engine. Every vertical.<br />
-            <span className="text-teal-400">Infinite operational intelligence.</span>
+            You're running a company without an operations manual.<br />
+            <span className="text-teal-400">Nobody has time to write one.</span>
           </h2>
           <p className="text-lg text-gray-400 max-w-3xl mx-auto mb-12 leading-relaxed">
-            Mid-market companies across every industry share the same problem: operational knowledge is scattered, outdated, and impossible to find. Enterprise tools are too expensive and complex. Generic wikis don't understand your workflows. ARG Builder fills this gap with AI-native platforms purpose-built for each vertical.
+            Solo founders and small teams run on memory and improvisation. The knowledge exists — in courses
+            you bought, threads you bookmarked, advice you half-remember — but none of it is structured,
+            current, or findable at the moment of decision. Consultants charge five figures to document what
+            you need. Template packs give you forty Word files and silence. ARG-Builder is the third option:
+            a complete, interconnected operating reference, maintained as software.
           </p>
-
-          {/* Problem Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-            {[
-              { stat: '67%', label: 'of employees say they can\'t find the information they need to do their job', source: 'McKinsey' },
-              { stat: '9.3h', label: 'per week wasted searching for information across disconnected tools', source: 'IDC Research' },
-              { stat: '$47M', label: 'annual cost of poor knowledge management for a 1,000-person company', source: 'Panopto' },
-            ].map((item, i) => (
-              <div key={i} className="p-6 rounded-xl bg-white/[0.03] border border-white/5">
-                <div className="text-3xl font-bold text-teal-400 mb-2">{item.stat}</div>
-                <p className="text-sm text-gray-400 mb-2">{item.label}</p>
-                <p className="text-xs text-gray-600">Source: {item.source}</p>
-              </div>
-            ))}
-          </div>
-
-          {/* Platform Stats */}
-          <div className="flex flex-wrap justify-center gap-8 py-4 px-6 rounded-xl bg-white/[0.03] border border-white/5">
-            {[
-              { value: '288', label: 'Features Shipped' },
-              { value: '92', label: 'Database Tables' },
-              { value: '299', label: 'Tests Passing' },
-              { value: '6', label: 'Verticals Ready' },
-            ].map((stat, i) => (
-              <div key={i} className="text-center">
-                <div className="text-xl font-bold text-teal-400">{stat.value}</div>
-                <div className="text-xs text-gray-500">{stat.label}</div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {STATS.map((s) => (
+              <div key={s.label} className="p-6 rounded-xl bg-white/[0.03] border border-white/5 text-left">
+                <div className="text-4xl font-bold text-teal-400 mb-2">{s.n}</div>
+                <p className="text-sm text-gray-400">{s.label}</p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* Verticals Section */}
-      <section id="verticals" className="py-24 px-4 border-y border-white/5">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-16">
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-teal-500/10 border border-teal-500/20 mb-4">
-              <span className="text-xs font-medium text-teal-300">INDUSTRY VERTICALS</span>
-            </div>
-            <h2 className="text-3xl sm:text-4xl font-bold mb-4">Built for your industry, not against it</h2>
-            <p className="text-lg text-gray-400 max-w-2xl mx-auto">
-              Each ARG Builder deployment is tailored to your vertical with industry-specific templates, workflows, compliance frameworks, and AI models that understand your domain.
-            </p>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {VERTICALS.map((v, i) => (
-              <div key={i} className="p-6 rounded-xl bg-white/[0.03] border border-white/5 hover:border-teal-500/20 transition-colors group">
-                <v.icon className={`w-10 h-10 ${v.color} mb-4 group-hover:scale-110 transition-transform`} />
-                <h3 className="text-lg font-semibold mb-2">{v.name}</h3>
-                <p className="text-sm text-gray-400 leading-relaxed">{v.desc}</p>
-                <div className="mt-4 flex items-center gap-1 text-xs text-teal-400 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <span>Learn more</span>
-                  <ChevronRight className="w-3 h-3" />
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Platform Features Section */}
-      <section id="platform" className="py-24 px-4 bg-gradient-to-b from-transparent via-teal-500/[0.03] to-transparent">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-16">
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-teal-500/10 border border-teal-500/20 mb-4">
-              <Layers className="w-3 h-3 text-teal-300" />
-              <span className="text-xs font-medium text-teal-300">THE ARG BUILDER ENGINE</span>
-            </div>
-            <h2 className="text-3xl sm:text-5xl font-bold mb-4">The platform powering it all</h2>
-            <p className="text-lg text-gray-400 max-w-2xl mx-auto">Every vertical deployment is built on the same battle-tested engine — AI-powered search, knowledge graphs, analytics, and governance tools that adapt to your domain.</p>
-          </div>
-
-          {/* Feature 1: Knowledge Graph */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center mb-24">
-            <div>
-              <div className="flex items-center gap-2 mb-4">
-                <Network className="w-5 h-5 text-teal-400" />
-                <span className="text-sm font-semibold text-teal-400 uppercase tracking-wider">Knowledge Graph</span>
-              </div>
-              <h3 className="text-2xl sm:text-3xl font-bold mb-4">See how everything connects</h3>
-              <p className="text-gray-400 mb-6 leading-relaxed">
-                Visualize relationships between SOPs, playbooks, and guides. Discover gaps in your documentation. Understand which processes depend on each other before making changes.
-              </p>
-              <ul className="space-y-3">
-                {['Interactive node-link visualization', 'Auto-detected cross-references', 'Gap analysis and coverage mapping', 'Category-based clustering'].map((item) => (
-                  <li key={item} className="flex items-center gap-3 text-gray-300">
-                    <CheckCircle2 className="w-4 h-4 text-teal-400 shrink-0" />
-                    {item}
-                  </li>
-                ))}
-              </ul>
-            </div>
-            <div className="relative">
-              <div className="absolute -inset-4 bg-gradient-to-r from-teal-500/10 to-purple-500/10 rounded-2xl blur-2xl" />
-              <img src={KNOWLEDGE_GRAPH_IMG} alt="Knowledge Graph" className="relative rounded-xl border border-white/10 shadow-xl w-full object-contain" />
-            </div>
-          </div>
-
-          {/* Feature 2: Analytics */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center mb-24">
-            <div className="order-2 lg:order-1 relative">
-              <div className="absolute -inset-4 bg-gradient-to-r from-cyan-500/10 to-teal-500/10 rounded-2xl blur-2xl" />
-              <img src={ANALYTICS_IMG} alt="Analytics Dashboard" className="relative rounded-xl border border-white/10 shadow-xl w-full object-contain" />
-            </div>
-            <div className="order-1 lg:order-2">
-              <div className="flex items-center gap-2 mb-4">
-                <BarChart3 className="w-5 h-5 text-cyan-400" />
-                <span className="text-sm font-semibold text-cyan-400 uppercase tracking-wider">Operational Analytics</span>
-              </div>
-              <h3 className="text-2xl sm:text-3xl font-bold mb-4">Know what your team actually reads</h3>
-              <p className="text-gray-400 mb-6 leading-relaxed">
-                Track engagement across every document. See which SOPs are being read, which are gathering dust, and where your team spends the most time. Make data-driven decisions about content investment.
-              </p>
-              <ul className="space-y-3">
-                {['Real-time reading heatmaps', 'Stale content detection', 'Team engagement scorecards', 'Export-ready compliance reports'].map((item) => (
-                  <li key={item} className="flex items-center gap-3 text-gray-300">
-                    <CheckCircle2 className="w-4 h-4 text-cyan-400 shrink-0" />
-                    {item}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
-
-          {/* Feature 3: AI Governance */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-            <div>
-              <div className="flex items-center gap-2 mb-4">
-                <Brain className="w-5 h-5 text-purple-400" />
-                <span className="text-sm font-semibold text-purple-400 uppercase tracking-wider">AI Content Governance</span>
-              </div>
-              <h3 className="text-2xl sm:text-3xl font-bold mb-4">AI that understands your operations</h3>
-              <p className="text-gray-400 mb-6 leading-relaxed">
-                Our AI doesn't just search — it understands context. It detects duplicates, suggests improvements, flags stale content, and helps your team write better documentation faster.
-              </p>
-              <ul className="space-y-3">
-                {['Duplicate content detection', 'AI-powered writing suggestions', 'Automated broken link scanning', 'Smart document summarization'].map((item) => (
-                  <li key={item} className="flex items-center gap-3 text-gray-300">
-                    <CheckCircle2 className="w-4 h-4 text-purple-400 shrink-0" />
-                    {item}
-                  </li>
-                ))}
-              </ul>
-            </div>
-            <div className="relative">
-              <div className="absolute -inset-4 bg-gradient-to-r from-purple-500/10 to-pink-500/10 rounded-2xl blur-2xl" />
-              <img src={AI_ASSISTANT_IMG} alt="AI Governance" className="relative rounded-xl border border-white/10 shadow-xl w-full object-contain" />
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Capability Grid */}
+      {/* Audience */}
       <section className="py-24 px-4">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl sm:text-4xl font-bold mb-4">And so much more</h2>
-            <p className="text-gray-400">Every feature your operations team has been asking for — built into the core engine.</p>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[
-              { icon: Search, title: 'Advanced Search', desc: 'Full-text search with filters, saved queries, and autocomplete across all documents' },
-              { icon: FileText, title: 'Version Control', desc: 'Track every change with full diff history, rollback capability, and audit trails' },
-              { icon: Users, title: 'Dual Persona System', desc: 'Switch between operational contexts seamlessly — one platform, multiple workflows' },
-              { icon: Clock, title: 'Reading Time Estimates', desc: 'AI-calculated reading times with complexity scoring for every document' },
-              { icon: Lock, title: 'Role-Based Access', desc: 'Granular permissions with admin, editor, and viewer roles plus workspace isolation' },
-              { icon: Zap, title: 'Workflow Automation', desc: 'Scheduled publishing, review reminders, and automated content health checks' },
-              { icon: BookOpen, title: 'Document Collections', desc: 'Curate reading paths and onboarding sequences for different team roles' },
-              { icon: Shield, title: 'Compliance Reports', desc: 'Generate audit-ready reports showing document freshness, coverage, and access logs' },
-              { icon: Star, title: 'Engagement Scoring', desc: 'Gamified reading streaks, leaderboards, and team engagement scorecards' },
-            ].map((feature, i) => (
-              <div key={i} className="p-6 rounded-xl bg-white/[0.03] border border-white/5 hover:border-teal-500/20 transition-colors group">
-                <feature.icon className="w-8 h-8 text-teal-400 mb-4 group-hover:scale-110 transition-transform" />
-                <h3 className="text-lg font-semibold mb-2">{feature.title}</h3>
-                <p className="text-sm text-gray-400 leading-relaxed">{feature.desc}</p>
+        <div className="max-w-6xl mx-auto text-center">
+          <h2 className="text-3xl sm:text-4xl font-bold mb-4">Built for operators, not enterprises</h2>
+          <p className="text-lg text-gray-400 max-w-3xl mx-auto mb-12 leading-relaxed">
+            ARG-Builder isn't a wiki you have to fill or an enterprise tool you have to configure. It deploys
+            complete. Each document follows the same architecture — frameworks, decision tables, templates,
+            metrics. Learn the structure once, navigate everything.
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {AUDIENCES.map((a) => (
+              <div key={a.title} className="p-8 rounded-xl bg-white/[0.03] border border-white/5 hover:border-teal-500/30 transition-colors text-left">
+                <h3 className="text-lg font-semibold mb-2">{a.title}</h3>
+                <p className="text-sm text-gray-400">{a.desc}</p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* How It Works */}
-      <section id="how-it-works" className="py-24 px-4 bg-gradient-to-b from-transparent via-white/[0.02] to-transparent">
-        <div className="max-w-5xl mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl sm:text-4xl font-bold mb-4">Up and running in days, not months</h2>
-            <p className="text-gray-400 max-w-2xl mx-auto">ARG Builder is designed for fast deployment. Import your existing docs, configure your workflows, and start seeing value immediately.</p>
+      {/* Library */}
+      <section id="library" className="py-24 px-4 bg-gradient-to-b from-transparent to-white/[0.02]">
+        <div className="max-w-6xl mx-auto text-center">
+          <h2 className="text-3xl sm:text-4xl font-bold mb-4">All {FUNCTION_COUNT} functions. One architecture.</h2>
+          <p className="text-lg text-gray-400 max-w-3xl mx-auto mb-10">
+            Every document ends in templates and decision tables — take the structure, fill in your company.
+          </p>
+          <div className="flex flex-wrap gap-3 justify-center">
+            {sortedCategories.map(([name, count]) => (
+              <Link key={name} href={`/category/${encodeURIComponent(name)}`}>
+                <span className="inline-block px-4 py-2 rounded-full bg-white/[0.03] border border-white/10 text-sm text-gray-400 hover:border-teal-500/40 transition-colors cursor-pointer">
+                  <span className="text-teal-400 font-semibold mr-1.5">{count}</span>{name}
+                </span>
+              </Link>
+            ))}
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-            {[
-              { step: '01', title: 'Choose Your Vertical', desc: 'Select your industry. We configure templates, workflows, and AI models for your domain.' },
-              { step: '02', title: 'Import & Organize', desc: 'Bulk import from Google Docs, Notion, Confluence, or plain files. AI auto-categorizes everything.' },
-              { step: '03', title: 'Configure & Brand', desc: 'Set up personas, permissions, and branding. Make it yours in minutes, not weeks.' },
-              { step: '04', title: 'Launch & Measure', desc: 'Invite your team. Track adoption with real-time analytics. AI surfaces what needs attention.' },
-            ].map((item, i) => (
-              <div key={i} className="relative">
-                <div className="text-6xl font-bold text-teal-500/10 mb-4">{item.step}</div>
-                <h3 className="text-xl font-semibold mb-3">{item.title}</h3>
-                <p className="text-gray-400 leading-relaxed text-sm">{item.desc}</p>
-                {i < 3 && <ChevronRight className="hidden md:block absolute top-8 -right-4 w-8 h-8 text-teal-500/20" />}
+        </div>
+      </section>
+
+      {/* Platform */}
+      <section id="platform" className="py-24 px-4">
+        <div className="max-w-6xl mx-auto text-center">
+          <h2 className="text-3xl sm:text-4xl font-bold mb-12">A reference platform, not a folder of files</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {FEATURES.map((f) => (
+              <div key={f.title} className="p-8 rounded-xl bg-white/[0.03] border border-white/5 hover:border-teal-500/30 transition-colors text-left">
+                <div className="w-11 h-11 rounded-lg bg-teal-500/10 border border-teal-500/20 flex items-center justify-center mb-5">
+                  <f.icon className="w-5 h-5 text-teal-400" />
+                </div>
+                <h3 className="text-lg font-semibold mb-2">{f.title}</h3>
+                <p className="text-sm text-gray-400">{f.desc}</p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* Social Proof */}
-      <SocialProof />
-      <TestimonialVideos />
+      {/* How it works */}
+      <section className="py-24 px-4 bg-gradient-to-b from-transparent to-white/[0.02]">
+        <div className="max-w-6xl mx-auto text-center">
+          <h2 className="text-3xl sm:text-4xl font-bold mb-12">Working in minutes, not months</h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {STEPS.map((s, i) => (
+              <div key={s.title} className="relative p-8 rounded-xl bg-white/[0.03] border border-white/5 text-left">
+                <span className="absolute -top-3 left-6 px-3 py-0.5 rounded-md bg-[#0B1120] border border-teal-500/30 text-teal-400 text-xs font-mono font-semibold">
+                  {String(i + 1).padStart(2, '0')}
+                </span>
+                <h3 className="text-lg font-semibold mb-2 mt-1">{s.title}</h3>
+                <p className="text-sm text-gray-400">{s.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
 
-      {/* Pricing Section */}
+      {/* Pricing */}
       <section id="pricing" className="py-24 px-4">
-        <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl sm:text-4xl font-bold mb-4">Simple, transparent pricing</h2>
-            <p className="text-gray-400">Start with a pilot. Scale when you're ready. Every plan includes your vertical configuration.</p>
+        <div className="max-w-4xl mx-auto text-center">
+          <h2 className="text-3xl sm:text-4xl font-bold mb-3">One plan. Everything.</h2>
+          <p className="text-lg text-gray-400 mb-14">No tiers, no per-seat math, no "Contact us."</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Monthly */}
+            <div className="p-8 rounded-2xl bg-white/[0.03] border border-white/10 text-left flex flex-col">
+              <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider">Membership</h3>
+              <div className="text-5xl font-bold my-4">$39<span className="text-base text-gray-400 font-medium">/month</span></div>
+              <ul className="space-y-3 mb-8 flex-1">
+                {[`Full access to all ${totalDocuments} documents`, 'Search, collections, annotations', 'PDF, DOCX & zip export', 'Every update as the library grows', 'Cancel anytime'].map((f) => (
+                  <li key={f} className="flex items-start gap-2.5 text-sm text-gray-400">
+                    <CheckCircle2 className="w-4 h-4 text-teal-400 mt-0.5 shrink-0" />{f}
+                  </li>
+                ))}
+              </ul>
+              <Button
+                variant="outline"
+                className="w-full border-white/20 text-white hover:bg-white/5"
+                onClick={() => subscribe('monthly')}
+                disabled={createCheckout.isPending}
+              >
+                {createCheckout.isPending ? 'Processing...' : 'Start now'}
+              </Button>
+            </div>
+            {/* Founding annual */}
+            <div className="relative p-8 rounded-2xl bg-gradient-to-b from-teal-500/10 to-white/[0.02] border border-teal-500/30 text-left flex flex-col">
+              <span className="absolute -top-3 left-7 px-3.5 py-1 rounded-full bg-teal-500 text-black text-xs font-bold">Founding Member</span>
+              <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mt-1">Annual</h3>
+              <div className="text-5xl font-bold mt-4 mb-1">$290<span className="text-base text-gray-400 font-medium">/year</span></div>
+              <p className="text-teal-400 text-sm font-semibold mb-4">Save 38% — price locked permanently</p>
+              <ul className="space-y-3 mb-8 flex-1">
+                {['Everything in Membership', 'Price locked at $290 — forever', 'Direct line to the founder', 'Your requests shape what gets documented next'].map((f) => (
+                  <li key={f} className="flex items-start gap-2.5 text-sm text-gray-400">
+                    <CheckCircle2 className="w-4 h-4 text-teal-400 mt-0.5 shrink-0" />{f}
+                  </li>
+                ))}
+              </ul>
+              <Button
+                className="w-full bg-teal-500 hover:bg-teal-400 text-black font-semibold"
+                onClick={() => subscribe('annual')}
+                disabled={createCheckout.isPending}
+              >
+                {createCheckout.isPending ? 'Processing...' : 'Become a Founding Member'}
+                {!createCheckout.isPending && <ArrowRight className="w-4 h-4 ml-2" />}
+              </Button>
+            </div>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {[
-              {
-                name: 'Starter',
-                price: '$299',
-                period: '/month',
-                desc: 'For small teams and departments',
-                subtext: 'Up to 25 users included',
-                features: ['Up to 25 users', 'AI-powered document generation', 'Full-text search', 'Basic analytics', '3 custom workflows', 'Knowledge graph (read-only)', '14-day free trial'],
-                cta: 'Start Free Trial',
-                highlight: false,
-              },
-              {
-                name: 'Professional',
-                price: '$15',
-                period: '/user/month',
-                desc: 'For growing mid-market teams',
-                subtext: '25-seat minimum · $12/user billed annually',
-                features: ['Everything in Starter', 'Interactive knowledge graph', 'Duplicate detection', 'Approval workflows', 'Advanced analytics', 'SSO / SAML', 'Custom branding', 'Priority support'],
-                cta: 'Start Free Trial',
-                highlight: true,
-              },
-              {
-                name: 'Enterprise',
-                price: 'Custom',
-                period: '',
-                desc: 'For organizations at scale',
-                subtext: 'Starting at $2,500/month',
-                features: ['Everything in Professional', 'Custom AI model training', 'On-premise deployment', 'Custom integrations & API', 'Compliance (SOC 2, HIPAA)', 'Multi-workspace', '24/7 white-glove support', 'Quarterly business reviews'],
-                cta: 'Contact Sales',
-                highlight: false,
-              },
-            ].map((plan, i) => (
-              <div key={i} className={`p-8 rounded-2xl border ${plan.highlight ? 'bg-gradient-to-b from-teal-500/10 to-transparent border-teal-500/30 relative' : 'bg-white/[0.02] border-white/5'}`}>
-                {plan.highlight && (
-                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 bg-teal-500 text-black text-xs font-bold rounded-full uppercase tracking-wider">
-                    Most Popular
-                  </div>
-                )}
-                <h3 className="text-xl font-semibold mb-2">{plan.name}</h3>
-                <div className="flex items-baseline gap-1 mb-2">
-                  <span className="text-4xl font-bold">{plan.price}</span>
-                  <span className="text-gray-400 text-sm">{plan.period}</span>
-                </div>
-                <p className="text-sm text-gray-400 mb-1">{plan.desc}</p>
-                {(plan as any).subtext && <p className="text-xs text-gray-500 mb-6">{(plan as any).subtext}</p>}
-                {!(plan as any).subtext && <div className="mb-6" />}
-                <div>
-                  <Button
-                    className={`w-full mb-6 ${plan.highlight ? 'bg-teal-500 hover:bg-teal-400 text-black' : 'bg-white/5 hover:bg-white/10 text-white border border-white/10'}`}
-                    onClick={() => {
-                      if (plan.name === 'Enterprise') {
-                        document.getElementById('contact')?.scrollIntoView({ behavior: 'smooth' });
-                      } else if (stripeConfig?.configured && user) {
-                        createCheckout.mutate({
-                          tierId: plan.name.toLowerCase() as 'starter' | 'professional',
-                          billingPeriod: 'monthly',
-                        });
-                      } else {
-                        document.getElementById('contact')?.scrollIntoView({ behavior: 'smooth' });
-                      }
-                    }}
-                    disabled={createCheckout.isPending}
-                  >
-                    {createCheckout.isPending ? 'Processing...' : plan.cta}
-                  </Button>
-                </div>
-                <ul className="space-y-3">
-                  {plan.features.map((f) => (
-                    <li key={f} className="flex items-center gap-2 text-sm text-gray-300">
-                      <CheckCircle2 className="w-4 h-4 text-teal-400 shrink-0" />
-                      {f}
-                    </li>
-                  ))}
-                </ul>
-              </div>
+          <p className="text-sm text-gray-600 mt-7">Founding pricing ends when the first 100 seats are taken.</p>
+        </div>
+      </section>
+
+      {/* FAQ */}
+      <section id="faq" className="py-24 px-4 bg-gradient-to-b from-transparent to-white/[0.02]">
+        <div className="max-w-3xl mx-auto">
+          <h2 className="text-3xl sm:text-4xl font-bold mb-12 text-center">Fair questions</h2>
+          <div className="space-y-4">
+            {FAQS.map((f) => (
+              <details key={f.q} className="rounded-xl bg-white/[0.03] border border-white/10 overflow-hidden group">
+                <summary className="cursor-pointer px-6 py-5 font-semibold text-[15px] list-none flex justify-between items-center">
+                  {f.q}<span className="text-teal-400 text-xl font-normal group-open:rotate-45 transition-transform">+</span>
+                </summary>
+                <p className="px-6 pb-5 text-sm text-gray-400 leading-relaxed">{f.a}</p>
+              </details>
             ))}
           </div>
         </div>
       </section>
 
-      {/* Lead Capture / Contact Form */}
-      <section id="contact" className="py-24 px-4 bg-gradient-to-b from-transparent via-teal-500/[0.03] to-transparent">
-        <div className="max-w-3xl mx-auto">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl sm:text-4xl font-bold mb-4">
-              {submitted ? 'Thank you!' : 'Ready to transform your operations?'}
-            </h2>
-            <p className="text-gray-400">
-              {submitted
-                ? 'We\'ll reach out within 24 hours to schedule your personalized demo.'
-                : 'Get a personalized demo tailored to your industry and see how ARG Builder can work for your team.'}
-            </p>
-          </div>
-
-          {!submitted ? (
-            <form onSubmit={handleSubmit} className="space-y-4 p-8 rounded-2xl bg-white/[0.03] border border-white/10">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label htmlFor="demo-fullname" className="block text-sm text-gray-400 mb-1.5">Full Name *</label>
-                  <Input
-                    id="demo-fullname"
-                    value={form.fullName}
-                    onChange={(e) => handleFieldChange('fullName', e.target.value)}
-                    onBlur={() => handleBlur('fullName')}
-                    placeholder="Jane Smith"
-                    className={`bg-white/5 border-white/10 text-white placeholder:text-gray-600 ${touched.fullName && fieldErrors.fullName ? 'border-red-500/60 focus-visible:ring-red-500/30' : ''}`}
-                  />
-                  {touched.fullName && fieldErrors.fullName && (
-                    <p className="text-xs text-red-400 mt-1">{fieldErrors.fullName}</p>
-                  )}
-                </div>
-                <div>
-                  <label htmlFor="demo-email" className="block text-sm text-gray-400 mb-1.5">Work Email *</label>
-                  <Input
-                    id="demo-email"
-                    type="email"
-                    value={form.email}
-                    onChange={(e) => handleFieldChange('email', e.target.value)}
-                    onBlur={() => handleBlur('email')}
-                    placeholder="jane@company.com"
-                    className={`bg-white/5 border-white/10 text-white placeholder:text-gray-600 ${touched.email && fieldErrors.email ? 'border-red-500/60 focus-visible:ring-red-500/30' : ''}`}
-                  />
-                  {touched.email && fieldErrors.email && (
-                    <p className="text-xs text-red-400 mt-1">{fieldErrors.email}</p>
-                  )}
-                </div>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label htmlFor="demo-company" className="block text-sm text-gray-400 mb-1.5">Company</label>
-                  <Input
-                    id="demo-company"
-                    value={form.company}
-                    onChange={(e) => setForm({ ...form, company: e.target.value })}
-                    placeholder="Acme Corp"
-                    className="bg-white/5 border-white/10 text-white placeholder:text-gray-600"
-                  />
-                </div>
-                <div>
-                  <label htmlFor="demo-jobtitle" className="block text-sm text-gray-400 mb-1.5">Job Title</label>
-                  <Input
-                    id="demo-jobtitle"
-                    value={form.jobTitle}
-                    onChange={(e) => setForm({ ...form, jobTitle: e.target.value })}
-                    placeholder="VP of Operations"
-                    className="bg-white/5 border-white/10 text-white placeholder:text-gray-600"
-                  />
-                </div>
-              </div>
-              <div>
-                <label htmlFor="industry-select" className="block text-sm text-gray-400 mb-1.5">Industry</label>
-                <select
-                  id="industry-select"
-                  value={form.teamSize}
-                  onChange={(e) => setForm({ ...form, teamSize: e.target.value })}
-                  className="w-full rounded-md bg-white/5 border border-white/10 text-white px-3 py-2 text-sm"
-                  aria-label="Select your industry"
-                >
-                  <option value="" className="bg-gray-900">Select your industry</option>
-                  <option value="hospitality" className="bg-gray-900">Hospitality & Travel</option>
-                  <option value="healthcare" className="bg-gray-900">Healthcare</option>
-                  <option value="professional-services" className="bg-gray-900">Professional Services</option>
-                  <option value="retail" className="bg-gray-900">Retail & E-Commerce</option>
-                  <option value="manufacturing" className="bg-gray-900">Manufacturing</option>
-                  <option value="saas" className="bg-gray-900">SaaS & Technology</option>
-                  <option value="other" className="bg-gray-900">Other</option>
-                </select>
-              </div>
-              <div>
-                <label htmlFor="demo-challenge" className="block text-sm text-gray-400 mb-1.5">What's your biggest operational challenge?</label>
-                <textarea
-                  id="demo-challenge"
-                  value={form.message}
-                  onChange={(e) => setForm({ ...form, message: e.target.value })}
-                  placeholder="Tell us about your current setup and pain points..."
-                  rows={3}
-                  className="w-full rounded-md bg-white/5 border border-white/10 text-white px-3 py-2 text-sm placeholder:text-gray-600 resize-none"
-                  aria-label="Describe your biggest operational challenge"
-                />
-              </div>
-              <Button
-                type="submit"
-                size="lg"
-                className="w-full bg-teal-500 hover:bg-teal-400 text-black font-semibold py-6 text-lg disabled:opacity-70 disabled:cursor-not-allowed"
-                disabled={submitLead.isPending}
-              >
-                {submitLead.isPending ? (
-                  <>
-                    <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                    Sending your request...
-                  </>
-                ) : (
-                  <>
-                    Request Your Demo
-                    <ArrowRight className="w-5 h-5 ml-2" />
-                  </>
-                )}
-              </Button>
-              <p className="text-xs text-gray-500 text-center">
-                No credit card required. We'll respond within 24 hours.
-              </p>
-            </form>
-          ) : (
-            <div className="text-center p-12 rounded-2xl bg-teal-500/10 border border-teal-500/20 animate-in fade-in slide-in-from-bottom-4 duration-500">
-              <div className="w-20 h-20 rounded-full bg-teal-500/20 flex items-center justify-center mx-auto mb-6">
-                <CheckCircle2 className="w-12 h-12 text-teal-400" />
-              </div>
-              <h3 className="text-2xl font-bold mb-2">You're on the list!</h3>
-              <p className="text-gray-400 mb-2">
-                Your demo request has been received and sent to our team.
-              </p>
-              <p className="text-gray-500 text-sm mb-4">
-                We'll reach out within 24 hours to schedule your personalized walkthrough.
-                Check your inbox for a confirmation email.
-              </p>
-              <div className="bg-white/5 border border-white/10 rounded-xl p-4 mb-6">
-                <p className="text-sm text-gray-300 mb-2 font-medium">Want to skip the wait?</p>
-                <a
-                  href="https://cal.com/argbuilder/demo"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 text-teal-400 hover:text-teal-300 text-sm font-semibold transition-colors"
-                >
-                  <Clock className="w-4 h-4" />
-                  Book a 15-min demo directly on our calendar
-                  <ArrowRight className="w-3 h-3" />
-                </a>
-              </div>
-              <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                <Link href="/">
-                  <Button className="bg-teal-500 hover:bg-teal-400 text-black font-semibold">
-                    Explore the Platform <ArrowRight className="w-4 h-4 ml-2" />
-                  </Button>
-                </Link>
-                <Button
-                  variant="outline"
-                  className="border-white/20 text-white hover:bg-white/5"
-                  onClick={() => setSubmitted(false)}
-                >
-                  Submit Another Request
-                </Button>
-              </div>
-            </div>
-          )}
+      {/* Final CTA */}
+      <section className="py-28 px-4 relative">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(45,212,191,0.08),transparent_70%)]" />
+        <div className="max-w-3xl mx-auto text-center relative">
+          <h2 className="text-3xl sm:text-5xl font-bold mb-5">Your company, documented.</h2>
+          <p className="text-lg text-gray-400 mb-10">
+            The companies that scale cleanly are the ones that run on structure instead of memory.
+            The structure is built. Deploy it.
+          </p>
+          <Button
+            size="lg"
+            className="bg-teal-500 hover:bg-teal-400 text-black font-semibold px-8 py-6 text-lg"
+            onClick={() => subscribe('annual')}
+            disabled={createCheckout.isPending}
+          >
+            {createCheckout.isPending ? 'Processing...' : 'Become a Founding Member — $290/year'}
+            {!createCheckout.isPending && <ArrowRight className="w-5 h-5 ml-2" />}
+          </Button>
+          <p className="mt-6 text-sm text-gray-600 font-mono">{totalDocuments} documents. {FUNCTION_COUNT} functions. One decision.</p>
         </div>
       </section>
-
-      {/* Comparison Section */}
-      <ComparisonSection />
-
-      {/* Chat Widget */}
-      <ChatWidget />
-
-      {/* Exit Intent Modal */}
-      <ExitIntentModal />
-      <ProductTour />
-
-      {/* Demo Booking Modal */}
-      <DemoBookingModal open={showDemoModal} onClose={() => setShowDemoModal(false)} />
 
       {/* Footer */}
-      <Footer />
+      <footer className="py-12 px-4 border-t border-white/5">
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <img src={LOGO_IMG} alt="ARG-Builder" className="w-7 h-7 rounded-lg" />
+            <span className="text-sm text-gray-500">ARG-Builder — the operating reference for companies that run on structure.</span>
+          </div>
+          <div className="flex items-center gap-6 text-xs text-gray-600">
+            <span>&copy; {new Date().getFullYear()} ARG-Builder</span>
+            <span>·</span>
+            <span>hello@argbuilder.io</span>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }
