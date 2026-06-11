@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { toast } from 'sonner';
 import { Sparkles, Loader2 } from 'lucide-react';
 import { trpc } from '@/lib/trpc';
 
@@ -16,8 +17,10 @@ export default function AISummary({ slug, existingSummary }: AISummaryProps) {
       setSummary(data.summary);
       setIsGenerating(false);
     },
-    onError: () => {
+    onError: (err: any) => {
       setIsGenerating(false);
+      const msg = String((err)?.message || '');
+      toast.error(msg.includes('429') || msg.includes('RESOURCE_EXHAUSTED') || msg.toLowerCase().includes('quota') ? 'AI quota reached for today — please try again later.' : 'AI summary failed — please try again.');
     },
   });
 
