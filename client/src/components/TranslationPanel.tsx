@@ -44,6 +44,9 @@ export default function TranslationPanel({ slug }: TranslationPanelProps) {
       if (result) {
         setTranslatedContent({ title: result.title, content: result.content });
       }
+    } catch (err: any) {
+      const msg = String(err?.message || '');
+      toast.error(msg.includes('429') || msg.includes('RESOURCE_EXHAUSTED') || msg.toLowerCase().includes('quota') ? 'AI quota reached for today — please try again later.' : 'Translation failed — please try again.');
     } finally {
       setIsTranslating(false);
     }
