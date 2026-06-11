@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { toast } from 'sonner';
 import { trpc } from '@/lib/trpc';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { Sparkles, Loader2, RefreshCw } from 'lucide-react';
@@ -20,6 +21,9 @@ export default function AISummaryPanel({ slug }: AISummaryPanelProps) {
     try {
       await generateMut.mutateAsync({ slug });
       await refetch();
+    } catch (err: any) {
+      const msg = String(err?.message || '');
+      toast.error(msg.includes('429') || msg.includes('RESOURCE_EXHAUSTED') || msg.toLowerCase().includes('quota') ? 'AI quota reached for today — please try again later.' : 'AI summary failed — please try again.');
     } finally {
       setIsGenerating(false);
     }
