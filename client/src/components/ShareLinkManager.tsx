@@ -14,6 +14,7 @@ export default function ShareLinkManager({ documentSlug }: ShareLinkManagerProps
   const { user } = useAuth();
   const [hours, setHours] = useState(24);
   const [copied, setCopied] = useState<string | null>(null);
+  const [open, setOpen] = useState(false);
 
   const { data: links, refetch } = trpc.shareLinks.listForDoc.useQuery(
     { documentSlug },
@@ -23,6 +24,16 @@ export default function ShareLinkManager({ documentSlug }: ShareLinkManagerProps
   const deleteMutation = trpc.shareLinks.delete.useMutation({ onSuccess: () => refetch() });
 
   if (user?.role !== 'admin') return null;
+
+  if (!open) {
+    return (
+      <div className="flex justify-end py-1">
+        <button onClick={() => setOpen(true)} className="flex items-center gap-1 text-xs text-muted-foreground hover:text-accent transition-colors" title="Manage expiring share links">
+          <Link2 className="w-3 h-3" /> Share links
+        </button>
+      </div>
+    );
+  }
 
   const copyLink = (token: string) => {
     const url = `${window.location.origin}/share/${token}`;
@@ -36,6 +47,7 @@ export default function ShareLinkManager({ documentSlug }: ShareLinkManagerProps
       <div className="flex items-center gap-2 mb-3">
         <Link2 className="w-4 h-4 text-accent" />
         <h4 className="text-sm font-medium">Expiring Share Links</h4>
+      <button onClick={() => setOpen(false)} className="ml-auto text-xs text-muted-foreground hover:text-foreground transition-colors">Hide</button>
       </div>
 
       <div className="flex items-center gap-2 mb-3">
